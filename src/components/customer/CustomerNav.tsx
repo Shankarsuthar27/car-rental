@@ -18,13 +18,6 @@ import {
 import { cn } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
 
-const navLinks = [
-  { label: 'Cars', href: '/cars' },
-  { label: 'How It Works', href: '/#how-it-works' },
-  { label: 'Offers', href: '/#offers' },
-  { label: 'Contact', href: '/#contact' },
-]
-
 export function CustomerNav() {
   const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
@@ -60,7 +53,7 @@ export function CustomerNav() {
       <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center shadow-sm">
             <Gauge className="w-5 h-5 text-white" />
           </div>
           <span
@@ -72,24 +65,6 @@ export function CustomerNav() {
             DriveEase
           </span>
         </Link>
-
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                'text-sm font-medium transition-colors hover:text-primary',
-                isTransparentPage && !scrolled
-                  ? 'text-white/80 hover:text-white'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
 
         {/* Desktop auth */}
         <div className="hidden md:flex items-center gap-3">
@@ -165,18 +140,8 @@ export function CustomerNav() {
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden bg-background border-b border-border overflow-hidden"
           >
-            <div className="container mx-auto px-4 py-4 space-y-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="pt-2 flex flex-col gap-2">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex flex-col gap-2">
                 {user ? (
                   <>
                     <Button variant="outline" size="sm" asChild>
