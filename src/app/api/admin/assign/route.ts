@@ -219,7 +219,7 @@ export async function POST(req: Request) {
       customerName: finalCustomer.profile?.full_name || 'Valued Customer',
       customerPhone: finalCustomer.profile?.phone || '—',
       customerEmail: finalCustomer.profile?.email,
-      customerDl: finalCustomer.driving_license_number || finalCustomer.profile?.driving_license_number,
+      customerDl: finalCustomer.driving_license_number || '',
       rentalType: rental_type || 'daily',
       pickupDatetime: pickup_datetime,
       returnDatetime: return_datetime,
