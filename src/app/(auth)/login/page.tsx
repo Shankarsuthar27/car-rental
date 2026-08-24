@@ -39,28 +39,34 @@ function LoginForm() {
     const cleanEmail = email.trim().toLowerCase()
     const cleanPass = password.trim()
 
-    // STRICT CHECK: Only admin@driveease.in and admin123 are permitted
-    if (
-      (cleanEmail === 'admin@driveease.in' || cleanEmail === 'admin') &&
-      cleanPass === 'admin123'
-    ) {
-      document.cookie = `driveease_demo_role=super_admin; path=/; max-age=2592000; SameSite=Lax`
-      try {
-        await fetch('/api/auth/demo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: 'admin' }),
-        })
-      } catch {}
-      window.location.href = '/admin/dashboard'
-      return
-    }
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password: cleanPass }),
+      })
 
-    // Reject all other usernames and passwords
-    setTimeout(() => {
-      setErrorMsg('Access Denied: Invalid administrator credentials. Only authorized staff can access the admin panel.')
+      const data = await res.json()
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(
+          data.message ||
+            'Access Denied: Invalid administrator credentials. Only authorized staff can access the admin panel.'
+        )
+        setLoading(false)
+        return
+      }
+
+      // Ensure client cookie is set for instant middleware validation
+      document.cookie = `driveease_demo_role=super_admin; path=/; max-age=${
+        rememberMe ? 2592000 : 86400
+      }; SameSite=Lax`
+
+      window.location.href = redirectTo || '/admin/dashboard'
+    } catch (err) {
+      setErrorMsg('Network error. Please try again.')
       setLoading(false)
-    }, 400)
+    }
   }
 
   return (
