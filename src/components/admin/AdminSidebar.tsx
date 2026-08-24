@@ -67,7 +67,6 @@ const navStructure: NavGroup[] = [
       { label: 'Available Cars', href: '/admin/vehicles?status=available', badgeColor: 'bg-emerald-500' },
       { label: 'Running Cars', href: '/admin/vehicles?status=rented', badgeColor: 'bg-blue-500' },
       { label: 'Unavailable Cars', href: '/admin/vehicles?status=inactive', badgeColor: 'bg-rose-500' },
-      { label: 'Maintenance', href: '/admin/maintenance', badgeColor: 'bg-orange-500' },
     ],
   },
   {

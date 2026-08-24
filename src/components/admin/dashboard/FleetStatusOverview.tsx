@@ -67,18 +67,6 @@ export function FleetStatusOverview({ statusCounts }: FleetStatusOverviewProps) 
       href: '/admin/vehicles?status=inactive',
       desc: 'Deactivated, held or off-market',
     },
-    {
-      label: 'Maintenance',
-      count: maintenance,
-      percentage: maintenancePct,
-      color: 'text-orange-600 dark:text-orange-400',
-      bgColor: 'bg-orange-500/10 border-orange-500/20 hover:border-orange-500/40',
-      barColor: 'bg-orange-500',
-      icon: Wrench,
-      emoji: '🟠',
-      href: '/admin/maintenance',
-      desc: 'Under mechanical service or repairs',
-    },
   ]
 
   return (
@@ -139,7 +127,7 @@ export function FleetStatusOverview({ statusCounts }: FleetStatusOverviewProps) 
       </div>
 
       {/* Status Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {statuses.map((s) => {
           const Icon = s.icon
           return (

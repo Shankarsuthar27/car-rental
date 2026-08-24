@@ -486,7 +486,7 @@ export function AdminVehiclesClient({
       </div>
 
       {/* Metric Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 bg-card border border-border/70 rounded-2xl shadow-sm flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
             <Car className="w-5 h-5" />
@@ -502,7 +502,7 @@ export function AdminVehiclesClient({
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Available</div>
+            <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Available Cars</div>
             <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">{availableCount}</div>
           </div>
         </div>
@@ -512,18 +512,8 @@ export function AdminVehiclesClient({
             <Key className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">On Rental / Res.</div>
+            <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Running / Rented</div>
             <div className="text-xl font-black text-blue-600 dark:text-blue-400">{activeRentalCount}</div>
-          </div>
-        </div>
-
-        <div className="p-4 bg-card border border-border/70 rounded-2xl shadow-sm flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0">
-            <Wrench className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Maintenance</div>
-            <div className="text-xl font-black text-orange-600 dark:text-orange-400">{maintenanceCount}</div>
           </div>
         </div>
       </div>

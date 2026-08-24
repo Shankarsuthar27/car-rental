@@ -92,12 +92,12 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
     },
     {
       id: 'n3',
-      type: 'maintenance',
-      title: 'Vehicle Maintenance Due',
-      description: 'Mahindra Scorpio N scheduled for brake pad inspection',
+      type: 'pickup',
+      title: 'Vehicle Ready for Assignment',
+      description: 'Mahindra Scorpio N inspected and ready for active duty',
       time: '4h ago',
       unread: false,
-      href: '/admin/maintenance',
+      href: '/admin/vehicles?status=available',
     },
   ])
 
