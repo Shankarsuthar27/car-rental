@@ -79,7 +79,6 @@ const navStructure: NavGroup[] = [
     icon: CalendarCheck,
     children: [
       { label: 'Active Rentals', href: '/admin/bookings?status=active', badgeColor: 'bg-blue-500' },
-      { label: 'Upcoming', href: '/admin/bookings?status=confirmed', badgeColor: 'bg-purple-500' },
       { label: 'Completed', href: '/admin/bookings?status=completed', badgeColor: 'bg-zinc-500' },
       { label: 'Cancelled', href: '/admin/bookings?status=cancelled', badgeColor: 'bg-rose-500' },
     ],

@@ -84,11 +84,11 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
     {
       id: 'n2',
       type: 'pickup',
-      title: 'Upcoming Scheduled Pickup',
-      description: 'Rahul Sharma scheduled for Toyota Fortuner at 2:00 PM',
+      title: 'Vehicle Active on Duty',
+      description: 'Rahul Sharma dispatched on Toyota Fortuner',
       time: '1h ago',
       unread: true,
-      href: '/admin/bookings?status=confirmed',
+      href: '/admin/bookings?status=active',
     },
     {
       id: 'n3',

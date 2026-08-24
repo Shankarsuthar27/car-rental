@@ -459,15 +459,6 @@ export function AdminBookingsClient({
 
           <Button
             size="sm"
-            variant={activeTab === 'confirmed' ? 'default' : 'outline'}
-            onClick={() => setActiveTab('confirmed')}
-            className="text-xs h-8.5 rounded-xl font-semibold gap-1.5"
-          >
-            Upcoming ({upcomingCount})
-          </Button>
-
-          <Button
-            size="sm"
             variant={activeTab === 'completed' ? 'default' : 'outline'}
             onClick={() => setActiveTab('completed')}
             className="text-xs h-8.5 rounded-xl font-semibold gap-1.5"
