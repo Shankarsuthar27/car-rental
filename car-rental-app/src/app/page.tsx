@@ -1,22 +1,11 @@
-import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import type { Metadata } from 'next'
+import LoginPage from '@/app/(auth)/login/page'
 
-export default async function RootPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export const metadata: Metadata = {
+  title: 'Sign In — DriveEase Fleet Management',
+  description: 'Sign in to DriveEase Fleet Operations & Car Rental Management Portal',
+}
 
-  if (user) {
-    redirect('/admin/dashboard')
-  }
-
-  const cookieStore = await cookies()
-  const demoRole = cookieStore.get('driveease_demo_role')?.value
-  if (demoRole) {
-    redirect('/admin/dashboard')
-  }
-
-  redirect('/login')
+export default function HomePage() {
+  return <LoginPage />
 }
