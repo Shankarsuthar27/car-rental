@@ -957,8 +957,8 @@ export function CheckoutWizard({
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
                 <Button size="lg" asChild className="gradient-brand text-white border-0 font-bold rounded-2xl">
-                  <Link href={`/dashboard/bookings`}>
-                    View in Customer Dashboard
+                  <Link href={`/admin/bookings`}>
+                    Open Admin Operations Console
                   </Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild className="rounded-2xl">

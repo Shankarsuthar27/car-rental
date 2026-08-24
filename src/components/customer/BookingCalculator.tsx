@@ -138,17 +138,7 @@ export function BookingCalculator({ vehicle, branches }: BookingCalculatorProps)
   }
 
   const handleProceedToBooking = () => {
-    const params = new URLSearchParams({
-      vehicle_id: vehicle.id,
-      pickup_branch: pickupBranch,
-      return_branch: returnBranch,
-      pickup: `${pickupDate}T${pickupTime}`,
-      return: `${returnDate}T${returnTime}`,
-      driver: withDriver ? '1' : '0',
-      insurance: withInsurance ? '1' : '0',
-      coupon: appliedCoupon || ''
-    })
-    router.push(`/checkout?${params.toString()}`)
+    router.push(`/admin/assign?vehicle_id=${vehicle.id}`)
   }
 
   return (
@@ -429,14 +419,15 @@ export function BookingCalculator({ vehicle, branches }: BookingCalculatorProps)
         )
       )}
 
-      {/* Book CTA */}
+      {/* Assign Car CTA */}
       <Button
         size="lg"
         onClick={handleProceedToBooking}
-        disabled={!isAvailable || !!calcError || loading}
-        className="w-full h-12 gradient-brand text-white border-0 hover:opacity-90 font-bold text-sm shadow-md gap-2"
+        disabled={!isAvailable}
+        className="w-full h-12 gradient-brand text-white border-0 hover:opacity-90 font-bold text-sm shadow-md gap-2 cursor-pointer"
       >
-        <span>Book This Car</span>
+        <Zap className="w-4 h-4 fill-current" />
+        <span>Assign Car to Customer</span>
         <ArrowRight className="w-4 h-4" />
       </Button>
 

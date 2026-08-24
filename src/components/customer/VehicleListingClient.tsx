@@ -615,10 +615,10 @@ export function VehicleListingClient({
                         <Button
                           size="sm"
                           asChild
-                          className="w-full gradient-brand text-white border-0 hover:opacity-90 text-xs h-9 font-semibold"
+                          className="w-full gradient-brand text-white border-0 hover:opacity-90 text-xs h-9 font-semibold gap-1"
                         >
-                          <Link href={`/checkout?vehicle_id=${v.id}`}>
-                            Book Now
+                          <Link href={`/admin/assign?vehicle_id=${v.id}`}>
+                            <Zap className="w-3 h-3 fill-current" /> Assign Car
                           </Link>
                         </Button>
                       </div>

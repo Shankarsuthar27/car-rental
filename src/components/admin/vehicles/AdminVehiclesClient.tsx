@@ -762,7 +762,32 @@ export function AdminVehiclesClient({
 
                       {/* Actions */}
                       <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {v.status === 'available' ? (
+                            <Button
+                              size="sm"
+                              asChild
+                              className="h-8 px-3 text-xs gradient-brand text-white border-0 hover:opacity-90 font-bold rounded-xl shadow-xs gap-1 cursor-pointer shrink-0"
+                              title="Assign car to customer"
+                            >
+                              <Link href={`/admin/assign?vehicle_id=${v.id}`}>
+                                <Zap className="w-3.5 h-3.5 fill-current" /> Assign Car
+                              </Link>
+                            </Button>
+                          ) : v.status === 'rented' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              asChild
+                              className="h-8 px-2.5 text-xs text-blue-600 border-blue-500/30 hover:bg-blue-500/10 rounded-xl font-semibold gap-1 shrink-0"
+                              title="Track running duty"
+                            >
+                              <Link href={`/admin/bookings?status=active`}>
+                                <Key className="w-3.5 h-3.5" /> Running
+                              </Link>
+                            </Button>
+                          ) : null}
+
                           <Button
                             variant="ghost"
                             size="sm"

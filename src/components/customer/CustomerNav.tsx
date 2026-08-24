@@ -109,10 +109,13 @@ export function CustomerNav() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard">My Dashboard</Link>
+                  <Link href="/admin/dashboard">Fleet Console</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard/bookings">My Bookings</Link>
+                  <Link href="/admin/vehicles">Fleet Inventory</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/bookings">All Bookings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
@@ -128,14 +131,14 @@ export function CustomerNav() {
                 asChild
                 className={cn(isTransparentPage && !scrolled && 'text-white hover:text-white/80')}
               >
-                <Link href="/login">Log in</Link>
+                <Link href="/login">Staff Log in</Link>
               </Button>
               <Button
                 size="sm"
                 asChild
                 className="gradient-brand text-white border-0 hover:opacity-90"
               >
-                <Link href="/register">Get Started</Link>
+                <Link href="/login">Admin Portal</Link>
               </Button>
             </>
           )}
@@ -177,7 +180,7 @@ export function CustomerNav() {
                 {user ? (
                   <>
                     <Button variant="outline" size="sm" asChild>
-                      <Link href="/dashboard">My Dashboard</Link>
+                      <Link href="/admin/dashboard">Fleet Console</Link>
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleLogout}>
                       Log out
@@ -186,14 +189,14 @@ export function CustomerNav() {
                 ) : (
                   <>
                     <Button variant="outline" size="sm" asChild>
-                      <Link href="/login">Log in</Link>
+                      <Link href="/login">Staff Log in</Link>
                     </Button>
                     <Button
                       size="sm"
                       asChild
                       className="gradient-brand text-white border-0"
                     >
-                      <Link href="/register">Get Started</Link>
+                      <Link href="/login">Admin Portal</Link>
                     </Button>
                   </>
                 )}

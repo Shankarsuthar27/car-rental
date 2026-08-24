@@ -44,9 +44,9 @@ export function Footer() {
             <ul className="space-y-2">
               {[
                 { label: 'Browse Cars', href: '/cars' },
-                { label: 'Book a Car', href: '/cars' },
-                { label: 'My Bookings', href: '/dashboard/bookings' },
-                { label: 'How It Works', href: '/#how-it-works' },
+                { label: 'Assign Car', href: '/admin/assign' },
+                { label: 'Fleet Console', href: '/admin/dashboard' },
+                { label: 'Fleet Inventory', href: '/admin/vehicles' },
                 { label: 'Special Offers', href: '/#offers' },
               ].map((link) => (
                 <li key={link.label}>

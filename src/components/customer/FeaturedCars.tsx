@@ -151,8 +151,8 @@ function VehicleCard({ vehicle, index }: { vehicle: Vehicle; index: number }) {
             asChild
             className="gradient-brand text-white border-0 hover:opacity-90 gap-1"
           >
-            <Link href={`/cars/${vehicle.id}`}>
-              Book Now <ArrowRight className="w-3 h-3" />
+            <Link href={`/admin/assign?vehicle_id=${vehicle.id}`}>
+              Assign Car <ArrowRight className="w-3 h-3" />
             </Link>
           </Button>
         </div>
