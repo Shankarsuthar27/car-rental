@@ -13,7 +13,7 @@ interface MemoryOtpRecord {
   createdAt: number
 }
 
-// Global active credentials store to survive module reloads and sync login instantly
+// Global active credentials store to survive module reloads
 const globalForAuth = globalThis as unknown as {
   adminCredentialsStore?: Map<string, string>
   memoryStore?: Map<string, MemoryOtpRecord>
@@ -30,8 +30,6 @@ const rateLimitStore =
   globalForAuth.rateLimitStore || new Map<string, number[]>()
 
 if (!globalForAuth.adminCredentialsStore) {
-  adminCredentialsStore.set('admin@driveease.in', 'admin123')
-  adminCredentialsStore.set('admin', 'admin123')
   globalForAuth.adminCredentialsStore = adminCredentialsStore
 }
 
@@ -59,19 +57,39 @@ function hashValue(value: string, email: string): string {
 
 export class PasswordResetService {
   /**
-   * Validate login credentials against active password
+   * Validate login credentials against persistent database and updated passwords
    */
-  static validateCredentials(rawEmail: string, rawPassword: string): boolean {
+  static async validateCredentials(rawEmail: string, rawPassword: string): Promise<boolean> {
     const email = rawEmail.trim().toLowerCase()
     const password = rawPassword.trim()
+    const inputHash = hashValue(password, email)
 
-    // 1. Direct match with active stored password
-    const currentPassword =
-      adminCredentialsStore.get(email) ||
-      (email === 'admin@driveease.in' || email === 'admin' ? 'admin123' : null)
+    // 1. Check persistent Supabase database table (system_auth_credentials)
+    try {
+      const supabase = createAdminClient()
+      const { data, error } = await supabase
+        .from('system_auth_credentials')
+        .select('password_hash')
+        .eq('email', email)
+        .maybeSingle()
 
-    if (currentPassword && currentPassword === password) {
-      return true
+      if (!error && data && data.password_hash) {
+        // If a password was reset/saved in the database, ONLY accept if hashes match exactly
+        return data.password_hash === inputHash
+      }
+    } catch (err) {
+      console.warn('[PasswordResetService] DB credentials check note:', err)
+    }
+
+    // 2. Check memory store
+    const currentMemoryPassword = adminCredentialsStore.get(email)
+    if (currentMemoryPassword) {
+      return currentMemoryPassword === password
+    }
+
+    // 3. Fallback: Only if NO password was EVER reset in DB or memory, accept initial default admin123
+    if (email === 'admin@driveease.in' || email === 'admin') {
+      return password === 'admin123'
     }
 
     return false
@@ -87,6 +105,7 @@ export class PasswordResetService {
       adminCredentialsStore.set('admin', newPassword.trim())
     }
   }
+
   /**
    * Check rate-limit for OTP generation per email
    */
@@ -172,8 +191,8 @@ export class PasswordResetService {
         expires_at: new Date(expiresAt).toISOString(),
         attempts: 0,
       })
-    } catch {
-      // Fallback silently to memory store
+    } catch (e) {
+      // Fallback to memory
     }
 
     // Send Email via Resend
@@ -201,6 +220,76 @@ export class PasswordResetService {
       return { success: false, message: 'Please provide a valid 6-digit code.' }
     }
 
+    const computedHash = hashValue(otp, email)
+    const now = Date.now()
+
+    // 1. Check in Supabase password_resets table first
+    try {
+      const supabase = createAdminClient()
+      const { data: dbRecord } = await supabase
+        .from('password_resets')
+        .select('*')
+        .eq('email', email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (dbRecord) {
+        if (new Date(dbRecord.expires_at).getTime() < now) {
+          return { success: false, message: 'This verification code has expired. Please request a new OTP.' }
+        }
+
+        if (dbRecord.attempts >= MAX_ATTEMPTS) {
+          return { success: false, message: 'Maximum attempts exceeded. Please request a new OTP.' }
+        }
+
+        const isMatch = dbRecord.otp_hash === computedHash
+
+        if (!isMatch) {
+          const newAttempts = (dbRecord.attempts || 0) + 1
+          await supabase.from('password_resets').update({ attempts: newAttempts }).eq('id', dbRecord.id)
+          const remaining = MAX_ATTEMPTS - newAttempts
+          return {
+            success: false,
+            message: `Invalid code. ${remaining} attempt${remaining > 1 ? 's' : ''} remaining.`,
+            remainingAttempts: remaining,
+          }
+        }
+
+        // Valid! Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex')
+        const resetTokenHash = hashValue(resetToken, email)
+        const resetTokenExpiresAt = new Date(now + RESET_TOKEN_EXPIRY_MS).toISOString()
+
+        await supabase.from('password_resets').update({
+          verified_at: new Date().toISOString(),
+          reset_token_hash: resetTokenHash,
+          reset_token_expires_at: resetTokenExpiresAt,
+        }).eq('id', dbRecord.id)
+
+        // Also sync memory record
+        memoryStore.set(email, {
+          email,
+          otpHash: dbRecord.otp_hash,
+          expiresAt: new Date(dbRecord.expires_at).getTime(),
+          attempts: 0,
+          verifiedAt: now,
+          resetTokenHash,
+          resetTokenExpiresAt: now + RESET_TOKEN_EXPIRY_MS,
+          createdAt: new Date(dbRecord.created_at).getTime(),
+        })
+
+        return {
+          success: true,
+          message: 'OTP verified successfully.',
+          resetToken,
+        }
+      }
+    } catch (err) {
+      console.warn('[PasswordResetService] DB OTP verify fallback to memory:', err)
+    }
+
+    // 2. Fallback to Memory Store
     const record = memoryStore.get(email)
 
     if (!record) {
@@ -210,8 +299,7 @@ export class PasswordResetService {
       }
     }
 
-    // Check expiration
-    if (Date.now() > record.expiresAt) {
+    if (now > record.expiresAt) {
       memoryStore.delete(email)
       return {
         success: false,
@@ -219,7 +307,6 @@ export class PasswordResetService {
       }
     }
 
-    // Check max attempts
     if (record.attempts >= MAX_ATTEMPTS) {
       memoryStore.delete(email)
       return {
@@ -228,8 +315,6 @@ export class PasswordResetService {
       }
     }
 
-    // Compare Hash
-    const computedHash = hashValue(otp, email)
     const isValid = crypto.timingSafeEqual(
       Buffer.from(computedHash, 'hex'),
       Buffer.from(record.otpHash, 'hex')
@@ -252,12 +337,11 @@ export class PasswordResetService {
       }
     }
 
-    // OTP is valid! Generate single-use reset token
     const resetToken = crypto.randomBytes(32).toString('hex')
     const resetTokenHash = hashValue(resetToken, email)
-    const resetTokenExpiresAt = Date.now() + RESET_TOKEN_EXPIRY_MS
+    const resetTokenExpiresAt = now + RESET_TOKEN_EXPIRY_MS
 
-    record.verifiedAt = Date.now()
+    record.verifiedAt = now
     record.resetTokenHash = resetTokenHash
     record.resetTokenExpiresAt = resetTokenExpiresAt
 
@@ -283,42 +367,87 @@ export class PasswordResetService {
       return { success: false, message: 'Password must be at least 8 characters long.' }
     }
 
-    // Find record by reset token hash
     let matchingEmail: string | null = null
-    let matchingRecord: MemoryOtpRecord | null = null
+    const now = Date.now()
 
-    for (const [email, record] of memoryStore.entries()) {
-      if (
-        record.resetTokenHash &&
-        record.resetTokenExpiresAt &&
-        Date.now() <= record.resetTokenExpiresAt
-      ) {
-        const testHash = hashValue(resetToken, email)
+    // 1. Check Supabase password_resets table
+    try {
+      const supabase = createAdminClient()
+      const { data: dbRecords } = await supabase
+        .from('password_resets')
+        .select('*')
+        .not('reset_token_hash', 'is', null)
+
+      if (dbRecords && dbRecords.length > 0) {
+        for (const record of dbRecords) {
+          if (record.reset_token_expires_at && new Date(record.reset_token_expires_at).getTime() >= now) {
+            const testHash = hashValue(resetToken, record.email)
+            if (testHash === record.reset_token_hash) {
+              matchingEmail = record.email
+              // Invalidate record in DB
+              await supabase.from('password_resets').update({
+                reset_token_hash: null,
+                reset_token_expires_at: null,
+              }).eq('id', record.id)
+              break
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[PasswordResetService] DB reset lookup fallback to memory:', err)
+    }
+
+    // 2. Fallback to Memory Store lookup if not found in DB
+    if (!matchingEmail) {
+      for (const [email, record] of memoryStore.entries()) {
         if (
-          testHash.length === record.resetTokenHash.length &&
-          crypto.timingSafeEqual(Buffer.from(testHash, 'hex'), Buffer.from(record.resetTokenHash, 'hex'))
+          record.resetTokenHash &&
+          record.resetTokenExpiresAt &&
+          now <= record.resetTokenExpiresAt
         ) {
-          matchingEmail = email
-          matchingRecord = record
-          break
+          const testHash = hashValue(resetToken, email)
+          if (
+            testHash.length === record.resetTokenHash.length &&
+            crypto.timingSafeEqual(Buffer.from(testHash, 'hex'), Buffer.from(record.resetTokenHash, 'hex'))
+          ) {
+            matchingEmail = email
+            memoryStore.delete(email)
+            break
+          }
         }
       }
     }
 
-    if (!matchingEmail || !matchingRecord) {
+    if (!matchingEmail) {
       return {
         success: false,
         message: 'Password reset session has expired or is invalid. Please start again.',
       }
     }
 
-    // Invalidate the reset token immediately (single use protection)
-    memoryStore.delete(matchingEmail)
+    // Compute persistent hash for the new password
+    const newPasswordHash = hashValue(newPassword, matchingEmail)
 
-    // Update active credentials store for immediate login synchronization
+    // 3. PERSIST new password in Supabase system_auth_credentials table
+    try {
+      const supabase = createAdminClient()
+      await supabase.from('system_auth_credentials').upsert(
+        {
+          email: matchingEmail,
+          password_hash: newPasswordHash,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'email' }
+      )
+    } catch (err) {
+      console.error('[PasswordResetService] DB store error:', err)
+    }
+
+    // 4. Update memory store for current instance
     PasswordResetService.setPassword(matchingEmail, newPassword)
 
-    // Update password in Supabase Auth
+    // 5. Update password in Supabase Auth
     try {
       const supabase = createAdminClient()
       const { data: userList } = await supabase.auth.admin.listUsers()
@@ -330,9 +459,16 @@ export class PasswordResetService {
         await supabase.auth.admin.updateUserById(targetUser.id, {
           password: newPassword,
         })
+      } else {
+        await supabase.auth.admin.createUser({
+          email: matchingEmail,
+          password: newPassword,
+          email_confirm: true,
+          user_metadata: { full_name: 'Admin DriveEase' },
+        })
       }
     } catch (err) {
-      console.error('[PasswordResetService] Supabase password update note:', err)
+      console.error('[PasswordResetService] Supabase Auth update note:', err)
     }
 
     return {

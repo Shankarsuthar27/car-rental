@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     const cleanPass = password.trim()
 
     // 1. Check against active updated credentials (including newly reset password)
-    const isLocalValid = PasswordResetService.validateCredentials(cleanEmail, cleanPass)
+    const isLocalValid = await PasswordResetService.validateCredentials(cleanEmail, cleanPass)
 
     if (isLocalValid) {
       const response = NextResponse.json({
