@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     const isSuperAdmin = role === 'admin'
     const userRole = isSuperAdmin ? 'super_admin' : 'customer'
     const email = isSuperAdmin ? 'admin@driveease.in' : 'rahul@example.com'
-    const password = 'Password@123'
+    const password = isSuperAdmin ? 'admin123' : 'Password@123'
     const fullName = isSuperAdmin ? 'Admin DriveEase' : 'Rahul Sharma'
 
     try {
