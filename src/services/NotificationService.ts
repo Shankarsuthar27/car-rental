@@ -41,28 +41,266 @@ export class NotificationService {
     to: string,
     subject: string,
     htmlContent: string
-  ): Promise<void> {
-    if (!process.env.RESEND_API_KEY) {
-      console.log('[NotificationService] Email skipped — RESEND_API_KEY not set')
-      return
+  ): Promise<boolean> {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey || apiKey === 're_placeholder') {
+      console.log('[NotificationService] Email skipped — RESEND_API_KEY not configured')
+      return false
     }
 
+    const fromAddress = process.env.RESEND_FROM_EMAIL || 'DriveEase Fleet <onboarding@resend.dev>'
+
     try {
-      await fetch('https://api.resend.com/emails', {
+      const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'DriveEase <noreply@driveease.in>',
-          to,
+          from: fromAddress,
+          to: Array.isArray(to) ? to : [to],
           subject,
           html: htmlContent
         })
       })
+
+      const result = await response.json()
+      if (!response.ok) {
+        console.error('[NotificationService] Resend API Error:', result)
+        return false
+      }
+
+      console.log(`[NotificationService] Email successfully sent to ${to} (ID: ${result.id})`)
+      return true
     } catch (e) {
-      console.error('[NotificationService] Email send failed:', e)
+      console.error('[NotificationService] Email send exception:', e)
+      return false
+    }
+  }
+
+  /**
+   * Send comprehensive Car Assignment & Dispatch notification to Owner & Admin
+   */
+  static async notifyCarAssignedToOwner(params: {
+    bookingNumber: string
+    vehicleBrand: string
+    vehicleModel: string
+    registrationNumber: string
+    startingKm: number
+    customerName: string
+    customerPhone: string
+    customerEmail?: string
+    customerDl?: string
+    rentalType: string
+    pickupDatetime: string
+    returnDatetime: string
+    grandTotal: number
+    advancePaid: number
+    outstandingBalance: number
+    paymentMethod: string
+    paymentStatus: string
+    notes?: string
+  }): Promise<void> {
+    const {
+      bookingNumber,
+      vehicleBrand,
+      vehicleModel,
+      registrationNumber,
+      startingKm,
+      customerName,
+      customerPhone,
+      customerEmail,
+      customerDl,
+      rentalType,
+      pickupDatetime,
+      returnDatetime,
+      grandTotal,
+      advancePaid,
+      outstandingBalance,
+      paymentMethod,
+      paymentStatus,
+      notes,
+    } = params
+
+    const ownerEmail = process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || 'ss2137789@gmail.com'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://driveease.in'
+
+    const emailSubject = `🚗 Car Assigned: ${vehicleBrand} ${vehicleModel} (${registrationNumber}) → ${customerName} [${bookingNumber}]`
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${emailSubject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f3f4f6;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0b0f19; padding: 30px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 30px; text-align: center;">
+              <div style="font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #e0e7ff; margin-bottom: 6px;">
+                ⚡ Fleet Dispatch Alert
+              </div>
+              <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #ffffff; line-height: 1.2;">
+                Vehicle Assigned & Dispatched!
+              </h1>
+              <div style="margin-top: 10px; display: inline-block; background-color: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); padding: 4px 14px; border-radius: 9999px; font-family: monospace; font-size: 13px; color: #ffffff;">
+                Rental ID: <strong>${bookingNumber}</strong>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Content Body -->
+          <tr>
+            <td style="padding: 30px 25px;">
+              <p style="margin: 0 0 20px 0; font-size: 14px; color: #9ca3af; line-height: 1.5;">
+                A fleet vehicle has just been marked as <strong style="color: #3b82f6;">Running</strong> and dispatched to an active customer. Here are the full rental details:
+              </p>
+
+              <!-- Vehicle Details Card -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #1f2937; border: 1px solid #374151; border-radius: 14px; margin-bottom: 16px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #374151; background-color: #273142;">
+                    <strong style="color: #a78bfa; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">🚘 Assigned Vehicle</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 16px 18px;">
+                    <div style="font-size: 18px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">
+                      ${vehicleBrand} ${vehicleModel}
+                    </div>
+                    <div style="font-size: 13px; color: #9ca3af; font-family: monospace;">
+                      Plate Number: <strong style="color: #60a5fa;">${registrationNumber}</strong>
+                    </div>
+                    <div style="font-size: 12px; color: #9ca3af; margin-top: 6px;">
+                      Starting Odometer: <strong>${startingKm.toLocaleString('en-IN')} KM</strong>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Customer Details Card -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #1f2937; border: 1px solid #374151; border-radius: 14px; margin-bottom: 16px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #374151; background-color: #273142;">
+                    <strong style="color: #34d399; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">👤 Customer & Driver Information</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 16px 18px;">
+                    <div style="font-size: 16px; font-weight: 700; color: #ffffff; margin-bottom: 6px;">
+                      ${customerName}
+                    </div>
+                    <div style="font-size: 13px; color: #d1d5db; margin-bottom: 4px;">
+                      📞 Phone: <a href="tel:${customerPhone}" style="color: #60a5fa; text-decoration: none;">${customerPhone}</a>
+                    </div>
+                    ${customerEmail ? `<div style="font-size: 13px; color: #d1d5db; margin-bottom: 4px;">✉️ Email: <a href="mailto:${customerEmail}" style="color: #60a5fa; text-decoration: none;">${customerEmail}</a></div>` : ''}
+                    ${customerDl ? `<div style="font-size: 13px; color: #9ca3af;">🪪 Driving License: <strong style="color: #f3f4f6;">${customerDl}</strong></div>` : ''}
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Schedule & Terms Card -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #1f2937; border: 1px solid #374151; border-radius: 14px; margin-bottom: 16px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #374151; background-color: #273142;">
+                    <strong style="color: #fbbf24; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">⏱️ Rental Period & Terms</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 16px 18px; font-size: 13px; color: #d1d5db; line-height: 1.6;">
+                    <div>Rate Plan: <strong style="text-transform: capitalize; color: #ffffff;">${rentalType} Rental</strong></div>
+                    <div>Pickup: <strong style="color: #ffffff;">${new Date(pickupDatetime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</strong></div>
+                    <div>Expected Return: <strong style="color: #ffffff;">${new Date(returnDatetime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</strong></div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Financial Summary Table -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #1f2937; border: 1px solid #374151; border-radius: 14px; margin-bottom: 24px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #374151; background-color: #273142;">
+                    <strong style="color: #60a5fa; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">💳 Financial Summary</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 16px 18px;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="4" style="font-size: 13px; color: #9ca3af;">
+                      <tr>
+                        <td>Grand Total:</td>
+                        <td align="right" style="font-weight: 700; color: #ffffff; font-size: 15px;">₹${grandTotal.toLocaleString('en-IN')}</td>
+                      </tr>
+                      <tr>
+                        <td>Advance Paid (${paymentMethod}):</td>
+                        <td align="right" style="font-weight: 700; color: #34d399;">₹${advancePaid.toLocaleString('en-IN')}</td>
+                      </tr>
+                      <tr>
+                        <td>Outstanding Balance:</td>
+                        <td align="right" style="font-weight: 700; color: ${outstandingBalance > 0 ? '#f87171' : '#34d399'};">₹${outstandingBalance.toLocaleString('en-IN')}</td>
+                      </tr>
+                      <tr>
+                        <td>Payment Status:</td>
+                        <td align="right" style="text-transform: uppercase; font-weight: 800; color: ${paymentStatus === 'paid' ? '#34d399' : '#fbbf24'}; font-size: 11px;">${paymentStatus}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              ${notes ? `
+              <div style="background-color: rgba(255,255,255,0.03); border-left: 3px solid #6366f1; padding: 10px 14px; margin-bottom: 20px; font-size: 12px; color: #9ca3af; border-radius: 0 8px 8px 0;">
+                <strong>Assignment Notes:</strong> ${notes}
+              </div>
+              ` : ''}
+
+              <!-- Action Button -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 10px;">
+                <tr>
+                  <td align="center">
+                    <a href="${appUrl}/admin/dashboard" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #ffffff; font-size: 14px; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
+                      Open Fleet Operations Dashboard →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 25px; border-top: 1px solid #1f2937; text-align: center; font-size: 11px; color: #6b7280;">
+              DriveEase Fleet Management System • Automated Dispatch Notification<br>
+              Sent securely to authorized owner: <span style="color: #9ca3af;">${ownerEmail}</span>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+
+    // 1. Send to Owner / Administrator
+    await this.sendEmail(ownerEmail, emailSubject, htmlContent)
+
+    // 2. Also send confirmation to customer if customer email is available
+    if (customerEmail && customerEmail.includes('@') && customerEmail !== ownerEmail) {
+      await this.sendEmail(
+        customerEmail,
+        `Your Rental Confirmation — ${vehicleBrand} ${vehicleModel} [${bookingNumber}] | DriveEase`,
+        htmlContent
+      )
     }
   }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatCustomer } from '@/lib/customers'
+import { NotificationService } from '@/services/NotificationService'
 
 export async function POST(req: Request) {
   try {
@@ -207,6 +208,28 @@ export async function POST(req: Request) {
       customer: finalCustomer,
       vehicle: finalVehicle,
     }
+
+    // 8. Dispatch Email notification to Owner / Admin
+    NotificationService.notifyCarAssignedToOwner({
+      bookingNumber,
+      vehicleBrand: vehicle.brand,
+      vehicleModel: vehicle.model,
+      registrationNumber: vehicle.registration_number,
+      startingKm: startingKmNum,
+      customerName: finalCustomer.profile?.full_name || 'Valued Customer',
+      customerPhone: finalCustomer.profile?.phone || '—',
+      customerEmail: finalCustomer.profile?.email,
+      customerDl: finalCustomer.driving_license_number || finalCustomer.profile?.driving_license_number,
+      rentalType,
+      pickupDatetime,
+      returnDatetime,
+      grandTotal,
+      advancePaid: amountPaid,
+      outstandingBalance: outstanding,
+      paymentMethod: payment_method || 'cash',
+      paymentStatus,
+      notes,
+    }).catch(err => console.error('[AssignAPI] Notification dispatch error:', err))
 
     return NextResponse.json({
       success: true,
