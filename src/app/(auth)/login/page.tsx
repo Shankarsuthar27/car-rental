@@ -124,7 +124,7 @@ function LoginForm() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-card/90 backdrop-blur-xl border border-border/80 rounded-3xl p-8 shadow-2xl space-y-6"
+        className="w-full max-w-md bg-card/92 dark:bg-card/85 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-3xl p-7 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] space-y-6"
       >
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center gap-2.5 mb-2">
@@ -333,20 +333,33 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
-      {/* Background Decorative Rings */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+    <div className="min-h-screen relative flex flex-col justify-center items-center px-4 py-12 overflow-hidden select-none">
+      {/* Background Image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/login-bg.jpg"
+        alt="DriveEase Luxury Car Rental"
+        className="absolute inset-0 w-full h-full object-cover object-center scale-100 pointer-events-none"
+      />
 
-      <Suspense
-        fallback={
-          <div className="p-8 text-center text-sm text-muted-foreground flex items-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" /> Loading Admin Portal...
-          </div>
-        }
-      >
-        <LoginForm />
-      </Suspense>
+      {/* Atmospheric Frosted Gradient Overlay for Contrast & Readability */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/65 to-background/80 dark:from-background/95 dark:via-background/75 dark:to-background/85 pointer-events-none backdrop-blur-[2px]" />
+
+      {/* Ambient Glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+
+      {/* Content Form Container */}
+      <div className="relative z-10 w-full flex justify-center items-center">
+        <Suspense
+          fallback={
+            <div className="p-8 text-center text-sm text-white bg-black/60 backdrop-blur-xl rounded-3xl flex items-center gap-2 shadow-2xl border border-white/10">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" /> Loading Admin Portal...
+            </div>
+          }
+        >
+          <LoginForm />
+        </Suspense>
+      </div>
     </div>
   )
 }
