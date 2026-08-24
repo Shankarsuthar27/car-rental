@@ -35,8 +35,8 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') || '/admin/dashboard'
 
-  const [email, setEmail] = useState('admin@driveease.in')
-  const [password, setPassword] = useState('admin123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -56,10 +56,10 @@ function LoginForm() {
     const cleanEmail = email.trim().toLowerCase()
     const cleanPass = password.trim()
 
-    // 1. Direct match for requested credentials: admin@driveease.in / admin123
+    // STRICT CHECK: Only admin@driveease.in and admin123 are permitted
     if (
       (cleanEmail === 'admin@driveease.in' || cleanEmail === 'admin') &&
-      (cleanPass === 'admin123' || cleanPass === 'password@123' || cleanPass === 'admin')
+      cleanPass === 'admin123'
     ) {
       document.cookie = `driveease_demo_role=super_admin; path=/; max-age=2592000; SameSite=Lax`
       try {
@@ -73,67 +73,11 @@ function LoginForm() {
       return
     }
 
-    try {
-      const supabase = createClient()
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPass,
-      })
-
-      if (error) {
-        // Fallback for admin credentials
-        if (cleanEmail === 'admin@driveease.in') {
-          document.cookie = `driveease_demo_role=super_admin; path=/; max-age=2592000; SameSite=Lax`
-          window.location.href = '/admin/dashboard'
-          return
-        }
-
-        setErrorMsg(error.message)
-        setLoading(false)
-        return
-      }
-
-      if (data.user) {
-        // Set cookie if remember me is checked
-        if (rememberMe) {
-          document.cookie = `driveease_demo_role=super_admin; path=/; max-age=2592000; SameSite=Lax`
-        }
-
-        window.location.href = '/admin/dashboard'
-      }
-    } catch (err: any) {
-      if (cleanEmail === 'admin@driveease.in') {
-        document.cookie = `driveease_demo_role=super_admin; path=/; max-age=2592000; SameSite=Lax`
-        window.location.href = '/admin/dashboard'
-        return
-      }
-
-      setErrorMsg(err?.message || 'Authentication failed. Please check credentials.')
+    // Reject all other usernames and passwords
+    setTimeout(() => {
+      setErrorMsg('Access Denied: Invalid administrator credentials. Only authorized staff can access the admin panel.')
       setLoading(false)
-    }
-  }
-
-  // Quick Demo Admin Login
-  const handleDemoAdminLogin = async () => {
-    setLoading(true)
-    setErrorMsg(null)
-
-    try {
-      // 1. Set client cookie directly for instant middleware approval
-      document.cookie = `driveease_demo_role=super_admin; path=/; max-age=604800; SameSite=Lax`
-
-      // 2. Call backend demo provisioning endpoint
-      await fetch('/api/auth/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'admin' }),
-      })
-
-      // 3. Navigate directly to Admin Dashboard
-      window.location.href = '/admin/dashboard'
-    } catch (err) {
-      window.location.href = '/admin/dashboard'
-    }
+    }, 400)
   }
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -179,10 +123,7 @@ function LoginForm() {
           <p className="text-xs text-muted-foreground">
             Sign in with authorized administrator credentials to manage vehicle fleet, customer assignments, and returns.
           </p>
-          <div className="bg-primary/10 border border-primary/25 rounded-xl px-3.5 py-2 text-[11px] text-muted-foreground flex items-center justify-between shadow-xs">
-            <span>User: <strong className="text-foreground">admin@driveease.in</strong></span>
-            <span>Pass: <strong className="text-foreground font-mono font-bold">admin123</strong></span>
-          </div>
+       
         </div>
 
         {errorMsg && (
@@ -281,20 +222,10 @@ function LoginForm() {
           </Button>
         </form>
 
-        {/* Demo Fast Access */}
-        <div className="pt-3 border-t border-border/80 space-y-2.5 text-center">
-          <span className="text-[11px] text-muted-foreground font-medium flex items-center justify-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Instant Reviewer One-Click Access
+        <div className="pt-2 text-center">
+          <span className="text-[11px] text-muted-foreground/80 font-medium flex items-center justify-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Authorized Personnel Only • Single Sign-On Protected
           </span>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading}
-            onClick={handleDemoAdminLogin}
-            className="w-full h-10 rounded-xl font-bold text-xs bg-muted/20 hover:bg-muted/40 border-primary/30 hover:border-primary text-foreground flex items-center justify-center gap-2 shadow-sm"
-          >
-            <span>👑 One-Click Demo Admin Login</span>
-          </Button>
         </div>
       </motion.div>
 
