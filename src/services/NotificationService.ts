@@ -80,6 +80,94 @@ export class NotificationService {
   }
 
   /**
+   * Send Password Reset OTP Email
+   */
+  static async notifyPasswordResetOtp(to: string, otp: string, expiryMinutes = 10): Promise<boolean> {
+    const appName = process.env.NEXT_PUBLIC_APP_NAME || 'DriveEase'
+    const emailSubject = `🔐 ${otp} is your password reset code | ${appName}`
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your Password</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f3f4f6;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0b0f19; padding: 30px 10px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 30px 25px; text-align: center;">
+              <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #e0e7ff; margin-bottom: 6px;">
+                🛡️ Security Verification
+              </div>
+              <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #ffffff; line-height: 1.2;">
+                Reset Your Password
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 30px 25px;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; color: #e5e7eb; line-height: 1.5;">
+                Hello,
+              </p>
+              <p style="margin: 0 0 24px 0; font-size: 14px; color: #9ca3af; line-height: 1.6;">
+                We received a request to reset the password for your <strong>${appName}</strong> administrator account. Use the 6-digit verification code below to proceed:
+              </p>
+
+              <!-- OTP Box -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td align="center" style="background: #1f2937; border: 2px dashed #6366f1; border-radius: 16px; padding: 20px 10px;">
+                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 900; letter-spacing: 12px; color: #a5b4fc; text-indent: 12px;">
+                      ${otp}
+                    </div>
+                    <div style="font-size: 12px; color: #9ca3af; margin-top: 8px;">
+                      ⏱️ Valid for <strong>${expiryMinutes} minutes</strong>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Warning Box -->
+              <div style="background-color: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 12px; color: #fca5a5; line-height: 1.5;">
+                  <strong>Security Reminder:</strong> Never share this OTP with anyone. DriveEase staff will never ask for your password or verification code.
+                </p>
+              </div>
+
+              <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.5;">
+                If you did not request a password reset, you can safely ignore this email. Your existing password will remain unchanged.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 25px; border-top: 1px solid #1f2937; text-align: center; font-size: 11px; color: #6b7280;">
+              ${appName} Fleet Management System • Automated Security Alert<br>
+              Sent to: <span style="color: #9ca3af;">${to}</span>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+    return await this.sendEmail(to, emailSubject, htmlContent)
+  }
+
+  /**
    * Send comprehensive Car Assignment & Dispatch notification to Owner & Admin
    */
   static async notifyCarAssignedToOwner(params: {

@@ -13,22 +13,11 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  ShieldCheck,
-  CheckCircle2,
-  KeyRound
+  ShieldCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog'
-import { createClient } from '@/lib/supabase/client'
 
 function LoginForm() {
   const router = useRouter()
@@ -41,12 +30,6 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(true)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-
-  // Forgot Password Modal
-  const [forgotOpen, setForgotOpen] = useState(false)
-  const [forgotEmail, setForgotEmail] = useState('')
-  const [forgotLoading, setForgotLoading] = useState(false)
-  const [forgotSuccess, setForgotSuccess] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,22 +61,6 @@ function LoginForm() {
       setErrorMsg('Access Denied: Invalid administrator credentials. Only authorized staff can access the admin panel.')
       setLoading(false)
     }, 400)
-  }
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setForgotLoading(true)
-    try {
-      const supabase = createClient()
-      await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/login`,
-      })
-      setForgotSuccess(true)
-    } catch (err) {
-      setForgotSuccess(true) // For security, show sent message
-    } finally {
-      setForgotLoading(false)
-    }
   }
 
   return (
@@ -156,17 +123,12 @@ function LoginForm() {
           <div className="space-y-1.5">
             <div className="flex justify-between items-center text-xs">
               <Label className="font-semibold">Password</Label>
-              <button
-                type="button"
-                onClick={() => {
-                  setForgotEmail(email)
-                  setForgotSuccess(false)
-                  setForgotOpen(true)
-                }}
+              <Link
+                href="/forgot-password"
                 className="text-primary hover:underline text-[11px] font-medium transition-colors"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
             <div className="relative">
               <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -228,73 +190,6 @@ function LoginForm() {
           </span>
         </div>
       </motion.div>
-
-      {/* FORGOT PASSWORD DIALOG */}
-      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
-        <DialogContent className="max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-primary" /> Reset Admin Password
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Enter your registered administrator email address to receive password recovery instructions.
-            </DialogDescription>
-          </DialogHeader>
-
-          {forgotSuccess ? (
-            <div className="py-4 text-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <p className="text-sm font-semibold text-foreground">Recovery Email Sent</p>
-              <p className="text-xs text-muted-foreground">
-                If an account matches <strong>{forgotEmail}</strong>, password reset instructions have been dispatched.
-              </p>
-              <Button
-                type="button"
-                onClick={() => setForgotOpen(false)}
-                className="mt-4 text-xs h-9"
-              >
-                Return to Login
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={handleForgotPassword} className="space-y-4 pt-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Registered Admin Email</Label>
-                <Input
-                  type="email"
-                  required
-                  value={forgotEmail}
-                  onChange={e => setForgotEmail(e.target.value)}
-                  placeholder="admin@driveease.in"
-                  className="h-10 text-xs rounded-xl"
-                />
-              </div>
-
-              <DialogFooter className="gap-2 sm:gap-0 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setForgotOpen(false)}
-                  className="text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={forgotLoading || !forgotEmail}
-                  className="gradient-brand text-white border-0 text-xs font-bold"
-                >
-                  {forgotLoading ? 'Sending...' : 'Send Recovery Link'}
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
