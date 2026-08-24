@@ -15,7 +15,8 @@ import {
   ArrowRight,
   Info,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Zap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
