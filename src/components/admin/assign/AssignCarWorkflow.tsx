@@ -460,12 +460,10 @@ export function AssignCarWorkflow({
                     ✕
                   </button>
                 )}
-              </div>
-
-              {/* Customer Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+              </div>              {/* Customer Cards List View */}
+              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
                 {filteredCustomers.length === 0 ? (
-                  <div className="sm:col-span-2 py-8 text-center bg-muted/20 border border-dashed border-border rounded-2xl">
+                  <div className="py-8 text-center bg-muted/20 border border-dashed border-border rounded-2xl">
                     <Users className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
                     <p className="text-xs font-semibold text-foreground">No customers found</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -488,91 +486,92 @@ export function AssignCarWorkflow({
                     const phone = cust.profile?.phone || cust.emergency_contact_phone || 'No phone'
                     const email = cust.profile?.email || ''
                     const dl = cust.driving_license_number || extractDrivingLicense(cust) || 'Verified on file'
-                    const initials = name
-                      .split(' ')
-                      .map(p => p[0])
-                      .slice(0, 2)
-                      .join('')
-                      .toUpperCase() || 'C'
+                    const initials =
+                      name
+                        .split(' ')
+                        .map(p => p[0])
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase() || 'C'
 
                     return (
                       <div
                         key={cust.id}
                         onClick={() => setSelectedCustomerId(cust.id)}
                         className={cn(
-                          'p-3.5 rounded-2xl border text-xs cursor-pointer transition-all duration-150 relative select-none flex flex-col justify-between gap-2.5 group',
+                          'p-3 sm:p-3.5 rounded-2xl border text-xs cursor-pointer transition-all duration-150 relative select-none flex items-center justify-between gap-3 group',
                           isSelected
-                            ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm'
-                            : 'border-border/80 bg-card hover:bg-muted/30 hover:border-primary/40'
+                            ? 'border-primary bg-primary/8 ring-2 ring-primary/30 shadow-xs'
+                            : 'border-border/80 bg-card hover:bg-muted/40 hover:border-primary/40'
                         )}
                       >
-                        {/* Top: Avatar, Name, Code, and Checkmark */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div
-                              className={cn(
-                                'w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors shadow-2xs',
-                                isSelected
-                                  ? 'gradient-brand text-white'
-                                  : 'bg-primary/10 text-primary group-hover:bg-primary/20'
-                              )}
-                            >
-                              {initials}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="font-extrabold text-foreground text-[13px] block truncate leading-tight">
+                        {/* Left: Avatar & Info */}
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div
+                            className={cn(
+                              'w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors shadow-2xs',
+                              isSelected
+                                ? 'gradient-brand text-white'
+                                : 'bg-primary/10 text-primary group-hover:bg-primary/20'
+                            )}
+                          >
+                            {initials}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-extrabold text-foreground text-sm truncate leading-tight">
                                 {name}
                               </span>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="font-mono text-[10px] text-muted-foreground truncate">
-                                  {cust.customer_code || 'CUST-VERIFIED'}
+                              <span className="font-mono text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded-md shrink-0">
+                                {cust.customer_code || 'CUST-VERIFIED'}
+                              </span>
+                              {cust.city && (
+                                <span className="text-[11px] text-muted-foreground shrink-0 hidden sm:inline">
+                                  • {cust.city}
                                 </span>
-                                <span className="text-muted-foreground/60 text-[10px]">•</span>
-                                <span className="text-[10px] text-muted-foreground truncate">
-                                  {cust.city || 'Jaipur'}
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-muted-foreground">
+                              <span className="font-semibold text-foreground flex items-center gap-1 shrink-0">
+                                <Phone className="w-3 h-3 text-primary shrink-0" />
+                                {phone}
+                              </span>
+                              {email && (
+                                <span className="flex items-center gap-1 truncate max-w-[180px] sm:max-w-[240px]">
+                                  <Mail className="w-3 h-3 text-muted-foreground/70 shrink-0" />
+                                  <span className="truncate">{email}</span>
                                 </span>
-                              </div>
+                              )}
                             </div>
                           </div>
+                        </div>
+
+                        {/* Right: DL Badge & Selection Indicator */}
+                        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[10px] px-2 py-0.5 font-mono tracking-tight shrink-0 border hidden xs:inline-flex',
+                              isSelected
+                                ? 'border-primary/40 bg-primary/15 text-primary font-bold'
+                                : 'border-border/80 text-muted-foreground bg-muted/30'
+                            )}
+                          >
+                            🪪 {dl}
+                          </Badge>
 
                           <div
                             className={cn(
-                              'w-5 h-5 rounded-full flex items-center justify-center shrink-0 border transition-all mt-0.5',
+                              'w-6 h-6 rounded-full flex items-center justify-center shrink-0 border transition-all',
                               isSelected
                                 ? 'bg-primary border-primary text-white shadow-xs'
                                 : 'border-border bg-muted/40 text-transparent group-hover:border-primary/40'
                             )}
                           >
-                            <Check className="w-3 h-3" />
+                            <Check className="w-3.5 h-3.5" />
                           </div>
-                        </div>
-
-                        {/* Middle & Bottom: Phone, DL badge, and Email */}
-                        <div className="pt-2 border-t border-border/60 space-y-1 text-[11px]">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-semibold text-foreground flex items-center gap-1.5 truncate">
-                              <Phone className="w-3 h-3 text-primary shrink-0" />
-                              {phone}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'text-[9px] px-1.5 py-0 font-mono tracking-tight shrink-0 border',
-                                isSelected
-                                  ? 'border-primary/40 bg-primary/10 text-primary font-bold'
-                                  : 'border-border/80 text-muted-foreground'
-                              )}
-                            >
-                              🪪 {dl}
-                            </Badge>
-                          </div>
-
-                          {email && (
-                            <div className="flex items-center gap-1 text-[10.5px] text-muted-foreground truncate">
-                              <Mail className="w-2.5 h-2.5 shrink-0 opacity-70" />
-                              <span className="truncate">{email}</span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     )
