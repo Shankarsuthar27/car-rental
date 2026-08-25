@@ -46,6 +46,7 @@
 }
 
 :root {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   /* DriveEase Brand — Deep Indigo + Electric Blue palette */
   --radius: 0.75rem;
   --background: oklch(0.99 0.002 256);
