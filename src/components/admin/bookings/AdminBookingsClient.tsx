@@ -106,6 +106,8 @@ export function AdminBookingsClient({
   const [lateCharges, setLateCharges] = useState('0')
   const [extraKmCharges, setExtraKmCharges] = useState('0')
   const [cleaningCharges, setCleaningCharges] = useState('0')
+  const [overspeedingCharges, setOverspeedingCharges] = useState('0')
+  const [maxSpeedRecorded, setMaxSpeedRecorded] = useState('')
   const [otherCharges, setOtherCharges] = useState('0')
   const [returnDiscount, setReturnDiscount] = useState('0')
   const [depositSettlement, setDepositSettlement] = useState('refunded')
@@ -134,6 +136,8 @@ export function AdminBookingsClient({
     setExtraKmCharges('0')
     setDamageCost('0')
     setCleaningCharges('0')
+    setOverspeedingCharges('0')
+    setMaxSpeedRecorded('')
     setOtherCharges('0')
     setReturnDiscount('0')
     setDamageDescription('')
@@ -152,18 +156,19 @@ export function AdminBookingsClient({
   }, [searchParams, bookings])
 
   // Live calculation of Return Bill:
-  // Formula: Base Rental + Late Charges + Extra KM Charges + Damage Charges + Cleaning Charges + Other Charges - Discount
+  // Formula: Base Rental + Late Charges + Extra KM Charges + Damage Charges + Cleaning Charges + Over Speeding Charges + Other Charges - Discount
   const baseRentalAmount = selectedBooking ? Number(selectedBooking.base_rental || 0) : 0
   const numLate = Number(lateCharges) || 0
   const numExtraKm = Number(extraKmCharges) || 0
   const numDamage = Number(damageCost) || 0
   const numCleaning = Number(cleaningCharges) || 0
+  const numOverspeed = Number(overspeedingCharges) || 0
   const numOther = Number(otherCharges) || 0
   const numDiscount = Number(returnDiscount) || 0
 
   const subtotalBeforeTax = Math.max(
     0,
-    baseRentalAmount + numLate + numExtraKm + numDamage + numCleaning + numOther - numDiscount
+    baseRentalAmount + numLate + numExtraKm + numDamage + numCleaning + numOverspeed + numOther - numDiscount
   )
   const taxRate = selectedBooking?.tax_rate || 18
   const returnTaxAmount = Math.round((subtotalBeforeTax * (taxRate / 100)) * 100) / 100
@@ -202,6 +207,8 @@ export function AdminBookingsClient({
         late_charges: numLate,
         extra_km_charges: numExtraKm,
         cleaning_charges: numCleaning,
+        overspeeding_charges: numOverspeed,
+        max_speed_recorded: maxSpeedRecorded,
         other_charges: numOther,
         discount_amount: numDiscount,
         tax_rate: taxRate,
@@ -788,45 +795,140 @@ export function AdminBookingsClient({
                 </div>
               </div>
 
+              {/* Over Speeding Violation Check */}
+              <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Gauge className="w-3.5 h-3.5 text-amber-500" /> Over Speeding Penalty Check
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    Standard Fleet Limit: 80 km/h
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <Input
+                      value={maxSpeedRecorded}
+                      onChange={e => setMaxSpeedRecorded(e.target.value)}
+                      placeholder="e.g. 115 km/h on Highway (2 alerts logged)"
+                      className="h-9 text-xs rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="number"
+                      value={overspeedingCharges}
+                      onChange={e => setOverspeedingCharges(e.target.value)}
+                      placeholder="Speeding Fine ₹"
+                      className="h-9 text-xs rounded-xl font-mono text-amber-600 dark:text-amber-400 font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Speed Penalty Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className="text-[10px] text-muted-foreground mr-1">Quick Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => { setOverspeedingCharges('0'); setMaxSpeedRecorded('') }}
+                    className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all',
+                      numOverspeed === 0
+                        ? 'bg-primary/10 border-primary/30 text-primary font-bold'
+                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                    )}
+                  >
+                    No Fine (₹0)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setOverspeedingCharges('500'); setMaxSpeedRecorded('95 km/h (1x Alert)') }}
+                    className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all',
+                      numOverspeed === 500
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-600 font-bold'
+                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                    )}
+                  >
+                    1 Alert (+₹500)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setOverspeedingCharges('1000'); setMaxSpeedRecorded('110 km/h (2x Alerts)') }}
+                    className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all',
+                      numOverspeed === 1000
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-600 font-bold'
+                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                    )}
+                  >
+                    2 Alerts (+₹1,000)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setOverspeedingCharges('2000'); setMaxSpeedRecorded('130+ km/h (Severe Violation)') }}
+                    className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all',
+                      numOverspeed === 2000
+                        ? 'bg-rose-500/20 border-rose-500/40 text-rose-600 font-bold'
+                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                    )}
+                  >
+                    Severe / 3+ (+₹2,000)
+                  </button>
+                </div>
+              </div>
+
               {/* Additional Charges Breakdown */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Late Fee (₹)</Label>
+                  <Label className="text-[11px] font-semibold">Late Fee (₹)</Label>
                   <Input
                     type="number"
                     value={lateCharges}
                     onChange={e => setLateCharges(e.target.value)}
-                    className="h-9 text-xs rounded-xl font-mono"
+                    className="h-8.5 text-xs rounded-xl font-mono"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Extra KM Fee (₹)</Label>
+                  <Label className="text-[11px] font-semibold">Extra KM (₹)</Label>
                   <Input
                     type="number"
                     value={extraKmCharges}
                     onChange={e => setExtraKmCharges(e.target.value)}
-                    className="h-9 text-xs rounded-xl font-mono"
+                    className="h-8.5 text-xs rounded-xl font-mono"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Cleaning Fee (₹)</Label>
+                  <Label className="text-[11px] font-semibold">Speeding (₹)</Label>
+                  <Input
+                    type="number"
+                    value={overspeedingCharges}
+                    onChange={e => setOverspeedingCharges(e.target.value)}
+                    className="h-8.5 text-xs rounded-xl font-mono text-amber-600 dark:text-amber-400 font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-semibold">Cleaning (₹)</Label>
                   <Input
                     type="number"
                     value={cleaningCharges}
                     onChange={e => setCleaningCharges(e.target.value)}
-                    className="h-9 text-xs rounded-xl font-mono"
+                    className="h-8.5 text-xs rounded-xl font-mono"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Discount (₹)</Label>
+                  <Label className="text-[11px] font-semibold">Discount (₹)</Label>
                   <Input
                     type="number"
                     value={returnDiscount}
                     onChange={e => setReturnDiscount(e.target.value)}
-                    className="h-9 text-xs rounded-xl font-mono"
+                    className="h-8.5 text-xs rounded-xl font-mono text-emerald-600"
                   />
                 </div>
               </div>
@@ -835,18 +937,19 @@ export function AdminBookingsClient({
               <div className="p-4 bg-card border-2 border-emerald-500/30 rounded-2xl space-y-2 text-xs">
                 <div className="flex items-center justify-between font-bold text-foreground border-b border-border pb-1.5">
                   <span>Live Formula Calculation:</span>
-                  <span className="font-mono text-[11px] text-muted-foreground">
-                    Rental + Late + Extra KM + Damage + Cleaning - Discount
+                  <span className="font-mono text-[10.5px] text-muted-foreground truncate max-w-[340px]">
+                    Rental + Late + Extra KM + Damage + Speeding + Cleaning - Discount
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-muted-foreground pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-muted-foreground pt-1">
                   <div>Base Rental: <span className="font-mono font-semibold text-foreground">₹{baseRentalAmount}</span></div>
                   <div>Late Charges: <span className="font-mono font-semibold text-foreground">+₹{numLate}</span></div>
                   <div>Extra KM Charges: <span className="font-mono font-semibold text-foreground">+₹{numExtraKm}</span></div>
                   <div>Damage / Repair: <span className="font-mono font-semibold text-foreground">+₹{numDamage}</span></div>
+                  <div>Speeding Fine: <span className={cn('font-mono font-bold', numOverspeed > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>+₹{numOverspeed}</span></div>
                   <div>Cleaning / Other: <span className="font-mono font-semibold text-foreground">+₹{numCleaning + numOther}</span></div>
-                  <div>Discount Applied: <span className="font-mono font-semibold text-emerald-600">-₹{numDiscount}</span></div>
+                  <div className="sm:col-span-3">Discount Applied: <span className="font-mono font-semibold text-emerald-600">-₹{numDiscount}</span></div>
                 </div>
 
                 <div className="border-t border-border pt-2 flex items-center justify-between">

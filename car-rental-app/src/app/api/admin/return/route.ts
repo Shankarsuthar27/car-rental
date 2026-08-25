@@ -14,6 +14,8 @@ export async function POST(req: Request) {
       late_charges = 0,
       extra_km_charges = 0,
       cleaning_charges = 0,
+      overspeeding_charges = 0,
+      max_speed_recorded = '',
       other_charges = 0,
       discount_amount = 0,
       tax_rate = 18,
@@ -65,14 +67,15 @@ export async function POST(req: Request) {
     const extraKmFee = Number(extra_km_charges) || 0
     const damageFee = Number(damage_cost) || 0
     const cleaningFee = Number(cleaning_charges) || 0
+    const overspeedFee = Number(overspeeding_charges) || 0
     const otherFee = Number(other_charges) || 0
     const discount = Number(discount_amount) || 0
     const taxRateNum = Number(tax_rate || booking.tax_rate || 18)
 
-    // Formula: Base Rental + Late + Extra KM + Damage + Cleaning + Other - Discount
+    // Formula: Base Rental + Late + Extra KM + Damage + Cleaning + Over Speeding + Other - Discount
     const subtotal = Math.max(
       0,
-      baseRental + lateFee + extraKmFee + damageFee + cleaningFee + otherFee - discount
+      baseRental + lateFee + extraKmFee + damageFee + cleaningFee + overspeedFee + otherFee - discount
     )
     const taxAmount = Math.round((subtotal * (taxRateNum / 100)) * 100) / 100
     const secDeposit = Number(booking.security_deposit || 0)
@@ -107,9 +110,11 @@ export async function POST(req: Request) {
         grand_total: finalGrandTotal,
         amount_paid: totalPaid,
         outstanding_amount: Math.max(0, finalGrandTotal - totalPaid),
-        admin_notes: admin_notes
-          ? `${booking.admin_notes || ''}\nReturn: ${admin_notes}`
-          : booking.admin_notes,
+        admin_notes: [
+          booking.admin_notes,
+          overspeedFee > 0 ? `Speeding Penalty: ₹${overspeedFee}${max_speed_recorded ? ` (Max Speed: ${max_speed_recorded})` : ''}` : null,
+          admin_notes ? `Return Note: ${admin_notes}` : null,
+        ].filter(Boolean).join('\n'),
         updated_at: new Date().toISOString(),
       })
       .eq('id', booking_id)
