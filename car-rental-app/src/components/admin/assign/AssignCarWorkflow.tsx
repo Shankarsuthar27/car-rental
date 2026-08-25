@@ -646,7 +646,7 @@ export function AssignCarWorkflow({
               </Link>
             </div>
 
-            {/* Vehicle Search & Grid */}
+            {/* Vehicle Search & List View */}
             <div className="space-y-3">
               <div className="relative">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -658,55 +658,95 @@ export function AssignCarWorkflow({
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
-                {filteredVehicles.map(car => {
-                  const isSelected = car.id === selectedVehicleId
-                  const primaryImg =
-                    (car as any).images?.find((img: any) => img.is_primary)?.url ||
-                    (car as any).images?.[0]?.url ||
-                    'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80'
+              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
+                {filteredVehicles.length === 0 ? (
+                  <div className="py-8 text-center bg-muted/20 border border-dashed border-border rounded-2xl">
+                    <Car className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                    <p className="text-xs font-semibold text-foreground">No available vehicles found</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      No cars matching "{vehicleSearch}" are currently available for dispatch.
+                    </p>
+                  </div>
+                ) : (
+                  filteredVehicles.map(car => {
+                    const isSelected = car.id === selectedVehicleId
+                    const primaryImg =
+                      (car as any).images?.find((img: any) => img.is_primary)?.url ||
+                      (car as any).images?.[0]?.url ||
+                      'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80'
 
-                  return (
-                    <div
-                      key={car.id}
-                      onClick={() => setSelectedVehicleId(car.id)}
-                      className={cn(
-                        'p-3.5 rounded-2xl border text-xs cursor-pointer transition-all duration-150 relative select-none flex flex-col justify-between gap-3',
-                        isSelected
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
-                          : 'border-border/80 bg-card hover:bg-muted/30 hover:border-border'
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <img
-                          src={primaryImg}
-                          alt={`${car.brand} ${car.model}`}
-                          className="w-16 h-12 rounded-xl object-cover border border-border/80 shrink-0 shadow-2xs"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <span className="font-black text-foreground text-sm block truncate">
-                            {car.brand} {car.model}
-                          </span>
-                          <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground inline-block mt-0.5">
-                            {car.registration_number}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground block capitalize mt-0.5">
-                            {car.fuel_type} • {car.transmission} • {car.current_odometer || 0} KM
-                          </span>
+                    return (
+                      <div
+                        key={car.id}
+                        onClick={() => setSelectedVehicleId(car.id)}
+                        className={cn(
+                          'p-3 sm:p-3.5 rounded-2xl border text-xs cursor-pointer transition-all duration-150 relative select-none flex items-center justify-between gap-3 group',
+                          isSelected
+                            ? 'border-primary bg-primary/8 ring-2 ring-primary/30 shadow-xs'
+                            : 'border-border/80 bg-card hover:bg-muted/40 hover:border-primary/40'
+                        )}
+                      >
+                        {/* Left: Thumbnail & Details */}
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <img
+                            src={primaryImg}
+                            alt={`${car.brand} ${car.model}`}
+                            className="w-16 h-12 rounded-xl object-cover border border-border/80 shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-black text-foreground text-sm truncate leading-tight">
+                                {car.brand} {car.model}
+                              </span>
+                              <span className="font-mono text-[10px] bg-muted/80 px-1.5 py-0.5 rounded text-muted-foreground font-semibold shrink-0">
+                                {car.registration_number}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded uppercase shrink-0">
+                                {car.type || 'Car'}
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-1 text-[11px] text-muted-foreground">
+                              <span className="capitalize">{car.fuel_type}</span>
+                              <span>•</span>
+                              <span className="capitalize">{car.transmission}</span>
+                              <span>•</span>
+                              <span className="font-mono font-medium text-foreground">{car.current_odometer || 0} KM</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: Pricing, Badge & Selection Checkmark */}
+                        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                          <div className="text-right hidden xs:block">
+                            <span className="font-black text-foreground text-sm block">
+                              ₹{car.daily_rate}<span className="text-[10px] font-normal text-muted-foreground">/day</span>
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              ₹{car.hourly_rate}/hr
+                            </span>
+                          </div>
+
+                          <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] font-bold shrink-0">
+                            Ready
+                          </Badge>
+
+                          <div
+                            className={cn(
+                              'w-6 h-6 rounded-full flex items-center justify-center shrink-0 border transition-all',
+                              isSelected
+                                ? 'bg-primary border-primary text-white shadow-xs'
+                                : 'border-border bg-muted/40 text-transparent group-hover:border-primary/40'
+                            )}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
                         </div>
                       </div>
-
-                      <div className="flex items-center justify-between border-t border-border/60 pt-2 text-[11px]">
-                        <span className="font-bold text-foreground">
-                          ₹{car.daily_rate}/day <span className="font-normal text-muted-foreground">({car.hourly_rate}/hr)</span>
-                        </span>
-                        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[9px] font-bold">
-                          Ready
-                        </Badge>
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                )}
               </div>
             </div>
           </div>
