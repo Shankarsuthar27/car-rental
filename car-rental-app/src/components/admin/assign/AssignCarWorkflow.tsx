@@ -687,11 +687,11 @@ export function AssignCarWorkflow({
                         )}
                       >
                         {/* Left: Thumbnail & Details */}
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
                           <img
                             src={primaryImg}
                             alt={`${car.brand} ${car.model}`}
-                            className="w-16 h-12 rounded-xl object-cover border border-border/80 shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
+                            className="w-24 h-16 sm:w-28 sm:h-18 md:w-32 md:h-20 rounded-2xl object-cover border border-border/80 shrink-0 shadow-sm group-hover:scale-105 transition-transform bg-muted"
                           />
 
                           <div className="min-w-0 flex-1">
@@ -921,9 +921,17 @@ export function AssignCarWorkflow({
               </span>
               {selectedVehicle ? (
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl gradient-brand text-white flex items-center justify-center font-bold text-xs shrink-0">
-                    <Car className="w-5 h-5" />
-                  </div>
+                  {(selectedVehicle as any).images?.[0]?.url ? (
+                    <img
+                      src={(selectedVehicle as any).images[0].url}
+                      alt={`${selectedVehicle.brand} ${selectedVehicle.model}`}
+                      className="w-14 h-10 rounded-xl object-cover border border-border/80 shrink-0 shadow-2xs bg-muted"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl gradient-brand text-white flex items-center justify-center font-bold text-xs shrink-0">
+                      <Car className="w-5 h-5" />
+                    </div>
+                  )}
                   <div>
                     <span className="font-bold text-sm text-foreground block">
                       {selectedVehicle.brand} {selectedVehicle.model}
