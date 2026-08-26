@@ -968,6 +968,114 @@ export function AdminBookingsClient({
                 </div>
               </div>
 
+              {/* Security Deposit Return */}
+              {selectedBooking && Number(selectedBooking.security_deposit || 0) > 0 && (() => {
+                const depositAmt = Number(selectedBooking.security_deposit || 0)
+                const depositDeducted = numDamage + numOverspeed + (depositSettlement === 'deducted' ? Math.max(0, remainingSettlementDue) : 0)
+                const depositRefundAmt = Math.max(0, depositAmt - depositDeducted)
+
+                return (
+                  <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black flex items-center justify-center">₹</span>
+                        Security Deposit Settlement
+                      </Label>
+                      <span className="font-mono text-sm font-black text-foreground">
+                        ₹{depositAmt.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    {/* Deposit Status Toggle */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wide">Deposit Action</span>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        {[
+                          { value: 'refunded', label: '✅ Full Refund', color: 'emerald' },
+                          { value: 'deducted', label: '🔻 Deduct Dues', color: 'amber' },
+                          { value: 'held', label: '⏸ Hold Deposit', color: 'blue' },
+                          { value: 'forfeited', label: '❌ Forfeit All', color: 'rose' },
+                        ].map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setDepositSettlement(opt.value)}
+                            className={cn(
+                              'text-[10px] py-1.5 px-2 rounded-xl border font-semibold transition-all text-center',
+                              depositSettlement === opt.value
+                                ? opt.value === 'refunded' ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
+                                : opt.value === 'deducted' ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold'
+                                : opt.value === 'held' ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-400 font-bold'
+                                : 'bg-rose-500/15 border-rose-500/40 text-rose-600 dark:text-rose-400 font-bold'
+                                : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                            )}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Deposit Breakdown Summary */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                      <div className="p-2 bg-background rounded-xl border border-border/60">
+                        <span className="text-muted-foreground block mb-0.5">Collected</span>
+                        <span className="font-mono font-bold text-foreground">₹{depositAmt.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="p-2 bg-background rounded-xl border border-border/60">
+                        <span className="text-muted-foreground block mb-0.5">Deductions</span>
+                        <span className={cn('font-mono font-bold', depositDeducted > 0 ? 'text-rose-500' : 'text-foreground')}>
+                          -₹{Math.min(depositAmt, depositDeducted).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className={cn(
+                        'p-2 rounded-xl border col-span-2 sm:col-span-1',
+                        depositSettlement === 'refunded' ? 'bg-emerald-500/10 border-emerald-500/30'
+                        : depositSettlement === 'forfeited' ? 'bg-rose-500/10 border-rose-500/30'
+                        : depositSettlement === 'held' ? 'bg-blue-500/10 border-blue-500/30'
+                        : 'bg-amber-500/10 border-amber-500/30'
+                      )}>
+                        <span className="text-muted-foreground block mb-0.5">
+                          {depositSettlement === 'refunded' ? '↩ Refund to Customer'
+                            : depositSettlement === 'deducted' ? '↔ After Deduction'
+                            : depositSettlement === 'held' ? '⏸ On Hold'
+                            : '❌ Forfeited'}
+                        </span>
+                        <span className={cn(
+                          'font-mono font-black text-sm',
+                          depositSettlement === 'refunded' ? 'text-emerald-600 dark:text-emerald-400'
+                          : depositSettlement === 'forfeited' ? 'text-rose-500'
+                          : depositSettlement === 'held' ? 'text-blue-500'
+                          : 'text-amber-600 dark:text-amber-400'
+                        )}>
+                          {depositSettlement === 'refunded' ? `₹${depositAmt.toLocaleString('en-IN')}`
+                            : depositSettlement === 'forfeited' ? '₹0'
+                            : depositSettlement === 'held' ? `₹${depositAmt.toLocaleString('en-IN')} (Held)`
+                            : `₹${depositRefundAmt.toLocaleString('en-IN')}`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {depositSettlement === 'refunded' && (
+                      <p className="text-[10.5px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                        <span>✓</span> Full security deposit of ₹{depositAmt.toLocaleString('en-IN')} will be returned to the customer.
+                      </p>
+                    )}
+                    {depositSettlement === 'deducted' && remainingSettlementDue > 0 && (
+                      <p className="text-[10.5px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                        <span>↔</span> ₹{Math.min(depositAmt, remainingSettlementDue).toLocaleString('en-IN')} will be deducted from deposit toward balance due.
+                        {depositRefundAmt > 0 && ` Remaining ₹${depositRefundAmt.toLocaleString('en-IN')} refunded.`}
+                      </p>
+                    )}
+                    {depositSettlement === 'forfeited' && (
+                      <p className="text-[10.5px] text-rose-500 font-medium flex items-center gap-1">
+                        <span>❌</span> Entire deposit forfeited due to damage / violations.
+                      </p>
+                    )}
+                  </div>
+                )
+              })()}
+
               {/* Settle Balance Payment */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1">
