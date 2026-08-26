@@ -703,7 +703,7 @@ export function AssignCarWorkflow({
                                 {car.registration_number}
                               </span>
                               <span className="text-[10px] text-muted-foreground bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded uppercase shrink-0">
-                                {car.type || 'Car'}
+                                {car.vehicle_type || 'Car'}
                               </span>
                             </div>
 
