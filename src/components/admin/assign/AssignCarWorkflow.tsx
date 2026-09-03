@@ -376,7 +376,7 @@ export function AssignCarWorkflow({
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-24 lg:pb-0">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-5">
         <div>
@@ -691,7 +691,7 @@ export function AssignCarWorkflow({
                           <img
                             src={primaryImg}
                             alt={`${car.brand} ${car.model}`}
-                            className="w-16 h-12 xs:w-20 xs:h-14 sm:w-28 sm:h-18 md:w-32 md:h-20 rounded-xl sm:rounded-2xl object-cover border border-border/80 shrink-0 shadow-sm group-hover:scale-105 transition-transform bg-muted"
+                            className="w-24 h-16 sm:w-28 sm:h-18 md:w-32 md:h-20 rounded-2xl object-cover border border-border/80 shrink-0 shadow-sm group-hover:scale-105 transition-transform bg-muted"
                           />
 
                           <div className="min-w-0 flex-1">
@@ -1069,32 +1069,6 @@ export function AssignCarWorkflow({
               ⚡ Upon assignment, car becomes <strong>Running</strong> and is linked to the customer.
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Mobile Sticky Assignment Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border p-3 sm:p-4 shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.15)]">
-        <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
-          <div>
-            <span className="text-[10px] text-muted-foreground uppercase font-bold block">
-              Total Due
-            </span>
-            <span className="text-base font-black text-foreground">
-              ₹{grandTotal.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <Button
-            type="button"
-            disabled={submitting || !selectedVehicle || !selectedCustomer}
-            onClick={handleConfirmAssignment}
-            className="gradient-brand text-white border-0 font-bold px-4 h-10 rounded-xl shadow-md gap-1.5 text-xs flex-1 max-w-[200px]"
-          >
-            {submitting ? 'Assigning...' : (
-              <>
-                <Zap className="w-3.5 h-3.5 fill-current" /> Confirm Assignment
-              </>
-            )}
-          </Button>
         </div>
       </div>
 

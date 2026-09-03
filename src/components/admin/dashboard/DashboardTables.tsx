@@ -96,19 +96,17 @@ export function DashboardTables({
             </p>
           </div>
 
-          <div className="overflow-x-auto scrollbar-none -mx-1 px-1">
-            <TabsList className="bg-muted/60 p-1 rounded-2xl h-auto min-h-10 border border-border/60 flex w-max sm:w-auto">
-              <TabsTrigger value="assignments" className="text-xs rounded-xl font-bold gap-1.5 shrink-0">
-                Recent Assignments ({recentAssignments.length})
-              </TabsTrigger>
-              <TabsTrigger value="available" className="text-xs rounded-xl font-bold gap-1.5 text-emerald-600 dark:text-emerald-400 shrink-0">
-                🟢 Available Cars ({availableVehicles.length})
-              </TabsTrigger>
-              <TabsTrigger value="running" className="text-xs rounded-xl font-bold gap-1.5 text-blue-600 dark:text-blue-400 shrink-0">
-                🔵 Running Cars ({runningVehicles.length})
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList className="bg-muted/60 p-1 rounded-2xl h-10 border border-border/60">
+            <TabsTrigger value="assignments" className="text-xs rounded-xl font-bold gap-1.5">
+              Recent Assignments ({recentAssignments.length})
+            </TabsTrigger>
+            <TabsTrigger value="available" className="text-xs rounded-xl font-bold gap-1.5 text-emerald-600 dark:text-emerald-400">
+              🟢 Available Cars ({availableVehicles.length})
+            </TabsTrigger>
+            <TabsTrigger value="running" className="text-xs rounded-xl font-bold gap-1.5 text-blue-600 dark:text-blue-400">
+              🔵 Running Cars ({runningVehicles.length})
+            </TabsTrigger>
+          </TabsList>
         </div>
 
         {/* 1. RECENT ASSIGNMENTS TABLE */}

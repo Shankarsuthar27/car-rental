@@ -61,27 +61,8 @@ export function CustomerNav() {
           subtextClassName={isTransparentPage && !scrolled ? 'text-amber-400' : 'text-primary'}
         />
 
-        {/* Desktop nav links & auth */}
-        <div className="hidden md:flex items-center gap-4">
-          <Link
-            href="/cars"
-            className={cn(
-              'text-xs font-bold transition-colors hover:text-primary',
-              isTransparentPage && !scrolled ? 'text-white/90 hover:text-white' : 'text-foreground/80'
-            )}
-          >
-            Browse Cars
-          </Link>
-          <a
-            href="tel:+911412345678"
-            className={cn(
-              'text-xs font-semibold transition-colors flex items-center gap-1 hover:text-primary',
-              isTransparentPage && !scrolled ? 'text-white/80 hover:text-white' : 'text-muted-foreground'
-            )}
-          >
-            <Phone className="w-3.5 h-3.5" /> +91-141-2345678
-          </a>
-
+        {/* Desktop auth */}
+        <div className="hidden md:flex items-center gap-3">
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -135,14 +116,16 @@ export function CustomerNav() {
 
         {/* Mobile menu toggle */}
         <button
+          type="button"
+          aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={mobileOpen}
           className={cn(
-            'md:hidden p-2 -mr-2 rounded-xl transition-colors',
+            'md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl transition-colors cursor-pointer',
             isTransparentPage && !scrolled ? 'text-white hover:bg-white/10' : 'text-foreground hover:bg-muted'
           )}
           onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle navigation menu"
         >
-          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
         </button>
       </nav>
 
@@ -153,59 +136,45 @@ export function CustomerNav() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-background/98 backdrop-blur-xl border-b border-border shadow-xl overflow-hidden"
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="md:hidden bg-background border-b border-border overflow-hidden shadow-lg"
           >
-            <div className="container mx-auto px-4 py-4 space-y-4">
-              <div className="pb-3 border-b border-border flex items-center justify-between">
+            <div className="container mx-auto px-4 py-4 space-y-3">
+              <div className="pb-2 border-b border-border/60 flex items-center justify-between">
                 <BrandLogo href="/" size="sm" textVariant="full" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full">
-                  Navigation
-                </span>
               </div>
-
-              {/* Customer Links */}
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  href="/cars"
-                  onClick={() => setMobileOpen(false)}
-                  className="p-3 rounded-2xl bg-muted/40 hover:bg-primary/10 border border-border/80 flex items-center gap-2.5 text-xs font-bold text-foreground transition-colors"
-                >
-                  <Car className="w-4 h-4 text-primary" />
-                  <span>Browse Fleet</span>
-                </Link>
-
-                <a
-                  href="tel:+911412345678"
-                  onClick={() => setMobileOpen(false)}
-                  className="p-3 rounded-2xl bg-muted/40 hover:bg-primary/10 border border-border/80 flex items-center gap-2.5 text-xs font-bold text-foreground transition-colors"
-                >
-                  <Phone className="w-4 h-4 text-primary" />
-                  <span>Call Support</span>
-                </a>
-              </div>
-
-              <div className="flex flex-col gap-2 pt-1 border-t border-border">
+              <div className="flex flex-col gap-2.5">
                 {user ? (
                   <>
-                    <Button variant="outline" size="sm" asChild onClick={() => setMobileOpen(false)} className="h-10 rounded-xl font-bold">
-                      <Link href="/admin/dashboard">Fleet Operations Console</Link>
+                    <Button variant="outline" size="sm" asChild className="min-h-[44px] justify-start rounded-xl">
+                      <Link href="/admin/dashboard" onClick={() => setMobileOpen(false)}>
+                        Fleet Console
+                      </Link>
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={handleLogout} className="h-10 rounded-xl text-destructive font-semibold">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLogout}
+                      className="min-h-[44px] justify-start rounded-xl text-destructive"
+                    >
                       Log out
                     </Button>
                   </>
                 ) : (
                   <>
-                    <Button variant="outline" size="sm" asChild onClick={() => setMobileOpen(false)} className="h-10 rounded-xl font-semibold">
-                      <Link href="/login">Staff Log in</Link>
+                    <Button variant="outline" size="sm" asChild className="min-h-[44px] justify-center rounded-xl font-semibold">
+                      <Link href="/login" onClick={() => setMobileOpen(false)}>
+                        Staff Log in
+                      </Link>
                     </Button>
                     <Button
                       size="sm"
                       asChild
-                      onClick={() => setMobileOpen(false)}
-                      className="gradient-brand text-white border-0 h-10 rounded-xl font-bold shadow-md"
+                      className="gradient-brand text-white border-0 min-h-[44px] justify-center rounded-xl font-bold shadow-xs"
                     >
-                      <Link href="/login">Admin Console</Link>
+                      <Link href="/login" onClick={() => setMobileOpen(false)}>
+                        Admin Portal
+                      </Link>
                     </Button>
                   </>
                 )}

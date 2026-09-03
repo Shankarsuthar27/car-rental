@@ -94,13 +94,12 @@ export function BrandLogo({
           {textVariant === 'full' && (
             <span
               className={cn(
-                'tracking-wider uppercase text-primary transition-colors mt-0.5 truncate',
+                'tracking-wider uppercase text-primary transition-colors mt-0.5',
                 config.subtitle,
                 subtextClassName
               )}
             >
-              <span className="inline sm:hidden">Jalore Self Drive</span>
-              <span className="hidden sm:inline">Jalore Self Drive Car Rental</span>
+              Jalore Self Drive Car Rental
             </span>
           )}
           {textVariant === 'compact' && (

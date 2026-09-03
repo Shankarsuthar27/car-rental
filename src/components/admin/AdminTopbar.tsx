@@ -139,22 +139,24 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
   return (
     <header className="h-16 border-b border-border bg-background/85 backdrop-blur-md flex items-center px-4 md:px-6 gap-4 sticky top-0 z-20 select-none">
       {/* Mobile menu toggle & brand badge */}
-      <div className="flex items-center gap-2 md:hidden">
+      <div className="flex items-center gap-1.5 md:hidden">
         <Button
           variant="ghost"
           size="icon"
           onClick={onMobileMenuToggle}
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-foreground"
+          aria-label="Open navigation drawer"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="w-5 h-5" aria-hidden="true" />
         </Button>
         <BrandLogo size="xs" textVariant="compact" href="/admin/dashboard" />
       </div>
 
       {/* Breadcrumbs */}
-      <nav className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground flex-1 min-w-0">
+      <nav className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground flex-1 min-w-0" aria-label="Breadcrumb">
         {breadcrumbs.map((crumb, i) => (
           <div key={crumb.href} className="flex items-center gap-1.5">
-            {i > 0 && <ChevronRight className="w-3.5 h-3.5 shrink-0 text-muted-foreground/50" />}
+            {i > 0 && <ChevronRight className="w-3.5 h-3.5 shrink-0 text-muted-foreground/50" aria-hidden="true" />}
             <Link
               href={crumb.href}
               className={cn(
@@ -170,19 +172,19 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
 
       {/* Global Quick Search */}
       <form onSubmit={handleGlobalSearch} className="hidden md:flex items-center gap-2 relative">
-        <Search className="w-3.5 h-3.5 absolute left-3 text-muted-foreground pointer-events-none" />
+        <Search className="w-3.5 h-3.5 absolute left-3 text-muted-foreground pointer-events-none" aria-hidden="true" />
         <Input
           value={globalSearch}
           onChange={e => setGlobalSearch(e.target.value)}
           placeholder="Search fleet, customer, license..."
-          className="pl-8.5 w-60 h-8.5 bg-muted/40 text-xs rounded-xl focus-visible:ring-primary"
+          className="pl-8.5 w-60 min-h-[38px] bg-muted/40 text-xs rounded-xl focus-visible:ring-primary"
         />
       </form>
 
       {/* Quick Action: Assign Car */}
       <Link href="/admin/assign" className="hidden sm:inline-flex">
-        <Button size="sm" className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs h-8.5 rounded-xl gap-1.5 shadow-sm shadow-primary/20">
-          <Zap className="w-3.5 h-3.5 fill-current" /> Assign Car
+        <Button size="sm" className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs min-h-[38px] px-3.5 rounded-xl gap-1.5 shadow-sm shadow-primary/20">
+          <Zap className="w-3.5 h-3.5 fill-current" aria-hidden="true" /> Assign Car
         </Button>
       </Link>
 
@@ -191,17 +193,21 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
         variant="ghost"
         size="icon"
         onClick={toggleTheme}
-        className="text-muted-foreground hover:text-foreground h-8.5 w-8.5 rounded-xl"
+        className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl"
+        aria-label="Toggle theme"
       >
-        {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+        {isDark ? <Sun className="w-4 h-4 text-amber-400" aria-hidden="true" /> : <Moon className="w-4 h-4 text-indigo-500" aria-hidden="true" />}
       </Button>
 
       {/* Notifications Popover */}
       <Popover>
-        <PopoverTrigger className="relative text-muted-foreground hover:text-foreground h-8.5 w-8.5 rounded-xl inline-flex items-center justify-center hover:bg-muted/40 transition-colors cursor-pointer">
-          <Bell className="w-4 h-4" />
+        <PopoverTrigger
+          className="relative text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] rounded-xl inline-flex items-center justify-center hover:bg-muted/40 transition-colors cursor-pointer"
+          aria-label="View fleet notifications"
+        >
+          <Bell className="w-4 h-4" aria-hidden="true" />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-2 ring-background animate-pulse">
+            <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-2 ring-background animate-pulse">
               {unreadCount}
             </span>
           )}

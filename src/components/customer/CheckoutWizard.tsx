@@ -277,15 +277,8 @@ export function CheckoutWizard({
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Step Indicator Header */}
-      <div className="mb-6 sm:mb-10">
-        {/* Mobile step label */}
-        <div className="sm:hidden text-center mb-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/60 px-3 py-1 rounded-full">
-            Step {currentStep} of 4: {[ '', 'Trip Details', 'KYC & Driver', 'Review & Pay', 'Confirmed' ][currentStep]}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between max-w-2xl mx-auto px-2">
+      <div className="mb-10">
+        <div className="flex items-center justify-between max-w-2xl mx-auto">
           {[
             { num: 1, title: 'Trip Details' },
             { num: 2, title: 'KYC & Driver' },
@@ -295,19 +288,19 @@ export function CheckoutWizard({
             <div key={s.num} className="flex items-center">
               <div className="flex flex-col items-center">
                 <div
-                  className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-bold text-[11px] sm:text-xs transition-all ${
+                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
                     currentStep === s.num
-                      ? 'gradient-brand text-white ring-2 sm:ring-4 ring-primary/20 shadow-md'
+                      ? 'gradient-brand text-white ring-4 ring-primary/20 shadow-md'
                       : currentStep > s.num
                       ? 'bg-emerald-500 text-white'
                       : 'bg-muted text-muted-foreground'
                   }`}
                 >
-                  {currentStep > s.num ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : s.num}
+                  {currentStep > s.num ? <Check className="w-4 h-4" /> : s.num}
                 </div>
                 <span
                   className={`text-[11px] font-medium mt-1.5 hidden sm:block ${
-                    currentStep >= s.num ? 'text-foreground font-semibold' : 'text-muted-foreground'
+                    currentStep >= s.num ? 'text-foreground' : 'text-muted-foreground'
                   }`}
                 >
                   {s.title}
@@ -315,7 +308,7 @@ export function CheckoutWizard({
               </div>
               {idx < 3 && (
                 <div
-                  className={`w-4 xs:w-8 sm:w-16 md:w-24 h-0.5 mx-1 sm:mx-2 transition-all ${
+                  className={`w-12 sm:w-24 h-0.5 mx-2 transition-all ${
                     currentStep > s.num ? 'bg-emerald-500' : 'bg-border'
                   }`}
                 />

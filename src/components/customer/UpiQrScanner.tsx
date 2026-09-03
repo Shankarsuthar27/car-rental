@@ -47,7 +47,7 @@ export function UpiQrScanner({
 
       {/* QR Code Container */}
       <div className="relative inline-block mx-auto bg-white p-4 rounded-3xl shadow-md border border-slate-200">
-        <div className="relative w-44 h-44 xs:w-52 xs:h-52 sm:w-56 sm:h-56 mx-auto flex items-center justify-center">
+        <div className="relative w-56 h-56 mx-auto flex items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={qrCodeUrl}
