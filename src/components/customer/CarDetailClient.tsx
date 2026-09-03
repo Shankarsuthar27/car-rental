@@ -19,7 +19,8 @@ import {
   ChevronRight,
   ShieldAlert,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,7 +47,7 @@ export function CarDetailClient({ vehicle, branches }: CarDetailClientProps) {
     : []
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-8 max-w-7xl pb-24 lg:pb-8">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-6">
         <Link href="/" className="hover:text-foreground transition-colors">
@@ -302,8 +303,37 @@ export function CarDetailClient({ vehicle, branches }: CarDetailClientProps) {
         </div>
 
         {/* Right Column: Dynamic Booking Calculator */}
-        <div className="lg:col-span-1">
+        <div id="booking-calculator-section" className="lg:col-span-1">
           <BookingCalculator vehicle={vehicle} branches={branches} />
+        </div>
+      </div>
+
+      {/* Mobile Sticky Booking Action Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border p-3 sm:p-4 shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.15)]">
+        <div className="container mx-auto flex items-center justify-between gap-4 max-w-lg">
+          <div>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold block">
+              Rental Rate
+            </span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-black text-foreground">
+                ₹{vehicle.daily_rate?.toLocaleString('en-IN')}
+              </span>
+              <span className="text-xs text-muted-foreground">/day</span>
+            </div>
+          </div>
+
+          <Button
+            size="lg"
+            className="gradient-brand text-white border-0 font-bold px-5 sm:px-6 h-11 rounded-xl shadow-md gap-2"
+            onClick={() => {
+              const el = document.getElementById('booking-calculator-section')
+              el?.scrollIntoView({ behavior: 'smooth' })
+            }}
+          >
+            <span>Book Now</span>
+            <ArrowRight className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>

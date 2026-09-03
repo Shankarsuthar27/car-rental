@@ -26,12 +26,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import Image from 'next/image'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false)
 
   // 1. Business Settings
-  const [businessName, setBusinessName] = useState('DriveEase Fleet Mobility Solutions')
+  const [businessName, setBusinessName] = useState('Jalore Self Drive Car Rental')
   const [tagline, setTagline] = useState('Premium Fleet & Self-Drive Car Rental')
   const [gstin, setGstin] = useState('08ABCDE1234F1Z5')
   const [supportEmail, setSupportEmail] = useState('admin@driveease.in')
@@ -109,6 +111,33 @@ export default function AdminSettingsPage() {
               <p className="text-xs text-muted-foreground mt-0.5">
                 Information displayed on rental agreements, customer invoices, and system receipts.
               </p>
+            </div>
+
+            {/* Active Brand Logo Showcase */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-muted/40 border border-border/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full overflow-hidden shrink-0 shadow-lg ring-2 ring-primary/30 bg-slate-950 flex items-center justify-center">
+                  <Image
+                    src="/logo.png"
+                    alt="JSD — Jalore Self Drive Car Rental"
+                    width={64}
+                    height={64}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-base text-foreground">JSD — Jalore Self Drive Car Rental</span>
+                    <Badge variant="outline" className="text-[10px] text-primary border-primary/30">Active Emblem</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Primary circular brand logo loaded from <code className="font-mono text-[11px] bg-background px-1.5 py-0.5 rounded border border-border">/public/logo.png</code>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <BrandLogo size="sm" textVariant="compact" />
+              </div>
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">

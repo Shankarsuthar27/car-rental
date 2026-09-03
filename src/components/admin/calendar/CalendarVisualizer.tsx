@@ -80,7 +80,7 @@ export function CalendarVisualizer({
           <table className="w-full text-xs text-left border-collapse">
             <thead className="bg-muted/40 border-b border-border">
               <tr>
-                <th className="p-4 w-56 font-bold uppercase text-[10px] text-muted-foreground tracking-wider">
+                <th className="p-3 sm:p-4 w-36 sm:w-56 sticky left-0 bg-card border-r border-border z-20 font-bold uppercase text-[10px] text-muted-foreground tracking-wider shadow-xs">
                   Vehicle ({vehicles.length})
                 </th>
                 {days.map((day, idx) => {
@@ -90,14 +90,14 @@ export function CalendarVisualizer({
                   return (
                     <th
                       key={idx}
-                      className={`p-3 text-center border-l border-border min-w-[120px] ${
+                      className={`p-3 text-center border-l border-border min-w-[95px] sm:min-w-[120px] ${
                         isToday ? 'bg-primary/5 text-primary' : 'text-muted-foreground'
                       }`}
                     >
                       <span className="block text-[10px] uppercase font-semibold">
                         {day.toLocaleDateString('en-IN', { weekday: 'short' })}
                       </span>
-                      <span className="text-sm font-extrabold text-foreground">
+                      <span className="text-xs sm:text-sm font-extrabold text-foreground">
                         {day.getDate()} {day.toLocaleDateString('en-IN', { month: 'short' })}
                       </span>
                     </th>
@@ -111,9 +111,9 @@ export function CalendarVisualizer({
 
                 return (
                   <tr key={v.id} className="hover:bg-muted/10 transition-colors">
-                    {/* Vehicle Title */}
-                    <td className="p-4 bg-muted/10 border-r border-border">
-                      <div className="font-bold text-xs text-foreground">
+                    {/* Sticky Vehicle Title */}
+                    <td className="p-3 sm:p-4 sticky left-0 bg-card border-r border-border z-10 shadow-xs">
+                      <div className="font-bold text-xs text-foreground truncate max-w-[130px] sm:max-w-none">
                         {v.brand} {v.model}
                       </div>
                       <div className="text-[10px] font-mono text-muted-foreground">

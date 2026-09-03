@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
@@ -90,8 +91,8 @@ export default function ForgotPasswordPage() {
         >
           {/* Header */}
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl gradient-brand text-white shadow-lg shadow-primary/20 mb-2">
-              <KeyRound className="w-6 h-6" />
+            <div className="flex justify-center mb-3">
+              <BrandLogo size="lg" textVariant="full" href="/" priority />
             </div>
             <h2 className="text-xl font-bold tracking-tight text-foreground">
               Forgot Password?

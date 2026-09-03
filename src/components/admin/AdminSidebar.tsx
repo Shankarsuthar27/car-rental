@@ -119,9 +119,16 @@ const navStructure: NavGroup[] = [
 interface AdminSidebarProps {
   collapsed: boolean
   onToggle: () => void
+  onNavClick?: () => void
+  isMobileDrawer?: boolean
 }
 
-export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
+export function AdminSidebar({
+  collapsed,
+  onToggle,
+  onNavClick,
+  isMobileDrawer = false
+}: AdminSidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -169,13 +176,20 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
   return (
     <TooltipProvider delayDuration={0}>
       <motion.aside
-        animate={{ width: collapsed ? 68 : 256 }}
+        animate={{ width: isMobileDrawer ? '100%' : collapsed ? 68 : 256 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
-        className="flex flex-col h-screen bg-sidebar border-r border-sidebar-border fixed left-0 top-0 z-30 overflow-hidden shadow-sm select-none"
+        className={cn(
+          'flex flex-col bg-sidebar border-r border-sidebar-border overflow-hidden shadow-sm select-none',
+          isMobileDrawer ? 'h-full w-full relative' : 'h-screen fixed left-0 top-0 z-30'
+        )}
       >
         {/* Header Logo */}
         <div className="flex items-center h-16 px-4 border-b border-sidebar-border shrink-0 bg-sidebar/50 backdrop-blur-sm">
-          <Link href="/admin/dashboard" className="flex items-center gap-2.5 overflow-hidden w-full group">
+          <Link
+            href="/admin/dashboard"
+            onClick={onNavClick}
+            className="flex items-center gap-2.5 overflow-hidden w-full group"
+          >
             <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-md ring-2 ring-primary/25 bg-slate-950 flex items-center justify-center transition-transform group-hover:scale-105">
               <Image
                 src="/logo.png"
@@ -196,7 +210,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                   JSD
                 </span>
                 <span className="text-[9px] font-extrabold uppercase tracking-widest text-primary block truncate">
-                  Jalore Self Drive • Fleet
+                  Jalore Self Drive Car Rental • Fleet
                 </span>
               </motion.div>
             )}
@@ -220,6 +234,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                 <Link
                   key={group.label}
                   href={group.href!}
+                  onClick={onNavClick}
                   className={cn(
                     'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 my-1.5 shadow-sm',
                     isActive
@@ -260,6 +275,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                 <Link
                   key={group.label}
                   href={group.href}
+                  onClick={onNavClick}
                   className={cn(
                     'flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs transition-all duration-150 group',
                     'text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/80',
@@ -370,6 +386,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                           <Link
                             key={child.href}
                             href={child.href}
+                            onClick={onNavClick}
                             className={cn(
                               'flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] transition-all duration-150',
                               isChildLinkActive

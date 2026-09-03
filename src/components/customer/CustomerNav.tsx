@@ -61,8 +61,27 @@ export function CustomerNav() {
           subtextClassName={isTransparentPage && !scrolled ? 'text-amber-400' : 'text-primary'}
         />
 
-        {/* Desktop auth */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Desktop nav links & auth */}
+        <div className="hidden md:flex items-center gap-4">
+          <Link
+            href="/cars"
+            className={cn(
+              'text-xs font-bold transition-colors hover:text-primary',
+              isTransparentPage && !scrolled ? 'text-white/90 hover:text-white' : 'text-foreground/80'
+            )}
+          >
+            Browse Cars
+          </Link>
+          <a
+            href="tel:+911412345678"
+            className={cn(
+              'text-xs font-semibold transition-colors flex items-center gap-1 hover:text-primary',
+              isTransparentPage && !scrolled ? 'text-white/80 hover:text-white' : 'text-muted-foreground'
+            )}
+          >
+            <Phone className="w-3.5 h-3.5" /> +91-141-2345678
+          </a>
+
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -117,46 +136,76 @@ export function CustomerNav() {
         {/* Mobile menu toggle */}
         <button
           className={cn(
-            'md:hidden transition-colors',
-            isTransparentPage && !scrolled ? 'text-white' : 'text-foreground'
+            'md:hidden p-2 -mr-2 rounded-xl transition-colors',
+            isTransparentPage && !scrolled ? 'text-white hover:bg-white/10' : 'text-foreground hover:bg-muted'
           )}
           onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Toggle navigation menu"
         >
           {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </nav>
 
-      {/* Mobile menu */}
+      {/* Mobile menu drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-background border-b border-border overflow-hidden"
+            className="md:hidden bg-background/98 backdrop-blur-xl border-b border-border shadow-xl overflow-hidden"
           >
-            <div className="container mx-auto px-4 py-4">
-              <div className="flex flex-col gap-2">
+            <div className="container mx-auto px-4 py-4 space-y-4">
+              <div className="pb-3 border-b border-border flex items-center justify-between">
+                <BrandLogo href="/" size="sm" textVariant="full" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full">
+                  Navigation
+                </span>
+              </div>
+
+              {/* Customer Links */}
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/cars"
+                  onClick={() => setMobileOpen(false)}
+                  className="p-3 rounded-2xl bg-muted/40 hover:bg-primary/10 border border-border/80 flex items-center gap-2.5 text-xs font-bold text-foreground transition-colors"
+                >
+                  <Car className="w-4 h-4 text-primary" />
+                  <span>Browse Fleet</span>
+                </Link>
+
+                <a
+                  href="tel:+911412345678"
+                  onClick={() => setMobileOpen(false)}
+                  className="p-3 rounded-2xl bg-muted/40 hover:bg-primary/10 border border-border/80 flex items-center gap-2.5 text-xs font-bold text-foreground transition-colors"
+                >
+                  <Phone className="w-4 h-4 text-primary" />
+                  <span>Call Support</span>
+                </a>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-1 border-t border-border">
                 {user ? (
                   <>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="/admin/dashboard">Fleet Console</Link>
+                    <Button variant="outline" size="sm" asChild onClick={() => setMobileOpen(false)} className="h-10 rounded-xl font-bold">
+                      <Link href="/admin/dashboard">Fleet Operations Console</Link>
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={handleLogout}>
+                    <Button variant="ghost" size="sm" onClick={handleLogout} className="h-10 rounded-xl text-destructive font-semibold">
                       Log out
                     </Button>
                   </>
                 ) : (
                   <>
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" asChild onClick={() => setMobileOpen(false)} className="h-10 rounded-xl font-semibold">
                       <Link href="/login">Staff Log in</Link>
                     </Button>
                     <Button
                       size="sm"
                       asChild
-                      className="gradient-brand text-white border-0"
+                      onClick={() => setMobileOpen(false)}
+                      className="gradient-brand text-white border-0 h-10 rounded-xl font-bold shadow-md"
                     >
-                      <Link href="/login">Admin Portal</Link>
+                      <Link href="/login">Admin Console</Link>
                     </Button>
                   </>
                 )}

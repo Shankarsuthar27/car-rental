@@ -192,7 +192,7 @@ export function BookingCalculator({ vehicle, branches }: BookingCalculatorProps)
               value={pickupDate}
               min={new Date().toISOString().split('T')[0]}
               onChange={e => setPickupDate(e.target.value)}
-              className="h-9 rounded-lg px-2.5 text-xs bg-background border border-input text-foreground w-full focus:outline-none focus:ring-1 focus:ring-primary"
+              className="h-9 min-w-0 rounded-lg px-2.5 text-xs bg-background border border-input text-foreground w-full focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <Select value={pickupTime} onValueChange={setPickupTime}>
               <SelectTrigger className="h-9 text-xs bg-background">
@@ -236,7 +236,7 @@ export function BookingCalculator({ vehicle, branches }: BookingCalculatorProps)
               value={returnDate}
               min={pickupDate}
               onChange={e => setReturnDate(e.target.value)}
-              className="h-9 rounded-lg px-2.5 text-xs bg-background border border-input text-foreground w-full focus:outline-none focus:ring-1 focus:ring-primary"
+              className="h-9 min-w-0 rounded-lg px-2.5 text-xs bg-background border border-input text-foreground w-full focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <Select value={returnTime} onValueChange={setReturnTime}>
               <SelectTrigger className="h-9 text-xs bg-background">

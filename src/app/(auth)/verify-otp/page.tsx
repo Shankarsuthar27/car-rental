@@ -15,6 +15,7 @@ import {
   CheckCircle2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 function VerifyOtpContent() {
   const router = useRouter()
@@ -238,8 +239,8 @@ function VerifyOtpContent() {
         >
           {/* Header */}
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl gradient-brand text-white shadow-lg shadow-primary/20 mb-2">
-              <ShieldCheck className="w-6 h-6" />
+            <div className="flex justify-center mb-3">
+              <BrandLogo size="lg" textVariant="full" href="/" priority />
             </div>
             <h2 className="text-xl font-bold tracking-tight text-foreground">
               Enter Verification Code

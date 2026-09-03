@@ -493,8 +493,123 @@ export function AdminBookingsClient({
         </div>
       </div>
 
-      {/* Rentals Table */}
-      <div className="bg-card border border-border/80 rounded-3xl overflow-hidden shadow-sm">
+      {/* Mobile Bookings Card List */}
+      <div className="md:hidden space-y-3">
+        {filteredBookings.length === 0 ? (
+          <div className="p-8 text-center bg-card border border-border/80 rounded-3xl text-muted-foreground space-y-2">
+            <p className="font-semibold text-xs">No rental assignments found in this view.</p>
+            <Link href="/admin/assign">
+              <Button size="sm" className="gradient-brand text-white border-0 text-xs font-bold mt-2 rounded-xl">
+                <Zap className="w-3.5 h-3.5 mr-1" /> Assign Car Now
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          filteredBookings.map(b => {
+            const car = b.vehicle
+            const cust = b.customer ? formatCustomer(b.customer) : null
+            const customerName =
+              cust?.profile?.full_name ||
+              (b.customer as any)?.emergency_contact_name ||
+              (b.customer as any)?.customer_code ||
+              'Valued Customer'
+            const customerPhone =
+              cust?.profile?.phone || (b.customer as any)?.emergency_contact_phone || '—'
+            const overdue = getOverdueStatus(b.return_datetime)
+            const primaryImg =
+              car?.images?.find((img: any) => img.is_primary)?.url ||
+              car?.images?.[0]?.url ||
+              'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80'
+
+            return (
+              <div
+                key={b.id}
+                className="bg-card border border-border/80 rounded-3xl p-4 shadow-sm space-y-3"
+              >
+                {/* Header: Car & Booking info */}
+                <div className="flex items-start gap-3">
+                  <img
+                    src={primaryImg}
+                    alt={car ? `${car.brand} ${car.model}` : 'Vehicle'}
+                    className="w-16 h-12 rounded-xl object-cover border border-border shrink-0 shadow-2xs"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-black text-sm text-foreground truncate">
+                        {car ? `${car.brand} ${car.model}` : 'Vehicle'}
+                      </span>
+                      <span className="font-mono text-[10px] text-primary font-bold shrink-0">
+                        {b.booking_number}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-bold">
+                        {car?.registration_number || '—'}
+                      </span>
+                      {b.status === 'active' && (
+                        <Badge className={cn('text-[10px] font-bold', overdue.badgeClass)}>
+                          {overdue.isOverdue ? 'Overdue' : 'Active'}
+                        </Badge>
+                      )}
+                      {b.status === 'completed' && (
+                        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] font-bold">
+                          Returned
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Customer info */}
+                <div className="p-2.5 rounded-2xl bg-muted/30 flex items-center justify-between text-xs">
+                  <div className="min-w-0">
+                    <span className="font-bold text-foreground block truncate">{customerName}</span>
+                    <span className="text-[10px] text-muted-foreground">{customerPhone}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-muted-foreground block">Total Amount</span>
+                    <span className="font-black text-foreground text-xs font-mono">
+                      ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dates & Actions */}
+                <div className="flex items-center justify-between pt-1 border-t border-border/60 text-xs">
+                  <div className="text-[10px] text-muted-foreground">
+                    Due: {format(new Date(b.return_datetime), 'dd MMM, hh:mm a')}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {b.status === 'active' && (
+                      <Button
+                        size="sm"
+                        onClick={() => openReturnDialog(b)}
+                        className="h-8 px-2.5 text-xs gradient-brand text-white border-0 font-bold rounded-xl shadow-xs gap-1"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" /> Return
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedBooking(b)
+                        setViewDetailsOpen(true)
+                      }}
+                      className="h-8 px-2 text-xs rounded-xl"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {/* Desktop Rentals Table */}
+      <div className="hidden md:block bg-card border border-border/80 rounded-3xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="bg-muted/40 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">

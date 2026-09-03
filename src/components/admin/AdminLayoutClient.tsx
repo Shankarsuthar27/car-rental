@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminTopbar } from '@/components/admin/AdminTopbar'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { cn } from '@/lib/utils'
 import type { Profile } from '@/types'
 
 interface AdminLayoutClientProps {
@@ -26,44 +27,46 @@ export function AdminLayoutClient({ children, profile }: AdminLayoutClientProps)
         />
       </div>
 
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar drawer */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="p-0 w-64 bg-sidebar border-sidebar-border">
           <AdminSidebar
             collapsed={false}
             onToggle={() => setMobileOpen(false)}
+            onNavClick={() => setMobileOpen(false)}
+            isMobileDrawer
           />
         </SheetContent>
       </Sheet>
 
-      {/* Main content */}
-      <motion.div
-        animate={{
-          marginLeft: sidebarCollapsed ? 64 : 240,
-        }}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
-        className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-auto"
-        style={{ width: `calc(100% - ${sidebarCollapsed ? 64 : 240}px)` }}
+      {/* Main content: Full width & 0 margin on mobile; offset only on md+ */}
+      <div
+        className={cn(
+          'flex-1 flex flex-col min-w-0 overflow-hidden w-full transition-[margin,width] duration-300 ease-in-out',
+          sidebarCollapsed
+            ? 'md:ml-[68px] md:w-[calc(100%-68px)]'
+            : 'md:ml-[256px] md:w-[calc(100%-256px)]'
+        )}
       >
         <AdminTopbar
           onMobileMenuToggle={() => setMobileOpen(true)}
           profile={profile}
         />
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={typeof window !== 'undefined' ? window.location.pathname : 'page'}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="h-full"
+              className="h-full max-w-7xl mx-auto"
             >
               {children}
             </motion.div>
           </AnimatePresence>
         </main>
-      </motion.div>
+      </div>
     </div>
   )
 }

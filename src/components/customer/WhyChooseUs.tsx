@@ -47,13 +47,13 @@ export function WhyChooseUs() {
             viewport={{ once: true }}
           >
             <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-              Why DriveEase
+              Why JSD
             </span>
             <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-4">
               The Smarter Way to Rent a Car
             </h2>
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              DriveEase brings you a premium, hassle-free car rental experience with 
+              JSD — Jalore Self Drive Car Rental brings you a premium, hassle-free car rental experience with 
               transparent pricing, top-notch vehicles, and 24/7 customer support. 
               Whether you need a car for a few hours or a few months, we have you covered.
             </p>

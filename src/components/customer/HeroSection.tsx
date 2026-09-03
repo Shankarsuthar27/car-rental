@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
@@ -61,17 +62,25 @@ export function HeroSection({ branches }: HeroSectionProps) {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl" />
       </div>
 
-      <div className="relative container mx-auto px-4 py-20 md:py-28">
+      <div className="relative container mx-auto px-4 py-12 sm:py-20 md:py-28">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/20 text-white/80 text-sm mb-6"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border border-white/20 text-white/90 text-xs sm:text-sm mb-4 sm:mb-6 bg-white/5 backdrop-blur-sm shadow-sm"
           >
-            <Car className="w-4 h-4" />
-            Premium Self-Drive Car Rental
+            <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 ring-1 ring-primary/50 bg-slate-950 flex items-center justify-center">
+              <Image
+                src="/logo.png"
+                alt="JSD"
+                width={20}
+                height={20}
+                className="w-full h-full object-cover rounded-full"
+              />
+            </div>
+            <span className="font-semibold text-[11px] sm:text-sm truncate">JSD — Jalore Self Drive Car Rental</span>
           </motion.div>
 
           {/* Headline */}
@@ -79,7 +88,7 @@ export function HeroSection({ branches }: HeroSectionProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 leading-tight"
+            className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-3 sm:mb-4 leading-tight tracking-tight"
           >
             Find Your{' '}
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-violet-400">
@@ -91,10 +100,10 @@ export function HeroSection({ branches }: HeroSectionProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto"
+            className="text-sm sm:text-lg md:text-xl text-white/75 mb-6 sm:mb-10 max-w-2xl mx-auto px-2"
           >
             Drive your way — hourly, daily, weekly, or monthly. Premium vehicles
-            across Jaipur, Jodhpur, Udaipur & Ahmedabad.
+            across Jalore, Rajasthan & Gujarat.
           </motion.p>
 
           {/* Search Widget */}
@@ -102,9 +111,9 @@ export function HeroSection({ branches }: HeroSectionProps) {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="glass rounded-2xl p-5 md:p-6 max-w-3xl mx-auto"
+            className="glass rounded-3xl p-4 sm:p-6 max-w-3xl mx-auto shadow-2xl"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4">
               {/* Pickup Location */}
               <div className="space-y-1">
                 <label className="text-xs text-white/60 font-medium flex items-center gap-1">

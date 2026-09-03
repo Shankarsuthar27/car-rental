@@ -40,6 +40,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { cn } from '@/lib/utils'
 
 function generateBreadcrumbs(pathname: string) {
@@ -137,15 +138,17 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
 
   return (
     <header className="h-16 border-b border-border bg-background/85 backdrop-blur-md flex items-center px-4 md:px-6 gap-4 sticky top-0 z-20 select-none">
-      {/* Mobile menu toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="md:hidden"
-        onClick={onMobileMenuToggle}
-      >
-        <Menu className="w-5 h-5" />
-      </Button>
+      {/* Mobile menu toggle & brand badge */}
+      <div className="flex items-center gap-2 md:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onMobileMenuToggle}
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
+        <BrandLogo size="xs" textVariant="compact" href="/admin/dashboard" />
+      </div>
 
       {/* Breadcrumbs */}
       <nav className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground flex-1 min-w-0">

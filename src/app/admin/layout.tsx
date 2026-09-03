@@ -7,8 +7,8 @@ import type { Profile } from '@/types'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Admin Dashboard',
-    template: '%s | DriveEase Admin',
+    default: 'Admin Dashboard | JSD Fleet Console',
+    template: '%s | JSD Admin',
   },
 }
 

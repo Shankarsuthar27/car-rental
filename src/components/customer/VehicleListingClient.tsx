@@ -403,50 +403,52 @@ export function VehicleListingClient({
         </div>
 
         {/* Search input + Sort + Mobile filter trigger */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 md:w-64">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search make or model..."
-              className="pl-9 h-10 bg-muted/40"
+              className="pl-9 h-10 bg-muted/40 rounded-xl"
             />
           </div>
 
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[180px] h-10">
-              <ArrowUpDown className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recommended">Recommended</SelectItem>
-              <SelectItem value="price_asc">Price: Low to High</SelectItem>
-              <SelectItem value="price_desc">Price: High to Low</SelectItem>
-              <SelectItem value="newest">Newest Model</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="flex-1 sm:w-[180px] h-10 rounded-xl">
+                <ArrowUpDown className="w-3.5 h-3.5 mr-2 text-muted-foreground shrink-0" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recommended">Recommended</SelectItem>
+                <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                <SelectItem value="newest">Newest Model</SelectItem>
+              </SelectContent>
+            </Select>
 
-          {/* Mobile Filter Button */}
-          <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" className="md:hidden h-10 gap-2">
-                <SlidersHorizontal className="w-4 h-4" />
-                Filters
-                {activeFilterCount > 0 && (
-                  <Badge variant="default" className="h-5 px-1.5 text-[10px]">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] overflow-y-auto">
-              <SheetHeader className="mb-4">
-                <SheetTitle>Filter Vehicles</SheetTitle>
-              </SheetHeader>
-              {FilterContent}
-            </SheetContent>
-          </Sheet>
+            {/* Mobile Filter Button */}
+            <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="lg:hidden h-10 gap-2 rounded-xl shrink-0">
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>Filters</span>
+                  {activeFilterCount > 0 && (
+                    <Badge variant="default" className="h-5 px-1.5 text-[10px]">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[85vw] max-w-xs overflow-y-auto p-5">
+                <SheetHeader className="mb-4">
+                  <SheetTitle>Filter Vehicles</SheetTitle>
+                </SheetHeader>
+                {FilterContent}
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
 

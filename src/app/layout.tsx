@@ -1,25 +1,44 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#090d16' },
+  ],
+}
 
 export const metadata: Metadata = {
   title: {
     default: 'JSD — Jalore Self Drive Car Rental',
-    template: '%s | JSD Jalore Self Drive',
+    template: '%s | JSD Jalore Self Drive Car Rental',
   },
   description:
-    'JSD Jalore Self Drive Car Rental — Premium car rental platform. Book SUVs, sedans, and more for hourly, daily, weekly, or monthly self-drive rentals across Jalore, Rajasthan, and Gujarat.',
-  keywords: ['car rental', 'self drive', 'Jalore car rental', 'JSD self drive', 'SUV rental Rajasthan', 'JSD'],
+    'JSD — Jalore Self Drive Car Rental — Premium self-drive car rental platform. Book SUVs, sedans, and luxury cars for hourly, daily, weekly, or monthly rentals across Jalore, Rajasthan, and Gujarat.',
+  keywords: ['car rental', 'self drive', 'Jalore car rental', 'JSD self drive', 'SUV rental Rajasthan', 'JSD', 'Jalore Self Drive Car Rental'],
   icons: {
-    icon: '/logo.png',
+    icon: [
+      { url: '/logo.png' },
+      { url: '/favicon.ico' },
+    ],
     shortcut: '/logo.png',
     apple: '/logo.png',
   },
   openGraph: {
     title: 'JSD — Jalore Self Drive Car Rental',
-    description: 'Premium self-drive car rental for hassle-free journeys.',
+    description: 'Premium self-drive car rental for hassle-free journeys across Jalore, Rajasthan & Gujarat.',
     type: 'website',
-    images: [{ url: '/logo.png', width: 800, height: 800, alt: 'JSD Logo' }],
+    images: [{ url: '/logo.png', width: 800, height: 800, alt: 'JSD — Jalore Self Drive Car Rental Logo' }],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'JSD — Jalore Self Drive Car Rental',
+    description: 'Premium self-drive car rental across Jalore, Rajasthan & Gujarat.',
+    images: ['/logo.png'],
   },
 }
 

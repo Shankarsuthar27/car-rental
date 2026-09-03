@@ -382,11 +382,11 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
 
       {/* PRINTABLE GST INVOICE MODAL */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 md:p-8 rounded-3xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 md:p-8 rounded-3xl">
           {selectedInvoice && (
             <div className="space-y-6 text-foreground print:text-black">
               {/* Top Company Header */}
-              <div className="flex justify-between items-start pb-6 border-b border-border">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-border">
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-primary/25 bg-slate-950 shadow-sm flex items-center justify-center">
@@ -400,7 +400,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                     </div>
                     <div>
                       <span className="font-extrabold text-xl leading-none block">JSD Car Rental</span>
-                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mt-0.5">Jalore Self Drive</span>
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mt-0.5">Jalore Self Drive Car Rental</span>
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground pt-1">
@@ -411,7 +411,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                   </p>
                 </div>
 
-                <div className="text-right space-y-1">
+                <div className="text-left sm:text-right space-y-1">
                   <Badge className="bg-primary text-white text-xs">TAX INVOICE</Badge>
                   <h3 className="font-mono text-sm font-bold block mt-1">
                     {selectedInvoice.invoice_number}
@@ -423,7 +423,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
               </div>
 
               {/* Billed To & Vehicle Info */}
-              <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
                 <div className="p-3.5 bg-muted/40 rounded-2xl space-y-1 border border-border/60">
                   <span className="font-bold text-muted-foreground uppercase text-[10px] block">
                     Billed To (Customer):
