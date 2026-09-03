@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import {
   FileText,
   Search,
@@ -10,7 +11,6 @@ import {
   AlertCircle,
   Eye,
   Building,
-  Gauge,
   Edit,
   DollarSign,
   Receipt,
@@ -388,14 +388,23 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
               {/* Top Company Header */}
               <div className="flex justify-between items-start pb-6 border-b border-border">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center text-white">
-                      <Gauge className="w-5 h-5" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-primary/25 bg-slate-950 shadow-sm flex items-center justify-center">
+                      <Image
+                        src="/logo.png"
+                        alt="JSD — Jalore Self Drive Car Rental"
+                        width={40}
+                        height={40}
+                        className="w-full h-full object-cover rounded-full"
+                      />
                     </div>
-                    <span className="font-extrabold text-xl">DriveEase Mobility SaaS</span>
+                    <div>
+                      <span className="font-extrabold text-xl leading-none block">JSD Car Rental</span>
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mt-0.5">Jalore Self Drive</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    C-Scheme, Ashok Marg, Jaipur, Rajasthan 302001
+                  <p className="text-xs text-muted-foreground pt-1">
+                    Jalore, Rajasthan • support@driveease.in
                   </p>
                   <p className="text-xs font-mono font-bold text-primary">
                     GSTIN: 08ABCDE1234F1Z5 • support@driveease.in

@@ -4,8 +4,8 @@ import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import {
-  Gauge,
   Lock,
   Mail,
   ArrowRight,
@@ -77,18 +77,8 @@ function LoginForm() {
         className="w-full max-w-md bg-card/92 dark:bg-card/85 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-3xl p-7 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] space-y-6"
       >
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center gap-2.5 mb-2">
-            <div className="w-12 h-12 rounded-2xl gradient-brand flex items-center justify-center shadow-lg shadow-primary/20">
-              <Gauge className="w-6 h-6 text-white" />
-            </div>
-            <div className="text-left">
-              <span className="font-black text-2xl tracking-tight block leading-none">
-                DriveEase
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-primary block mt-0.5">
-                Fleet Management SaaS
-              </span>
-            </div>
+          <div className="flex justify-center mb-3">
+            <BrandLogo size="lg" textVariant="full" href="/" priority />
           </div>
           <h2 className="text-xl font-bold tracking-tight text-foreground">
             Admin Staff Portal

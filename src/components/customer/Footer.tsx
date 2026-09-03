@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Gauge, Phone, Mail, MapPin, Globe, Share2, MessageCircle } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
+import { Phone, Mail, MapPin, Globe, Share2, MessageCircle } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 
 export function Footer() {
@@ -11,14 +12,16 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center">
-                <Gauge className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg text-white">DriveEase</span>
+            <div className="mb-4">
+              <BrandLogo
+                href="/"
+                size="md"
+                textClassName="text-white"
+                subtextClassName="text-amber-400"
+              />
             </div>
             <p className="text-sm text-sidebar-foreground/60 leading-relaxed mb-4">
-              Premium self-drive car rental across Rajasthan and Gujarat. 
+              Premium self-drive car rental in Jalore and across Rajasthan & Gujarat. 
               Drive your way, every day.
             </p>
             <div className="flex gap-3">
@@ -110,7 +113,7 @@ export function Footer() {
         <Separator className="bg-sidebar-border mb-6" />
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-sidebar-foreground/40">
-          <p>© 2026 DriveEase. All rights reserved.</p>
+          <p>© 2026 JSD — Jalore Self Drive Car Rental. All rights reserved.</p>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-white transition-colors">
               Privacy Policy

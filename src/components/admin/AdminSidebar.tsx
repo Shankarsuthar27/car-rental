@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -19,7 +20,6 @@ import {
   ChevronRight,
   ChevronLeft,
   LogOut,
-  Gauge,
   Sparkles,
   CheckCircle2,
   Clock,
@@ -175,9 +175,15 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
       >
         {/* Header Logo */}
         <div className="flex items-center h-16 px-4 border-b border-sidebar-border shrink-0 bg-sidebar/50 backdrop-blur-sm">
-          <Link href="/admin/dashboard" className="flex items-center gap-2.5 overflow-hidden w-full">
-            <div className="w-9 h-9 rounded-xl gradient-brand flex items-center justify-center shrink-0 shadow-md shadow-primary/20">
-              <Gauge className="w-5 h-5 text-white" />
+          <Link href="/admin/dashboard" className="flex items-center gap-2.5 overflow-hidden w-full group">
+            <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-md ring-2 ring-primary/25 bg-slate-950 flex items-center justify-center transition-transform group-hover:scale-105">
+              <Image
+                src="/logo.png"
+                alt="JSD — Jalore Self Drive Car Rental"
+                width={36}
+                height={36}
+                className="w-full h-full object-cover rounded-full"
+              />
             </div>
             {!collapsed && (
               <motion.div
@@ -187,10 +193,10 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                 className="overflow-hidden min-w-0"
               >
                 <span className="text-sidebar-foreground font-black text-lg tracking-tight block leading-tight">
-                  DriveEase
+                  JSD
                 </span>
-                <span className="text-[9px] font-extrabold uppercase tracking-widest text-primary block">
-                  Fleet Manager
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-primary block truncate">
+                  Jalore Self Drive • Fleet
                 </span>
               </motion.div>
             )}

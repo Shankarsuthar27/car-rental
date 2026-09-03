@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Car, Phone, Gauge } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
+import { Menu, X, Car, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -52,19 +53,13 @@ export function CustomerNav() {
     >
       <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center shadow-sm">
-            <Gauge className="w-5 h-5 text-white" />
-          </div>
-          <span
-            className={cn(
-              'font-bold text-lg transition-colors',
-              isTransparentPage && !scrolled ? 'text-white' : 'text-foreground'
-            )}
-          >
-            DriveEase
-          </span>
-        </Link>
+        <BrandLogo
+          href="/"
+          size="md"
+          priority
+          textClassName={isTransparentPage && !scrolled ? 'text-white' : 'text-foreground'}
+          subtextClassName={isTransparentPage && !scrolled ? 'text-amber-400' : 'text-primary'}
+        />
 
         {/* Desktop auth */}
         <div className="hidden md:flex items-center gap-3">

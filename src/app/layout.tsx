@@ -4,16 +4,22 @@ import { Toaster } from '@/components/ui/toaster'
 
 export const metadata: Metadata = {
   title: {
-    default: 'DriveEase — Car Rental Management',
-    template: '%s | DriveEase',
+    default: 'JSD — Jalore Self Drive Car Rental',
+    template: '%s | JSD Jalore Self Drive',
   },
   description:
-    'DriveEase — Premium car rental platform. Book SUVs, sedans, and more for hourly, daily, weekly, or monthly rentals across Jaipur, Jodhpur, Udaipur, and Ahmedabad.',
-  keywords: ['car rental', 'self drive', 'SUV rental', 'Jaipur car rental', 'DriveEase'],
+    'JSD Jalore Self Drive Car Rental — Premium car rental platform. Book SUVs, sedans, and more for hourly, daily, weekly, or monthly self-drive rentals across Jalore, Rajasthan, and Gujarat.',
+  keywords: ['car rental', 'self drive', 'Jalore car rental', 'JSD self drive', 'SUV rental Rajasthan', 'JSD'],
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
   openGraph: {
-    title: 'DriveEase — Drive Your Way, Every Day',
-    description: 'Premium car rental platform for individuals and businesses.',
+    title: 'JSD — Jalore Self Drive Car Rental',
+    description: 'Premium self-drive car rental for hassle-free journeys.',
     type: 'website',
+    images: [{ url: '/logo.png', width: 800, height: 800, alt: 'JSD Logo' }],
   },
 }
 

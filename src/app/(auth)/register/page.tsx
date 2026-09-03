@@ -4,7 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Gauge, Lock, Mail, User, Phone, ArrowRight, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
+import { Lock, Mail, User, Phone, ArrowRight, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -74,12 +75,9 @@ export default function RegisterPage() {
         className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-xl space-y-6"
       >
         <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2 mb-2">
-            <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center">
-              <Gauge className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-extrabold text-2xl">DriveEase</span>
-          </Link>
+          <div className="flex justify-center mb-3">
+            <BrandLogo size="lg" textVariant="full" href="/" priority />
+          </div>
           <h2 className="text-xl font-bold">Create an Account</h2>
           <p className="text-xs text-muted-foreground">
             Join thousands of happy drivers across Rajasthan and Gujarat.

@@ -10,11 +10,11 @@ import {
   CreditCard,
   User,
   LogOut,
-  Gauge,
   Menu,
   X,
   Car
 } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -53,12 +53,7 @@ export default function CustomerDashboardLayout({
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center">
-              <Gauge className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-lg hidden sm:inline">DriveEase</span>
-          </Link>
+          <BrandLogo href="/" size="sm" textVariant="compact" />
           <span className="text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-md">
             Customer Portal
           </span>

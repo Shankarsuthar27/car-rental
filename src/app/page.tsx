@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import LoginPage from '@/app/(auth)/login/page'
 
 export const metadata: Metadata = {
-  title: 'Sign In — DriveEase Fleet Management',
-  description: 'Sign in to DriveEase Fleet Operations & Car Rental Management Portal',
+  title: 'Sign In — JSD Jalore Self Drive Car Rental',
+  description: 'Sign in to JSD Fleet Operations & Car Rental Management Portal',
 }
 
 export default function HomePage() {

@@ -7,8 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 import type { Vehicle, Branch } from '@/types'
 
 export const metadata: Metadata = {
-  title: 'Secure Checkout — Book Your Rental Car | DriveEase',
-  description: 'Complete your car rental reservation securely.'
+  title: 'Secure Checkout — Book Your Rental Car | JSD Jalore Self Drive',
+  description: 'Complete your car rental reservation securely with JSD Self Drive Car Rental.',
 }
 
 interface Props {
