@@ -12,30 +12,31 @@ export const metadata: Metadata = {
 async function getBookingsData() {
   const supabase = createAdminClient()
 
-  const { data: rawBookings } = await supabase
-    .from('bookings')
-    .select(`
-      *,
-      customer:customers(*, profile:profiles!customers_profile_id_fkey(*)),
-      vehicle:vehicles(*),
-      pickup_branch:branches!pickup_branch_id(*),
-      return_branch:branches!return_branch_id(*)
-    `)
-    .order('created_at', { ascending: false })
+  const [rawBookingsRes, branchesRes] = await Promise.all([
+    supabase
+      .from('bookings')
+      .select(`
+        *,
+        customer:customers(*, profile:profiles!customers_profile_id_fkey(*)),
+        vehicle:vehicles(*),
+        pickup_branch:branches!pickup_branch_id(*),
+        return_branch:branches!return_branch_id(*)
+      `)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('branches')
+      .select('*')
+      .eq('is_active', true),
+  ])
 
-  const bookings = (rawBookings ?? []).map(b => ({
+  const bookings = (rawBookingsRes.data ?? []).map(b => ({
     ...b,
     customer: b.customer ? formatCustomer(b.customer) : b.customer,
   }))
 
-  const { data: branches } = await supabase
-    .from('branches')
-    .select('*')
-    .eq('is_active', true)
-
   return {
     bookings: bookings as unknown as Booking[],
-    branches: (branches ?? []) as unknown as Branch[]
+    branches: (branchesRes.data ?? []) as unknown as Branch[]
   }
 }
 

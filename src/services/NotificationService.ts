@@ -235,7 +235,7 @@ export class NotificationService {
           <tr>
             <td style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 30px; text-align: center;">
               <div style="font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #e0e7ff; margin-bottom: 6px;">
-                ⚡ Fleet Dispatch Alert
+                Fleet Dispatch Alert
               </div>
               <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #ffffff; line-height: 1.2;">
                 Vehicle Assigned & Dispatched!

@@ -30,7 +30,32 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // 2. Standard Supabase session check
+  // 2. Fast redirect /dashboard to /admin/dashboard
+  if (pathname.startsWith('/dashboard')) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/admin/dashboard'
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  // 3. Fast-path: Check cached staff role cookie to avoid DB queries on internal navigations
+  const staffRoles = [
+    'super_admin',
+    'admin',
+    'branch_manager',
+    'booking_manager',
+    'accountant',
+    'vehicle_manager',
+    'staff',
+  ]
+  const cachedRole = request.cookies.get('driveease_user_role')?.value
+  const hasAuthCookie = request.cookies.getAll().some(c => c.name.includes('-auth-token'))
+
+  // If already verified staff on internal navigation, return immediately
+  if (cachedRole && staffRoles.includes(cachedRole) && pathname.startsWith('/admin') && hasAuthCookie) {
+    return supabaseResponse
+  }
+
+  // 4. Standard Supabase session check
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -71,34 +96,29 @@ export async function middleware(request: NextRequest) {
 
   // Admin route protection — must have staff role
   if (user && pathname.startsWith('/admin')) {
+    if (cachedRole && staffRoles.includes(cachedRole)) {
+      return supabaseResponse
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    const staffRoles = [
-      'super_admin',
-      'admin',
-      'branch_manager',
-      'booking_manager',
-      'accountant',
-      'vehicle_manager',
-      'staff',
-    ]
-
     if (!profile || !staffRoles.includes(profile.role)) {
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/login'
       return NextResponse.redirect(redirectUrl)
     }
-  }
 
-  // Redirect /dashboard to /admin/dashboard for admin-only system
-  if (pathname.startsWith('/dashboard')) {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/admin/dashboard'
-    return NextResponse.redirect(redirectUrl)
+    // Cache verified role in cookie for 1 hour to accelerate subsequent navigations
+    supabaseResponse.cookies.set('driveease_user_role', profile.role, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 3600,
+    })
   }
 
   return supabaseResponse

@@ -27,35 +27,36 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
+  // 1. Fast path: check demo role cookie FIRST without hitting remote Supabase auth
+  const cookieStore = await cookies()
+  const demoRole = cookieStore.get('driveease_demo_role')?.value
+
+  if (demoRole && STAFF_ROLES.includes(demoRole)) {
+    const mockAdminProfile: Profile = {
+      id: '00000000-0000-0000-0000-000000000001',
+      email: 'admin@driveease.in',
+      full_name: 'Admin DriveEase 👑',
+      role: demoRole as any,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    return (
+      <AdminLayoutClient profile={mockAdminProfile}>
+        {children}
+      </AdminLayoutClient>
+    )
+  }
+
+  // 2. Real user Supabase session check
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // 1. If no user, check demo role cookie fallback
   if (!user) {
-    const cookieStore = await cookies()
-    const demoRole = cookieStore.get('driveease_demo_role')?.value
-
-    if (demoRole && STAFF_ROLES.includes(demoRole)) {
-      const mockAdminProfile: Profile = {
-        id: '00000000-0000-0000-0000-000000000001',
-        email: 'admin@driveease.in',
-        full_name: 'Admin DriveEase 👑',
-        role: demoRole as any,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-
-      return (
-        <AdminLayoutClient profile={mockAdminProfile}>
-          {children}
-        </AdminLayoutClient>
-      )
-    }
-
     redirect('/login?redirectTo=/admin/dashboard')
   }
 

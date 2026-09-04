@@ -118,9 +118,9 @@ export function AdminVehiclesClient({
   // React to searchParams updates (e.g. from sidebar navigation)
   useEffect(() => {
     const statusParam = searchParams.get('status')
-    if (statusParam) setStatusFilter(statusParam)
+    setStatusFilter(statusParam || 'all')
     const searchParam = searchParams.get('search')
-    if (searchParam) setSearchQuery(searchParam)
+    if (searchParam !== null) setSearchQuery(searchParam)
     if (searchParams.get('action') === 'new') setAddModalOpen(true)
   }, [searchParams])
 

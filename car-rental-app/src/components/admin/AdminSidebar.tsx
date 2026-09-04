@@ -229,7 +229,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                   )}
                   {!collapsed && (
                     <span className="text-[10px] px-1.5 py-0.2 bg-primary-foreground/20 text-primary-foreground rounded uppercase font-extrabold">
-                      ⚡ Quick
+                      Quick
                     </span>
                   )}
                 </Link>

@@ -9,7 +9,7 @@ const categories = [
   { label: 'Hatchback', icon: '🚕', query: 'hatchback', count: '5+ Cars' },
   { label: 'MUV / MPV', icon: '🚐', query: 'muv', count: '4+ Cars' },
   { label: 'Luxury', icon: '🏎️', query: 'luxury', count: '3+ Cars' },
-  { label: 'Electric', icon: '⚡', query: 'electric', count: '2+ Cars' },
+  { label: 'Electric', icon: '🔋', query: 'electric', count: '2+ Cars' },
 ]
 
 export function PopularCategories() {

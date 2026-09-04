@@ -11,43 +11,42 @@ export const metadata: Metadata = {
 async function getHistoryData() {
   const supabase = createAdminClient()
 
-  // 1. Fetch all bookings with relations
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select(`
-      *,
-      vehicle:vehicles(*),
-      customer:customers(*, profile:profiles!customers_profile_id_fkey(*))
-    `)
-    .order('created_at', { ascending: false })
+  // Run all 3 queries concurrently in parallel
+  const [bookingsRes, vehiclesRes, rawCustomersRes] = await Promise.all([
+    supabase
+      .from('bookings')
+      .select(`
+        *,
+        vehicle:vehicles(*),
+        customer:customers(*, profile:profiles!customers_profile_id_fkey(*))
+      `)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('vehicles')
+      .select('*')
+      .order('brand', { ascending: true }),
+    supabase
+      .from('customers')
+      .select(`
+        *,
+        profile:profiles!customers_profile_id_fkey(*)
+      `)
+      .order('created_at', { ascending: false }),
+  ])
 
-  // 2. Fetch all vehicles
-  const { data: vehicles } = await supabase
-    .from('vehicles')
-    .select('*')
-    .order('brand', { ascending: true })
-
-  // 3. Fetch all customers
-  const { data: rawCustomers } = await supabase
-    .from('customers')
-    .select(`
-      *,
-      profile:profiles!customers_profile_id_fkey(*)
-    `)
-    .order('created_at', { ascending: false })
-
+  const rawCustomers = rawCustomersRes.data
   const formattedCustomers = (rawCustomers && rawCustomers.length > 0)
     ? rawCustomers.map(formatCustomer)
     : DEFAULT_DEMO_CUSTOMERS
 
-  const formattedBookings = (bookings ?? []).map(b => ({
+  const formattedBookings = (bookingsRes.data ?? []).map(b => ({
     ...b,
     customer: b.customer ? formatCustomer(b.customer) : b.customer,
   }))
 
   return {
     bookings: formattedBookings as any[],
-    vehicles: (vehicles ?? []) as any[],
+    vehicles: (vehiclesRes.data ?? []) as any[],
     customers: formattedCustomers as any[],
   }
 }

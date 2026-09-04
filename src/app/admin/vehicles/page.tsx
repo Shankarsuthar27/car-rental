@@ -11,23 +11,24 @@ export const metadata: Metadata = {
 async function getVehiclesData() {
   const supabase = createAdminClient()
 
-  const { data: vehicles } = await supabase
-    .from('vehicles')
-    .select(`
-      *,
-      branch:branches(id, name, city),
-      images:vehicle_images(id, url, is_primary)
-    `)
-    .order('created_at', { ascending: false })
-
-  const { data: branches } = await supabase
-    .from('branches')
-    .select('id, name, city')
-    .eq('is_active', true)
+  const [vehiclesRes, branchesRes] = await Promise.all([
+    supabase
+      .from('vehicles')
+      .select(`
+        *,
+        branch:branches(id, name, city),
+        images:vehicle_images(id, url, is_primary)
+      `)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('branches')
+      .select('id, name, city')
+      .eq('is_active', true),
+  ])
 
   return {
-    vehicles: (vehicles ?? []) as unknown as Vehicle[],
-    branches: (branches ?? []) as unknown as Branch[]
+    vehicles: (vehiclesRes.data ?? []) as unknown as Vehicle[],
+    branches: (branchesRes.data ?? []) as unknown as Branch[]
   }
 }
 

@@ -1066,7 +1066,7 @@ export function AssignCarWorkflow({
             </Button>
 
             <p className="text-[10px] text-center text-muted-foreground">
-              ⚡ Upon assignment, car becomes <strong>Running</strong> and is linked to the customer.
+              Upon assignment, car becomes <strong>Running</strong> and is linked to the customer.
             </p>
           </div>
         </div>

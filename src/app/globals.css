@@ -279,3 +279,116 @@
     @apply text-muted-foreground text-sm;
   }
 }
+
+@keyframes top-progress {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(50%); }
+  100% { transform: translateX(200%); }
+}
+
+.animate-top-progress {
+  animation: top-progress 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* ============================================================
+   UIVERSE.IO ASSIGN CAR BUTTON (by nathAd17)
+   ============================================================ */
+.uiverse-assign-btn {
+  position: relative;
+  z-index: 10;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 9999px;
+  border: 2px solid #e5e7eb;
+  background-color: #f9fafb;
+  color: #111827;
+  box-shadow: 0 10px 20px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+  transition: color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.uiverse-assign-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 9999px;
+  background-color: #10b981;
+  z-index: -10;
+  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(1);
+}
+
+.uiverse-assign-btn:hover::before {
+  left: 0;
+  transform: scale(1.6);
+}
+
+.uiverse-assign-btn:hover {
+  color: #f9fafb !important;
+  border-color: #10b981;
+}
+
+.uiverse-assign-btn .arrow-circle {
+  transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+  transform: rotate(45deg);
+  border: 1.5px solid #374151;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uiverse-assign-btn:hover .arrow-circle {
+  transform: rotate(90deg);
+  background-color: #f9fafb;
+  border-color: transparent;
+}
+
+.uiverse-assign-btn .arrow-icon {
+  fill: #1f2937;
+  transition: fill 0.3s ease;
+}
+
+.uiverse-assign-btn:hover .arrow-icon {
+  fill: #111827;
+}
+
+.uiverse-assign-btn .badge-quick {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #047857;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.uiverse-assign-btn:hover .badge-quick {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Active State */
+.uiverse-assign-btn.is-active {
+  background-color: #10b981;
+  border-color: #34d399;
+  color: #ffffff !important;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.45);
+}
+
+.uiverse-assign-btn.is-active::before {
+  left: 0;
+  transform: scale(1.6);
+  background-color: #10b981;
+}
+
+.uiverse-assign-btn.is-active .arrow-circle {
+  transform: rotate(90deg);
+  background-color: #ffffff;
+  border-color: transparent;
+}
+
+.uiverse-assign-btn.is-active .badge-quick {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}

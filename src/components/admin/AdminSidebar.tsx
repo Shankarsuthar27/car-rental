@@ -70,11 +70,6 @@ const navStructure: NavGroup[] = [
     ],
   },
   {
-    label: 'Customers',
-    href: '/admin/customers',
-    icon: Users,
-  },
-  {
     label: 'Rentals',
     icon: CalendarCheck,
     children: [
@@ -82,6 +77,11 @@ const navStructure: NavGroup[] = [
       { label: 'Completed', href: '/admin/bookings?status=completed', badgeColor: 'bg-zinc-500' },
       { label: 'Cancelled', href: '/admin/bookings?status=cancelled', badgeColor: 'bg-rose-500' },
     ],
+  },
+  {
+    label: 'Customers',
+    href: '/admin/customers',
+    icon: Users,
   },
   {
     label: 'Assign Car',
@@ -214,30 +214,60 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
             const isChildActive = hasChildren && group.children?.some(c => isLinkActive(c.href))
             const isActive = group.href ? isLinkActive(group.href) : isChildActive
 
-            // Render primary "Assign Car" special highlighted button
+            // Render primary "Assign Car" special highlighted button (Uiverse.io design by nathAd17)
             if (group.isPrimary) {
-              const linkContent = (
+              const linkContent = collapsed ? (
                 <Link
                   key={group.label}
                   href={group.href!}
+                  prefetch={true}
                   className={cn(
-                    'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 my-1.5 shadow-sm',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-primary/30 ring-2 ring-primary/40'
-                      : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30'
+                    'uiverse-assign-btn w-10 h-10 flex items-center justify-center mx-auto my-1.5',
+                    isActive && 'is-active'
                   )}
                 >
-                  <Icon className="w-4 h-4 shrink-0 animate-pulse" />
-                  {!collapsed && (
-                    <span className="flex-1 whitespace-nowrap tracking-wide">
-                      {group.label}
-                    </span>
+                  <div className="arrow-circle w-6 h-6">
+                    <svg
+                      className="w-3.5 h-3.5 shrink-0"
+                      viewBox="0 0 16 19"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M7 18C7 18.5523 7.44772 19 8 19C8.55228 19 9 18.5523 9 18H7ZM8.70711 0.292893C8.31658 -0.0976311 7.68342 -0.0976311 7.29289 0.292893L0.928932 6.65685C0.538408 7.04738 0.538408 7.68054 0.928932 8.07107C1.31946 8.46159 1.95262 8.46159 2.34315 8.07107L8 2.41421L13.6569 8.07107C14.0474 8.46159 14.6805 8.46159 15.0711 8.07107C15.4616 7.68054 15.4616 7.04738 15.0711 6.65685L8.70711 0.292893ZM9 18L9 1H7L7 18H9Z"
+                        className="arrow-icon"
+                      />
+                    </svg>
+                  </div>
+                </Link>
+              ) : (
+                <Link
+                  key={group.label}
+                  href={group.href!}
+                  prefetch={true}
+                  className={cn(
+                    'uiverse-assign-btn w-full flex items-center justify-between px-3.5 py-2 my-1.5 text-xs font-extrabold tracking-wide',
+                    isActive && 'is-active'
                   )}
-                  {!collapsed && (
-                    <span className="text-[10px] px-1.5 py-0.2 bg-primary-foreground/20 text-primary-foreground rounded uppercase font-extrabold">
-                      ⚡ Quick
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span>{group.label}</span>
+                    <span className="badge-quick text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase">
+                      Quick
                     </span>
-                  )}
+                  </span>
+
+                  <div className="arrow-circle w-6 h-6 shrink-0">
+                    <svg
+                      className="w-3.5 h-3.5 shrink-0"
+                      viewBox="0 0 16 19"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M7 18C7 18.5523 7.44772 19 8 19C8.55228 19 9 18.5523 9 18H7ZM8.70711 0.292893C8.31658 -0.0976311 7.68342 -0.0976311 7.29289 0.292893L0.928932 6.65685C0.538408 7.04738 0.538408 7.68054 0.928932 8.07107C1.31946 8.46159 1.95262 8.46159 2.34315 8.07107L8 2.41421L13.6569 8.07107C14.0474 8.46159 14.6805 8.46159 15.0711 8.07107C15.4616 7.68054 15.4616 7.04738 15.0711 6.65685L8.70711 0.292893ZM9 18L9 1H7L7 18H9Z"
+                        className="arrow-icon"
+                      />
+                    </svg>
+                  </div>
                 </Link>
               )
 
@@ -260,6 +290,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                 <Link
                   key={group.label}
                   href={group.href}
+                  prefetch={true}
                   className={cn(
                     'flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs transition-all duration-150 group',
                     'text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/80',
@@ -302,6 +333,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                   <TooltipTrigger asChild>
                     <Link
                       href={group.children![0].href}
+                      prefetch={true}
                       className={cn(
                         'flex items-center justify-center p-2 rounded-xl text-xs transition-all duration-150',
                         isActive
@@ -318,6 +350,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                       <Link
                         key={child.href}
                         href={child.href}
+                        prefetch={true}
                         className="block text-xs py-0.5 hover:text-primary transition-colors"
                       >
                         {child.label}
@@ -370,6 +403,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                           <Link
                             key={child.href}
                             href={child.href}
+                            prefetch={true}
                             className={cn(
                               'flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] transition-all duration-150',
                               isChildLinkActive

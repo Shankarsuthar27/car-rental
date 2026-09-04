@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminTopbar } from '@/components/admin/AdminTopbar'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
@@ -61,17 +61,9 @@ export function AdminLayoutClient({ children, profile }: AdminLayoutClientProps)
         />
 
         <main className="flex-1 overflow-y-auto overscroll-contain">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={typeof window !== 'undefined' ? window.location.pathname : 'page'}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className="w-full min-w-0"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <div className="w-full min-w-0 animate-in fade-in-50 duration-150">
+            {children}
+          </div>
         </main>
       </motion.div>
     </div>
