@@ -155,7 +155,7 @@ export function AssignCarWorkflow({
   const [withDriver, setWithDriver] = useState(false)
   const [driverCharge, setDriverCharge] = useState('1000')
   const [discountAmount, setDiscountAmount] = useState('0')
-  const [advancePayment, setAdvancePayment] = useState('5000')
+  const [advancePayment, setAdvancePayment] = useState('0')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [assignmentNotes, setAssignmentNotes] = useState('')
 
