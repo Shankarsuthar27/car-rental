@@ -17,6 +17,7 @@ import {
   FileText
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { HeroBookingSection } from '@/components/hero/HeroBookingSection'
 import { formatCustomer } from '@/lib/customers'
 import type { Vehicle } from '@/types'
 
@@ -30,8 +31,8 @@ async function getDashboardData() {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 14)
 
-  // Run all 4 database queries concurrently in parallel for 4x faster page loading
-  const [vehiclesRes, bookingsRes, paymentsRes, revenueRes] = await Promise.all([
+  // Run all database queries concurrently in parallel for 4x faster page loading
+  const [vehiclesRes, bookingsRes, paymentsRes, revenueRes, branchesRes] = await Promise.all([
     supabase
       .from('vehicles')
       .select(`
@@ -58,6 +59,10 @@ async function getDashboardData() {
         p_start_date: thirtyDaysAgo.toISOString().split('T')[0],
         p_end_date: todayStr,
       }),
+    supabase
+      .from('branches')
+      .select('id, name, city')
+      .eq('is_active', true),
   ])
 
   const allVehicles = (vehiclesRes.data ?? []) as unknown as Vehicle[]
@@ -129,6 +134,7 @@ async function getDashboardData() {
     availableVehicles: availableVehicles.slice(0, 10),
     runningVehicles,
     revenueChartData: (revenueData ?? []) as any[],
+    branches: (branchesRes.data ?? []) as any[],
   }
 }
 
@@ -195,6 +201,9 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Hero & Interactive Booking Search Section */}
+      <HeroBookingSection branches={data.branches} targetUrl="/cars" />
 
       {/* 8 Clickable Stat Cards */}
       <DashboardKPIs stats={data.stats} />

@@ -856,7 +856,7 @@ export function RentalHistoryClient({
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Phone: {selectedCustomer.profile?.phone || 'N/A'} • Email: {selectedCustomer.profile?.email || 'N/A'} • City: {selectedCustomer.city || 'Jaipur'}
+                        Phone: {selectedCustomer.profile?.phone || 'N/A'} • Email: {selectedCustomer.profile?.email || 'N/A'} • City: {selectedCustomer.city || 'Jalore'}
                       </p>
                     </div>
 

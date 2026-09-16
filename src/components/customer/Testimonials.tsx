@@ -6,30 +6,30 @@ import { Star, Quote } from 'lucide-react'
 const testimonials = [
   {
     name: 'Priya Sharma',
-    location: 'Jaipur',
+    location: 'Jalore',
     rating: 5,
-    text: 'Booked a Hyundai Creta for our Udaipur trip. The car was immaculate, pickup was smooth, and the pricing was exactly as shown. Highly recommend DriveEase!',
+    text: 'Booked a Hyundai Creta from the Jalore branch. The car was immaculate, pickup was smooth, and the pricing was completely transparent. Highly recommend JSD!',
     avatar: 'PS',
   },
   {
     name: 'Rahul Gupta',
-    location: 'Ahmedabad',
+    location: 'Jalore',
     rating: 5,
-    text: 'Used the monthly rental plan for 3 months for work. Best decision ever — saved so much money compared to Ola/Uber. Customer support is exceptional.',
+    text: 'Used the weekly rental plan for a family trip. Best decision ever — hassle-free booking and exceptional customer support from the Jalore team.',
     avatar: 'RG',
   },
   {
     name: 'Anjali Mehta',
-    location: 'Jodhpur',
+    location: 'Jalore',
     rating: 5,
-    text: 'The Toyota Fortuner for our family trip was perfect! Well maintained, full tank, and the return process was hassle-free. Security deposit refunded within 2 hours!',
+    text: 'The Toyota Fortuner for our trip was perfect! Well maintained, full tank, and the return process at Jalore branch was seamless. Security deposit refunded quickly!',
     avatar: 'AM',
   },
   {
     name: 'Vikram Singh',
-    location: 'Udaipur',
+    location: 'Jalore',
     rating: 5,
-    text: 'Rented the Mahindra Thar for an offroad adventure. The vehicle was in excellent condition and the staff at Udaipur branch was very helpful. Will definitely rent again.',
+    text: 'Rented the Mahindra Thar for an offroad adventure. The vehicle was in mint condition and the staff at Jalore branch was very helpful. Will definitely rent again.',
     avatar: 'VS',
   },
 ]

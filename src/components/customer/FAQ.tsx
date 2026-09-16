@@ -35,9 +35,9 @@ const faqs = [
       'Free cancellation up to 48 hours before pickup — 100% refund. 24–48 hours before pickup — 75% refund. Less than 24 hours — 50% refund. Refunds are processed within 5–7 business days.',
   },
   {
-    question: 'Do you offer one-way rentals?',
+    question: 'Where is your branch located?',
     answer:
-      'Yes! You can pick up from one branch and return to another. One-way rentals may have an additional fee depending on the route. Available between all our branches in Jaipur, Jodhpur, Udaipur, and Ahmedabad.',
+      'Our primary operating branch is located at Near Bus Stand, Collectorate Road, Jalore, Rajasthan. All vehicle pickups, inspections, and returns take place directly at our Jalore branch hub.',
   },
   {
     question: 'What happens if the car breaks down?',

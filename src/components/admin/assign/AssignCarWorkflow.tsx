@@ -88,7 +88,7 @@ export function AssignCarWorkflow({
   const [newCustPhone, setNewCustPhone] = useState('')
   const [newCustEmail, setNewCustEmail] = useState('')
   const [newCustLicense, setNewCustLicense] = useState('')
-  const [newCustCity, setNewCustCity] = useState('Jaipur')
+  const [newCustCity, setNewCustCity] = useState('Jalore')
   const [addingCustomer, setAddingCustomer] = useState(false)
 
   // Step 2: Vehicle Selection
@@ -259,7 +259,7 @@ export function AssignCarWorkflow({
           phone: newCustPhone.trim(),
           email: newCustEmail.trim() || `customer-${Date.now()}@driveease.in`,
           driving_license_number: newCustLicense.trim(),
-          city: newCustCity.trim() || 'Jaipur',
+          city: newCustCity.trim() || 'Jalore',
           state: 'Rajasthan',
           kyc_status: 'verified',
         }),
@@ -282,7 +282,7 @@ export function AssignCarWorkflow({
           profile_id: `prof-${Date.now()}`,
           customer_code: `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
           country: 'India',
-          city: newCustCity.trim() || 'Jaipur',
+          city: newCustCity.trim() || 'Jalore',
           kyc_status: 'verified',
           driving_license_number: newCustLicense.trim() || 'RJ14 2024009811',
           emergency_contact_name: newCustName.trim(),
@@ -973,7 +973,7 @@ export function AssignCarWorkflow({
                         {selectedCustomer.profile?.full_name || selectedCustomer.emergency_contact_name}
                       </span>
                       <span className="text-[10.5px] text-muted-foreground block truncate">
-                        {selectedCustomer.city || 'Jaipur'}, {selectedCustomer.state || 'Rajasthan'}
+                        {selectedCustomer.city || 'Jalore'}, {selectedCustomer.state || 'Rajasthan'}
                       </span>
                     </div>
                   </div>
@@ -1136,7 +1136,7 @@ export function AssignCarWorkflow({
                 <Input
                   value={newCustCity}
                   onChange={e => setNewCustCity(e.target.value)}
-                  placeholder="Jaipur"
+                  placeholder="Jalore"
                   className="h-9 text-xs rounded-xl"
                 />
               </div>

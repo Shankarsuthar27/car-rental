@@ -57,7 +57,7 @@ export default function CustomerProfilePage() {
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">City</Label>
-              <Input defaultValue="Jaipur" className="h-10 rounded-xl" />
+              <Input defaultValue="Jalore" className="h-10 rounded-xl" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">State</Label>

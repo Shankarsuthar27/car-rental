@@ -115,10 +115,10 @@ export function CheckoutWizard({
   const [customerPhone, setCustomerPhone] = useState('+91 98765 43210')
   const [drivingLicense, setDrivingLicense] = useState('RJ14-20220019284')
   const [aadhaarNumber, setAadhaarNumber] = useState('5482 9182 3019')
-  const [address, setAddress] = useState('42, Civil Lines')
-  const [city, setCity] = useState('Jaipur')
+  const [address, setAddress] = useState('Near Bus Stand, Collectorate Road')
+  const [city, setCity] = useState('Jalore')
   const [state, setState] = useState('Rajasthan')
-  const [pincode, setPincode] = useState('302006')
+  const [pincode, setPincode] = useState('343001')
   const [dlUploaded, setDlUploaded] = useState(true)
   const [idUploaded, setIdUploaded] = useState(true)
 

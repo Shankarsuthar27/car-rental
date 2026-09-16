@@ -17,7 +17,7 @@ export default async function AdminEmployeesPage() {
       phone: '+91 98290 11111',
       role: 'Super Admin',
       department: 'Executive Management',
-      branch: 'Jaipur Main Branch',
+      branch: 'Jalore Main Branch',
       permissions: ['Full Access', 'Finance', 'Fleet Management', 'User Control']
     },
     {
@@ -27,7 +27,7 @@ export default async function AdminEmployeesPage() {
       phone: '+91 98290 22222',
       role: 'Accountant',
       department: 'Finance & Invoicing',
-      branch: 'Jaipur Main Branch',
+      branch: 'Jalore Main Branch',
       permissions: ['View Payments', 'Generate Invoices', 'Process Refunds']
     },
     {
@@ -37,7 +37,7 @@ export default async function AdminEmployeesPage() {
       phone: '+91 98290 33333',
       role: 'Vehicle Manager',
       department: 'Fleet Operations',
-      branch: 'Jodhpur Branch',
+      branch: 'Jalore Main Branch',
       permissions: ['Manage Vehicles', 'Schedule Maintenance', 'Perform Inspections']
     },
     {
@@ -47,7 +47,7 @@ export default async function AdminEmployeesPage() {
       phone: '+91 98290 44444',
       role: 'Booking Manager',
       department: 'Customer Success',
-      branch: 'Udaipur Branch',
+      branch: 'Jalore Main Branch',
       permissions: ['Manage Bookings', 'Verify KYC', 'Start & Return Handover']
     }
   ]

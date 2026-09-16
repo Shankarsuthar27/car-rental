@@ -36,7 +36,7 @@ export default function AdminNotificationsPage() {
     {
       id: 'n-2',
       title: 'Upcoming Scheduled Pickup Today',
-      body: 'Customer Rahul Sharma scheduled to pick up Toyota Fortuner (GJ01-TF-2024) at 2:00 PM at Jaipur Main Branch.',
+      body: 'Customer Rahul Sharma scheduled to pick up Toyota Fortuner (GJ01-TF-2024) at 2:00 PM at Jalore Main Branch.',
       category: 'pickup',
       time: '45 minutes ago',
       unread: true,

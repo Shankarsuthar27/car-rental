@@ -66,9 +66,9 @@ export function Footer() {
 
           {/* Locations */}
           <div>
-            <h4 className="font-semibold text-white mb-4">Our Branches</h4>
+            <h4 className="font-semibold text-white mb-4">Our Branch</h4>
             <ul className="space-y-2">
-              {['Jaipur', 'Jodhpur', 'Udaipur', 'Ahmedabad'].map((city) => (
+              {['Jalore Main Branch'].map((city) => (
                 <li key={city}>
                   <span className="text-sm text-sidebar-foreground/60 flex items-center gap-1.5">
                     <MapPin className="w-3 h-3" /> {city}
@@ -84,11 +84,11 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="tel:+911412345678"
+                  href="tel:+912973222333"
                   className="text-sm text-sidebar-foreground/60 hover:text-white transition-colors flex items-center gap-2"
                 >
                   <Phone className="w-4 h-4 shrink-0" />
-                  +91-141-2345678
+                  +91-2973-222333
                 </a>
               </li>
               <li>
@@ -103,7 +103,7 @@ export function Footer() {
               <li>
                 <span className="text-sm text-sidebar-foreground/60 flex items-start gap-2">
                   <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
-                  C-Scheme, Ashok Marg, Jaipur, Rajasthan 302001
+                  Near Bus Stand, Collectorate Road, Jalore, Rajasthan 343001
                 </span>
               </li>
             </ul>

@@ -8,20 +8,17 @@
 -- ============================================================
 
 INSERT INTO branches (id, name, slug, address, city, state, pincode, phone, email, opening_time, closing_time, is_active) VALUES
-  ('11111111-0000-0000-0000-000000000001', 'Jaipur Main Branch', 'jaipur-main', 'C-Scheme, Ashok Marg', 'Jaipur', 'Rajasthan', '302001', '+91-141-2345678', 'jaipur@driveease.in', '08:00', '22:00', TRUE),
-  ('11111111-0000-0000-0000-000000000002', 'Jodhpur Branch', 'jodhpur', 'Near Clock Tower, Sardar Market', 'Jodhpur', 'Rajasthan', '342001', '+91-291-3456789', 'jodhpur@driveease.in', '08:00', '21:00', TRUE),
-  ('11111111-0000-0000-0000-000000000003', 'Udaipur Branch', 'udaipur', 'City Palace Road, Fateh Sagar', 'Udaipur', 'Rajasthan', '313001', '+91-294-4567890', 'udaipur@driveease.in', '09:00', '21:00', TRUE),
-  ('11111111-0000-0000-0000-000000000004', 'Ahmedabad Branch', 'ahmedabad', 'SG Highway, Prahlad Nagar', 'Ahmedabad', 'Gujarat', '380051', '+91-79-5678901', 'ahmedabad@driveease.in', '08:00', '22:00', TRUE);
+  ('11111111-0000-0000-0000-000000000001', 'Jalore Main Branch', 'jalore-main', 'Near Bus Stand, Collectorate Road', 'Jalore', 'Rajasthan', '343001', '+91-2973-222333', 'jalore@driveease.in', '08:00', '22:00', TRUE);
 
 -- ============================================================
 -- SETTINGS
 -- ============================================================
 
 INSERT INTO settings (key, value, description, is_public) VALUES
-  ('company_name', '"DriveEase"', 'Company name', TRUE),
+  ('company_name', '"JSD Jalore Self Drive PVT LTD"', 'Company name', TRUE),
   ('company_tagline', '"Drive Your Way, Every Day"', 'Company tagline', TRUE),
-  ('company_address', '"C-Scheme, Ashok Marg, Jaipur, Rajasthan 302001"', 'Registered address', FALSE),
-  ('company_phone', '"+91-141-2345678"', 'Support phone', TRUE),
+  ('company_address', '"Near Bus Stand, Collectorate Road, Jalore, Rajasthan 343001"', 'Registered address', FALSE),
+  ('company_phone', '"+91-2973-222333"', 'Support phone', TRUE),
   ('company_email', '"support@driveease.in"', 'Support email', TRUE),
   ('company_gstin', '"08ABCDE1234F1Z5"', 'GST number', FALSE),
   ('currency', '"INR"', 'Default currency', TRUE),
@@ -74,7 +71,7 @@ INSERT INTO vehicles (id, branch_id, brand, model, variant, year, registration_n
   ),
   (
     '33333333-0000-0000-0000-000000000003',
-    '11111111-0000-0000-0000-000000000002',
+    '11111111-0000-0000-0000-000000000001',
     'Toyota', 'Innova Crysta', 'GX 2.4 MT', 2023,
     'RJ20-IC-2023', 'muv', 'diesel', 'manual', 7,
     'White Pearl', 15.1, 32000,
@@ -86,7 +83,7 @@ INSERT INTO vehicles (id, branch_id, brand, model, variant, year, registration_n
   ),
   (
     '33333333-0000-0000-0000-000000000004',
-    '11111111-0000-0000-0000-000000000002',
+    '11111111-0000-0000-0000-000000000001',
     'Mahindra', 'Scorpio N', 'Z8 L 4WD', 2023,
     'RJ20-SN-2023', 'suv', 'diesel', 'manual', 7,
     'Deep Forest', 15.5, 22000,
@@ -98,7 +95,7 @@ INSERT INTO vehicles (id, branch_id, brand, model, variant, year, registration_n
   ),
   (
     '33333333-0000-0000-0000-000000000005',
-    '11111111-0000-0000-0000-000000000003',
+    '11111111-0000-0000-0000-000000000001',
     'Kia', 'Seltos', 'GTX+ Turbo', 2024,
     'RJ27-KS-2024', 'suv', 'petrol', 'automatic', 5,
     'Glacial White Pearl', 16.5, 18000,
@@ -110,7 +107,7 @@ INSERT INTO vehicles (id, branch_id, brand, model, variant, year, registration_n
   ),
   (
     '33333333-0000-0000-0000-000000000006',
-    '11111111-0000-0000-0000-000000000004',
+    '11111111-0000-0000-0000-000000000001',
     'Toyota', 'Fortuner', 'Legender 4x4 AT', 2024,
     'GJ01-TF-2024', 'suv', 'diesel', 'automatic', 7,
     'Sparkling Black Pearl Crystal Shine', 14.0, 28000,

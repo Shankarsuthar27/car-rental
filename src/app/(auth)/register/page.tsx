@@ -58,7 +58,7 @@ export default function RegisterPage() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push('/dashboard')
+        router.push('/admin/dashboard')
         router.refresh()
       }, 1000)
     } catch (err) {

@@ -70,8 +70,8 @@ export default async function CustomerBookingsPage() {
           year: 2024,
           registration_number: 'RJ14-CR-2024'
         },
-        pickup_branch: { city: 'Jaipur', name: 'Jaipur Main Branch' },
-        return_branch: { city: 'Jaipur', name: 'Jaipur Main Branch' }
+        pickup_branch: { city: 'Jalore', name: 'Jalore Main Branch' },
+        return_branch: { city: 'Jalore', name: 'Jalore Main Branch' }
       },
       {
         id: 'demo-2',
@@ -88,8 +88,8 @@ export default async function CustomerBookingsPage() {
           year: 2024,
           registration_number: 'RJ27-TR-2024'
         },
-        pickup_branch: { city: 'Udaipur', name: 'Udaipur Branch' },
-        return_branch: { city: 'Udaipur', name: 'Udaipur Branch' }
+        pickup_branch: { city: 'Jalore', name: 'Jalore Main Branch' },
+        return_branch: { city: 'Jalore', name: 'Jalore Main Branch' }
       }
     ]
   }

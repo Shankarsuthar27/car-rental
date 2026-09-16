@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
       ]
       if (!staffRoles.includes(demoRole)) {
         const redirectUrl = request.nextUrl.clone()
-        redirectUrl.pathname = '/dashboard'
+        redirectUrl.pathname = '/cars'
         return NextResponse.redirect(redirectUrl)
       }
     }

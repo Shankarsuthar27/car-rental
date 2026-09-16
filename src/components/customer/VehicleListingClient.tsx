@@ -243,7 +243,7 @@ export function VehicleListingClient({
             <SelectValue placeholder="All Branches" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Cities / Branches</SelectItem>
+            <SelectItem value="all">All Branches</SelectItem>
             {branches.map(b => (
               <SelectItem key={b.id} value={b.id}>
                 {b.city} — {b.name}

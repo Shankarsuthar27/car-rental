@@ -6,10 +6,7 @@
 -- 1. BRANCHES
 INSERT INTO branches (id, name, slug, city, state, address, pincode, phone, email, opening_time, closing_time, is_active)
 VALUES
-  ('11111111-1111-1111-1111-111111111111', 'Jaipur Main Branch', 'jaipur-main', 'Jaipur', 'Rajasthan', 'C-Scheme, Ashok Marg, Jaipur', '302001', '+91-141-2345678', 'jaipur@driveease.in', '08:00', '22:00', true),
-  ('22222222-2222-2222-2222-222222222222', 'Jodhpur Branch', 'jodhpur-branch', 'Jodhpur', 'Rajasthan', 'Paota Circle, High Court Road, Jodhpur', '342001', '+91-291-2345678', 'jodhpur@driveease.in', '08:00', '21:00', true),
-  ('33333333-3333-3333-3333-333333333333', 'Udaipur City Center', 'udaipur-city', 'Udaipur', 'Rajasthan', 'Sukhadia Circle, Panchwati, Udaipur', '313001', '+91-294-2345678', 'udaipur@driveease.in', '08:00', '21:00', true),
-  ('44444444-4444-4444-4444-444444444444', 'Ahmedabad SG Highway', 'ahmedabad-sg', 'Ahmedabad', 'Gujarat', 'SG Highway, Bodakdev, Ahmedabad', '380054', '+91-79-2345678', 'ahmedabad@driveease.in', '08:00', '22:00', true)
+  ('11111111-1111-1111-1111-111111111111', 'Jalore Main Branch', 'jalore-main', 'Jalore', 'Rajasthan', 'Near Bus Stand, Collectorate Road, Jalore', '343001', '+91-2973-222333', 'jalore@driveease.in', '08:00', '22:00', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. VEHICLES
@@ -41,7 +38,7 @@ INSERT INTO vehicles (
   ),
   (
     'a3333333-3333-3333-3333-333333333333',
-    '33333333-3333-3333-3333-333333333333',
+    '11111111-1111-1111-1111-111111111111',
     'Toyota', 'Innova Crysta', '2.4 ZX 7-Str', 2023, 'RJ27-IC-2023',
     'muv', 'diesel', 'automatic', 7, 'Pearl White',
     220.00, 2800.00, 17500.00, 60000.00, 12000.00, 14.00, 250,
@@ -61,7 +58,7 @@ INSERT INTO vehicles (
   ),
   (
     'a5555555-5555-5555-5555-555555555555',
-    '44444444-4444-4444-4444-444444444444',
+    '11111111-1111-1111-1111-111111111111',
     'BMW', '3 Series Gran Limousine', '330Li M Sport', 2024, 'GJ01-BM-2024',
     'luxury', 'petrol', 'automatic', 5, 'Portimao Blue',
     500.00, 6500.00, 42000.00, 145000.00, 25000.00, 25.00, 200,
@@ -71,7 +68,7 @@ INSERT INTO vehicles (
   ),
   (
     'a6666666-6666-6666-6666-666666666666',
-    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
     'Maruti Suzuki', 'Swift', 'ZXi Plus AMT', 2024, 'RJ19-SW-2024',
     'hatchback', 'petrol', 'automatic', 5, 'Sizzling Red',
     100.00, 1200.00, 7500.00, 26000.00, 5000.00, 9.00, 200,
@@ -110,6 +107,6 @@ ON CONFLICT (id) DO NOTHING;
 -- 6. SETTINGS
 INSERT INTO settings (id, key, value, description, is_public)
 VALUES
-  ('e1111111-1111-1111-1111-111111111111', 'company_profile', '{"name": "DriveEase Mobility Solutions", "tagline": "Drive Your Way, Every Day", "gstin": "08ABCDE1234F1Z5", "email": "support@driveease.in", "phone": "+91-141-2345678", "address": "C-Scheme, Ashok Marg, Jaipur, Rajasthan 302001"}', 'Company details and GSTIN', true),
+  ('e1111111-1111-1111-1111-111111111111', 'company_profile', '{"name": "JSD Jalore Self Drive PVT LTD", "tagline": "Drive Your Way, Every Day", "gstin": "08ABCDE1234F1Z5", "email": "support@driveease.in", "phone": "+91-2973-222333", "address": "Near Bus Stand, Collectorate Road, Jalore, Rajasthan 343001"}', 'Company details and GSTIN', true),
   ('e2222222-2222-2222-2222-222222222222', 'rental_policy', '{"partial_period_rule": "round_up_hour", "return_grace_period_minutes": 30, "advance_payment_percentage": 30, "tax_rate": 18, "weekend_multiplier": 1.25}', 'Pricing calculation rules', true)
 ON CONFLICT (id) DO NOTHING;

@@ -37,8 +37,8 @@ export default function AdminSettingsPage() {
   const [tagline, setTagline] = useState('Premium Fleet & Self-Drive Car Rental')
   const [gstin, setGstin] = useState('08ABCDE1234F1Z5')
   const [supportEmail, setSupportEmail] = useState('admin@driveease.in')
-  const [supportPhone, setSupportPhone] = useState('+91-141-2345678')
-  const [address, setAddress] = useState('C-Scheme, Ashok Marg, Jaipur, Rajasthan 302001')
+  const [supportPhone, setSupportPhone] = useState('+91-2973-222333')
+  const [address, setAddress] = useState('Near Bus Stand, Collectorate Road, Jalore, Rajasthan 343001')
   const [currency, setCurrency] = useState('INR (₹)')
 
   // 2. Rental Settings

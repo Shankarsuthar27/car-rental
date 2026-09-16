@@ -125,10 +125,10 @@ export async function POST(req: Request) {
         .insert({
           profile_id: profileId || null,
           customer_code: `CUST-${new Date().getFullYear()}-${randomSuffix}`,
-          address: customerDetails?.address || 'Civil Lines',
-          city: customerDetails?.city || 'Jaipur',
+          address: customerDetails?.address || 'Main Market, Collectorate Road',
+          city: customerDetails?.city || 'Jalore',
           state: customerDetails?.state || 'Rajasthan',
-          pincode: customerDetails?.pincode || '302001',
+          pincode: customerDetails?.pincode || '343001',
           country: 'India',
           emergency_contact_name: customerName,
           emergency_contact_phone: customerPhone,

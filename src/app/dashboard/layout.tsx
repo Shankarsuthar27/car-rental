@@ -80,7 +80,7 @@ export default function CustomerDashboardLayout({
           <BrandLogo href="/" size="sm" textVariant="compact" />
 
           <span className="hidden sm:inline-block text-[11px] bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full border border-primary/20">
-            Customer Portal
+            Console
           </span>
         </div>
 
@@ -103,7 +103,7 @@ export default function CustomerDashboardLayout({
             size="sm"
             onClick={handleLogout}
             className="text-xs text-muted-foreground hover:text-rose-600 min-h-[40px] px-2.5 rounded-xl gap-1"
-            aria-label="Log out of customer portal"
+            aria-label="Log out"
           >
             <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">Log out</span>

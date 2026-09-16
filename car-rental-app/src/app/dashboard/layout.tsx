@@ -60,7 +60,7 @@ export default function CustomerDashboardLayout({
             <span className="font-bold text-lg hidden sm:inline">DriveEase</span>
           </Link>
           <span className="text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-md">
-            Customer Portal
+            Console
           </span>
         </div>
 

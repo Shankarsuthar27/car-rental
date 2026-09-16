@@ -4,10 +4,10 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BrandLogo } from '@/components/brand/BrandLogo'
 import {
   Menu,
   X,
+  Home,
   Car,
   Phone,
   ShieldCheck,
@@ -75,8 +75,8 @@ export function CustomerNav() {
   const isTransparentPage = pathname === '/'
 
   const navLinks = [
+    { label: 'Home', href: '/', icon: Home },
     { label: 'Browse Fleet', href: '/cars', icon: Car },
-    { label: 'Customer Portal', href: '/dashboard', icon: LayoutDashboard },
   ]
 
   return (
@@ -93,16 +93,20 @@ export function CustomerNav() {
           className="container mx-auto px-3 sm:px-4 md:px-6 h-16 flex items-center justify-between gap-2 max-w-7xl"
           aria-label="Main Navigation"
         >
-          {/* Brand Logo - Responsive sizing for ultra-narrow 320px screens */}
-          <div className="shrink-0 min-w-0">
-            <BrandLogo
+          {/* Mobile Quick Home Link */}
+          <div className="flex items-center md:hidden">
+            <Link
               href="/"
-              size="sm"
-              textVariant="compact"
-              priority
-              textClassName={isTransparentPage && !scrolled ? 'text-white' : 'text-foreground'}
-              subtextClassName={isTransparentPage && !scrolled ? 'text-amber-400' : 'text-primary'}
-            />
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors min-h-[44px]',
+                isTransparentPage && !scrolled
+                  ? 'text-white hover:bg-white/10'
+                  : 'text-foreground hover:bg-muted'
+              )}
+            >
+              <Home className="w-4 h-4 text-primary" aria-hidden="true" />
+              <span>Home</span>
+            </Link>
           </div>
 
           {/* Desktop Navigation Links */}
@@ -193,12 +197,6 @@ export function CustomerNav() {
                     <Link href="/admin/bookings" className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-primary" aria-hidden="true" />
                       <span>All Bookings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="rounded-xl min-h-[40px] text-xs font-medium cursor-pointer">
-                    <Link href="/dashboard" className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-primary" aria-hidden="true" />
-                      <span>Customer Portal</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -353,6 +351,23 @@ export function CustomerNav() {
                   </span>
 
                   <Link
+                    href="/"
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      'flex items-center justify-between p-3.5 rounded-2xl text-sm font-semibold transition-colors min-h-[44px]',
+                      pathname === '/'
+                        ? 'bg-primary text-white font-bold shadow-xs'
+                        : 'bg-muted/30 text-foreground hover:bg-muted'
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Home className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
+                      <span>Home</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" aria-hidden="true" />
+                  </Link>
+
+                  <Link
                     href="/cars"
                     onClick={() => setMobileOpen(false)}
                     className={cn(
@@ -365,23 +380,6 @@ export function CustomerNav() {
                     <div className="flex items-center gap-3">
                       <Car className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
                       <span>Browse Fleet & Cars</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 opacity-70" aria-hidden="true" />
-                  </Link>
-
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      'flex items-center justify-between p-3.5 rounded-2xl text-sm font-semibold transition-colors min-h-[44px]',
-                      pathname.startsWith('/dashboard')
-                        ? 'bg-primary text-white font-bold shadow-xs'
-                        : 'bg-muted/30 text-foreground hover:bg-muted'
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <LayoutDashboard className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
-                      <span>Customer Portal / Bookings</span>
                     </div>
                     <ChevronRight className="w-4 h-4 opacity-70" aria-hidden="true" />
                   </Link>

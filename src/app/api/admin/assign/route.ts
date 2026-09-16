@@ -80,7 +80,7 @@ export async function POST(req: Request) {
         .insert({
           customer_code: customerCode,
           emergency_contact_name: 'Registered Customer',
-          city: 'Jaipur',
+          city: 'Jalore',
           state: 'Rajasthan',
           country: 'India',
           kyc_status: 'verified',

@@ -68,7 +68,7 @@ export default async function AdminLayout({
     .single()
 
   if (!profile || !STAFF_ROLES.includes(profile.role)) {
-    redirect('/dashboard')
+    redirect('/cars')
   }
 
   return (

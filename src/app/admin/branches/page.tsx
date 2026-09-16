@@ -25,7 +25,7 @@ export default async function AdminBranchesPage() {
             Branch Network ({branches.length})
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Operational hubs across Rajasthan and Gujarat supporting inter-branch and one-way rentals.
+            Primary operational hub in Jalore, Rajasthan providing premium self-drive rental services.
           </p>
         </div>
 

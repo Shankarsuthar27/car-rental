@@ -40,7 +40,7 @@ export default async function AdminMaintenancePage() {
       completed_date: '2026-08-10',
       cost: 4200,
       is_completed: true,
-      vendor_name: 'Hyundai Authorized Service Centre, Jaipur',
+      vendor_name: 'Hyundai Authorized Service Centre, Jalore',
       vehicle: { brand: 'Hyundai', model: 'Creta', registration_number: 'RJ14-CR-2024' }
     },
     {
@@ -50,7 +50,7 @@ export default async function AdminMaintenancePage() {
       scheduled_date: '2026-08-28',
       cost: 3100,
       is_completed: false,
-      vendor_name: 'Toyota Service Hub, Jodhpur',
+      vendor_name: 'Toyota Service Hub, Jalore',
       vehicle: { brand: 'Toyota', model: 'Innova Crysta', registration_number: 'RJ20-IC-2023' }
     }
   ]

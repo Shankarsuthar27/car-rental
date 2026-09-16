@@ -85,7 +85,7 @@ export function AdminCustomersClient({
   const [addEmail, setAddEmail] = useState('')
   const [addLicense, setAddLicense] = useState('')
   const [addAddress, setAddAddress] = useState('')
-  const [addCity, setAddCity] = useState('Jaipur')
+  const [addCity, setAddCity] = useState('Jalore')
   const [addEmergencyName, setAddEmergencyName] = useState('')
   const [addEmergencyPhone, setAddEmergencyPhone] = useState('')
   const [addNotes, setAddNotes] = useState('')
@@ -394,7 +394,7 @@ export function AdminCustomersClient({
 
                       {/* Address */}
                       <td className="p-4 text-muted-foreground">
-                        <span className="font-medium text-foreground block">{cust.city || 'Jaipur'}</span>
+                        <span className="font-medium text-foreground block">{cust.city || 'Jalore'}</span>
                         <span className="text-[11px] block">{cust.address || cust.state || 'India'}</span>
                       </td>
 
@@ -529,7 +529,7 @@ export function AdminCustomersClient({
                 <Input
                   value={addCity}
                   onChange={e => setAddCity(e.target.value)}
-                  placeholder="Jaipur"
+                  placeholder="Jalore"
                   className="h-9 text-xs rounded-xl"
                 />
               </div>
@@ -806,7 +806,7 @@ export function AdminCustomersClient({
                   {selectedCust.emergency_contact_name || 'Family Member'} ({selectedCust.emergency_contact_phone || 'Contact provided on file'})
                 </span>
                 <span className="text-[10px] text-muted-foreground block">
-                  Address: {selectedCust.address || 'Jaipur, Rajasthan'}
+                  Address: {selectedCust.address || 'Jalore, Rajasthan'}
                 </span>
               </div>
 

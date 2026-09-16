@@ -58,7 +58,7 @@ export async function POST(req: Request) {
             await supabase.from('customers').insert({
               profile_id: userId,
               customer_code: 'CUST-DEMO-001',
-              city: 'Jaipur',
+              city: 'Jalore',
               state: 'Rajasthan',
               kyc_status: 'verified',
             })
