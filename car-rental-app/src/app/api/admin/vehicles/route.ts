@@ -31,9 +31,14 @@ export async function GET(req: Request) {
 
     if (error) throw error
 
+    const vehicles = ((data ?? []) as any[]).map(v => ({
+      ...v,
+      late_charge_24h: v.late_charge_24h ?? (v.meta as any)?.late_charge_24h ?? 1000
+    }))
+
     return NextResponse.json({
       success: true,
-      data: (data ?? []) as unknown as Vehicle[]
+      data: vehicles as unknown as Vehicle[]
     })
   } catch (error: any) {
     console.error('Fetch vehicles error:', error)
@@ -63,6 +68,7 @@ export async function POST(req: Request) {
       security_deposit,
       extra_km_charge,
       included_km_per_day = 200,
+      late_charge_24h = 1000,
       branch_id,
       color,
       current_odometer = 0,
@@ -102,6 +108,8 @@ export async function POST(req: Request) {
       )
     }
 
+    const numLateCharge24h = Number(late_charge_24h) || 1000
+
     const newVehiclePayload = {
       brand: brand.trim(),
       model: model.trim(),
@@ -123,7 +131,11 @@ export async function POST(req: Request) {
       description: description?.trim() || null,
       features: Array.isArray(features) ? features : [],
       status: (status as VehicleStatus) || 'available',
-      is_active: true
+      is_active: true,
+      meta: {
+        ...(typeof body.meta === 'object' && body.meta !== null ? body.meta : {}),
+        late_charge_24h: numLateCharge24h
+      }
     }
 
     const { data: createdVehicle, error: createErr } = await supabase
@@ -157,9 +169,19 @@ export async function POST(req: Request) {
       .eq('id', createdVehicle.id)
       .single()
 
+    const fullVehicleData = fullVehicle
+      ? {
+          ...fullVehicle,
+          late_charge_24h: fullVehicle.late_charge_24h ?? (fullVehicle.meta as any)?.late_charge_24h ?? numLateCharge24h
+        }
+      : {
+          ...createdVehicle,
+          late_charge_24h: numLateCharge24h
+        }
+
     return NextResponse.json({
       success: true,
-      data: fullVehicle as unknown as Vehicle,
+      data: fullVehicleData as unknown as Vehicle,
       message: `${createdVehicle.brand} ${createdVehicle.model} registered successfully!`
     })
   } catch (error: any) {
@@ -191,6 +213,7 @@ export async function PUT(req: Request) {
       security_deposit,
       extra_km_charge,
       included_km_per_day,
+      late_charge_24h,
       branch_id,
       color,
       current_odometer,
@@ -249,6 +272,13 @@ export async function PUT(req: Request) {
     if (security_deposit !== undefined) updatePayload.security_deposit = Number(security_deposit)
     if (extra_km_charge !== undefined) updatePayload.extra_km_charge = Number(extra_km_charge)
     if (included_km_per_day !== undefined) updatePayload.included_km_per_day = Number(included_km_per_day)
+    if (late_charge_24h !== undefined) {
+      const { data: existingV } = await supabase.from('vehicles').select('meta').eq('id', id).maybeSingle()
+      updatePayload.meta = {
+        ...((existingV?.meta as any) || {}),
+        late_charge_24h: Number(late_charge_24h) || 0
+      }
+    }
     if (branch_id !== undefined) updatePayload.branch_id = branch_id
     if (color !== undefined) updatePayload.color = color?.trim() || null
     if (current_odometer !== undefined) updatePayload.current_odometer = Number(current_odometer)
@@ -306,9 +336,14 @@ export async function PUT(req: Request) {
 
     if (fetchErr) throw fetchErr
 
+    const updatedVehicleData = {
+      ...updatedVehicle,
+      late_charge_24h: updatedVehicle.late_charge_24h ?? (updatedVehicle.meta as any)?.late_charge_24h ?? (late_charge_24h !== undefined ? Number(late_charge_24h) : 1000)
+    }
+
     return NextResponse.json({
       success: true,
-      data: updatedVehicle as unknown as Vehicle,
+      data: updatedVehicleData as unknown as Vehicle,
       message: 'Vehicle updated successfully!'
     })
   } catch (error: any) {

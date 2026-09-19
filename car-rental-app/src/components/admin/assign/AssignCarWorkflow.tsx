@@ -97,27 +97,16 @@ export function AssignCarWorkflow({
   )
   const [vehicleSearch, setVehicleSearch] = useState('')
 
-  // Step 3: Rental Configuration
-  const [rentalType, setRentalType] = useState<'daily' | 'hourly'>('daily')
+  // Step 3: Rental Configuration (Defaults to Daily)
+  const [rentalType] = useState<'daily' | 'hourly'>('daily')
 
-  // Default dates: Start = now, Return = 2 days from now (or 6 hours for hourly)
+  // Default dates: Start = now, Return = 2 days from now
   const now = new Date()
   const defaultPickup = format(now, "yyyy-MM-dd'T'HH:mm")
   const defaultReturnDaily = format(addDays(now, 2), "yyyy-MM-dd'T'HH:mm")
-  const defaultReturnHourly = format(addHours(now, 6), "yyyy-MM-dd'T'HH:mm")
 
   const [pickupDatetime, setPickupDatetime] = useState(defaultPickup)
   const [returnDatetime, setReturnDatetime] = useState(defaultReturnDaily)
-
-  // When switching rental type, adjust default return datetime
-  const handleRentalTypeChange = (type: 'daily' | 'hourly') => {
-    setRentalType(type)
-    if (type === 'hourly') {
-      setReturnDatetime(format(addHours(new Date(pickupDatetime), 6), "yyyy-MM-dd'T'HH:mm"))
-    } else {
-      setReturnDatetime(format(addDays(new Date(pickupDatetime), 2), "yyyy-MM-dd'T'HH:mm"))
-    }
-  }
 
   // Selected vehicle object
   const selectedVehicle = useMemo(() => {
@@ -763,37 +752,6 @@ export function AssignCarWorkflow({
             </div>
 
             <div className="space-y-4">
-              {/* Rental Type Pill Toggle */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-foreground">Rental Rate Billing Model</Label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-muted/60 rounded-2xl border border-border/60">
-                  <button
-                    type="button"
-                    onClick={() => handleRentalTypeChange('daily')}
-                    className={cn(
-                      'py-2 rounded-xl text-xs font-bold transition-all',
-                      rentalType === 'daily'
-                        ? 'bg-card text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    📅 Daily Rental Plan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRentalTypeChange('hourly')}
-                    className={cn(
-                      'py-2 rounded-xl text-xs font-bold transition-all',
-                      rentalType === 'hourly'
-                        ? 'bg-card text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    ⏱️ Hourly Quick Rental
-                  </button>
-                </div>
-              </div>
-
               {/* Dates Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">

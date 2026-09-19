@@ -278,6 +278,7 @@ export interface Vehicle {
   security_deposit: number
   extra_km_charge: number
   included_km_per_day: number
+  late_charge_24h?: number
   status: VehicleStatus
   is_active: boolean
   insurance_expiry?: string

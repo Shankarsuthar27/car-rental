@@ -150,7 +150,7 @@ export function AdminVehiclesClient({
   const [newHourlyRate, setNewHourlyRate] = useState('200')
   const [newDeposit, setNewDeposit] = useState('10000')
   const [newExtraKm, setNewExtraKm] = useState('15')
-  const [newIncludedKm, setNewIncludedKm] = useState('200')
+  const [newLateCharge24h, setNewLateCharge24h] = useState('1000')
   const [newBranch, setNewBranch] = useState(branches[0]?.id || '')
   const [newImageUrl, setNewImageUrl] = useState(IMAGE_PRESETS[0].url)
   const [newDescription, setNewDescription] = useState('')
@@ -179,7 +179,7 @@ export function AdminVehiclesClient({
   const [editHourlyRate, setEditHourlyRate] = useState('200')
   const [editDeposit, setEditDeposit] = useState('10000')
   const [editExtraKm, setEditExtraKm] = useState('15')
-  const [editIncludedKm, setEditIncludedKm] = useState('200')
+  const [editLateCharge24h, setEditLateCharge24h] = useState('1000')
   const [editBranch, setEditBranch] = useState('')
   const [editImageUrl, setEditImageUrl] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -257,7 +257,7 @@ export function AdminVehiclesClient({
     setEditHourlyRate(String(v.hourly_rate || 200))
     setEditDeposit(String(v.security_deposit || 10000))
     setEditExtraKm(String(v.extra_km_charge || 15))
-    setEditIncludedKm(String(v.included_km_per_day || 200))
+    setEditLateCharge24h(String(v.late_charge_24h ?? (v.meta as any)?.late_charge_24h ?? 1000))
     setEditBranch(v.branch_id || branches[0]?.id || '')
     setEditImageUrl(v.images?.[0]?.url || '')
     setEditDescription(v.description || '')
@@ -308,7 +308,8 @@ export function AdminVehiclesClient({
         hourly_rate: Number(newHourlyRate),
         security_deposit: Number(newDeposit),
         extra_km_charge: Number(newExtraKm),
-        included_km_per_day: Number(newIncludedKm),
+        late_charge_24h: Number(newLateCharge24h),
+        included_km_per_day: 200,
         branch_id: newBranch,
         image_url: newImageUrl,
         description: newDescription,
@@ -339,6 +340,7 @@ export function AdminVehiclesClient({
       setNewVariant('')
       setNewRegNumber('')
       setNewDescription('')
+      setNewLateCharge24h('1000')
     } catch (err: any) {
       showFeedback('error', err.message || 'Error registering vehicle.')
     } finally {
@@ -369,7 +371,8 @@ export function AdminVehiclesClient({
         hourly_rate: Number(editHourlyRate),
         security_deposit: Number(editDeposit),
         extra_km_charge: Number(editExtraKm),
-        included_km_per_day: Number(editIncludedKm),
+        late_charge_24h: Number(editLateCharge24h),
+        included_km_per_day: 200,
         branch_id: editBranch,
         image_url: editImageUrl,
         description: editDescription,
@@ -589,7 +592,7 @@ export function AdminVehiclesClient({
                 <th className="p-4">Registration #</th>
                 <th className="p-4">Branch Location</th>
                 <th className="p-4">Rental Rates</th>
-                <th className="p-4">Deposit & KM</th>
+                <th className="p-4">Deposit & Charges</th>
                 <th className="p-4">Live Status</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
@@ -693,11 +696,11 @@ export function AdminVehiclesClient({
                         </div>
                       </td>
 
-                      {/* Security Deposit & Inclusions */}
+                      {/* Security Deposit & 24h Late Charge */}
                       <td className="p-4 font-medium text-foreground">
                         <span className="block font-semibold">₹{v.security_deposit?.toLocaleString('en-IN')}</span>
                         <span className="text-[10px] text-muted-foreground block">
-                          Incl: {v.included_km_per_day || 200} km/day
+                          24h Late: ₹{(v.late_charge_24h ?? (v.meta as any)?.late_charge_24h ?? 1000)?.toLocaleString('en-IN')}
                         </span>
                       </td>
 
@@ -1000,8 +1003,8 @@ export function AdminVehiclesClient({
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Daily Rate (₹)</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Daily Rate (₹)</Label>
                   <Input
                     type="number"
                     required
@@ -1010,8 +1013,8 @@ export function AdminVehiclesClient({
                     className="h-9 text-xs font-bold rounded-xl"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Hourly Rate (₹)</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Hourly Rate (₹)</Label>
                   <Input
                     type="number"
                     value={newHourlyRate}
@@ -1019,8 +1022,8 @@ export function AdminVehiclesClient({
                     className="h-9 text-xs rounded-xl"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Security Deposit (₹)</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Security Deposit (₹)</Label>
                   <Input
                     type="number"
                     value={newDeposit}
@@ -1028,8 +1031,8 @@ export function AdminVehiclesClient({
                     className="h-9 text-xs rounded-xl"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Extra KM (₹/km)</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Extra KM (₹/km)</Label>
                   <Input
                     type="number"
                     value={newExtraKm}
@@ -1037,12 +1040,13 @@ export function AdminVehiclesClient({
                     className="h-9 text-xs rounded-xl"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Included KM/Day</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center" title="24 Hours Late Charge">24h Late Charge (₹)</Label>
                   <Input
                     type="number"
-                    value={newIncludedKm}
-                    onChange={e => setNewIncludedKm(e.target.value)}
+                    placeholder="e.g. 1000"
+                    value={newLateCharge24h}
+                    onChange={e => setNewLateCharge24h(e.target.value)}
                     className="h-9 text-xs rounded-xl"
                   />
                 </div>
@@ -1306,8 +1310,8 @@ export function AdminVehiclesClient({
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Daily Rate (₹)</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Daily Rate (₹)</Label>
                   <Input
                     type="number"
                     required
@@ -1316,8 +1320,8 @@ export function AdminVehiclesClient({
                     className="h-9 text-xs font-bold rounded-xl"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Hourly Rate (₹)</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Hourly Rate (₹)</Label>
                   <Input
                     type="number"
                     value={editHourlyRate}
@@ -1325,8 +1329,8 @@ export function AdminVehiclesClient({
                     className="h-9 text-xs rounded-xl"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Security Deposit (₹)</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Security Deposit (₹)</Label>
                   <Input
                     type="number"
                     value={editDeposit}
@@ -1334,8 +1338,8 @@ export function AdminVehiclesClient({
                     className="h-9 text-xs rounded-xl"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Extra KM (₹/km)</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Extra KM (₹/km)</Label>
                   <Input
                     type="number"
                     value={editExtraKm}
@@ -1343,12 +1347,13 @@ export function AdminVehiclesClient({
                     className="h-9 text-xs rounded-xl"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Included KM/Day</Label>
+                <div className="space-y-1 flex flex-col justify-between">
+                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center" title="24 Hours Late Charge">24h Late Charge (₹)</Label>
                   <Input
                     type="number"
-                    value={editIncludedKm}
-                    onChange={e => setEditIncludedKm(e.target.value)}
+                    placeholder="e.g. 1000"
+                    value={editLateCharge24h}
+                    onChange={e => setEditLateCharge24h(e.target.value)}
                     className="h-9 text-xs rounded-xl"
                   />
                 </div>
