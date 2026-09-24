@@ -123,6 +123,12 @@ export async function POST(req: Request) {
     // Unique Booking/Rental Number
     const bookingNumber = `RNT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`
 
+    // 24-hour rate limit: 300 km included per 24 hours
+    const diffHours = Math.max(1, (new Date(return_datetime).getTime() - new Date(pickup_datetime).getTime()) / (1000 * 60 * 60))
+    const rentalDays = Math.max(1, Math.ceil(diffHours / 24))
+    const kmLimitPerDay = Number((vehicle as any)?.included_km_per_day || 300)
+    const includedKm = rentalDays * kmLimitPerDay
+
     // 4. Create active booking record
     const { data: newBooking, error: bookingErr } = await supabase
       .from('bookings')
@@ -136,6 +142,7 @@ export async function POST(req: Request) {
         return_datetime: new Date(return_datetime).toISOString(),
         actual_pickup_datetime: new Date().toISOString(),
         pickup_odometer: startingKmNum,
+        included_km: includedKm,
         base_rental: baseRental,
         driver_charge: driverFee,
         insurance_charge: insFee,

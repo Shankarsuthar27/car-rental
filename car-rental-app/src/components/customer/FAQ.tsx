@@ -22,7 +22,7 @@ const faqs = [
   {
     question: 'What is included in the rental price?',
     answer:
-      'The rental price includes the vehicle, basic insurance, and a fixed number of kilometers per day (typically 200 km/day). Fuel, toll charges, and parking are not included. Extra kilometers beyond the included limit are charged at a per-km rate.',
+      'The 24-hour rental rate includes the vehicle, basic insurance, and up to 300 km. As soon as travel exceeds 300 km (or 300 km per 24-hour cycle for multi-day rentals), extra kilometers are counted and charged at the vehicle’s entered per-km rate. Fuel, toll charges, and parking are not included.',
   },
   {
     question: 'Can I extend my rental period?',

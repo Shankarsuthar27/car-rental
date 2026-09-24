@@ -398,13 +398,26 @@ export class BookingService {
     const newTotal = booking.grand_total + totalExtra
     const newOutstanding = Math.max(0, newTotal - booking.amount_paid)
 
+    const startKm = Number(booking.pickup_odometer || (booking.vehicle as any)?.current_odometer || 0)
+    const endKm = Number(returnData.returnOdometer) || startKm
+    const totalDriven = Math.max(0, endKm - startKm)
+
+    // 24-hour rate limit: 300 km included per 24 hours
+    const pickupDt = new Date(booking.pickup_datetime)
+    const returnDt = new Date()
+    const diffHours = Math.max(1, (returnDt.getTime() - pickupDt.getTime()) / (1000 * 60 * 60))
+    const rentalDays = Math.max(1, Math.ceil(diffHours / 24))
+    const kmLimitPerDay = Number((booking.vehicle as any)?.included_km_per_day || 300)
+    const totalIncludedKm = Number(booking.included_km || (rentalDays * kmLimitPerDay))
+    const extraKm = Math.max(0, totalDriven - totalIncludedKm)
+
     await supabase
       .from('bookings')
       .update({
         status: 'completed',
-        actual_return_datetime: new Date().toISOString(),
+        actual_return_datetime: returnDt.toISOString(),
         return_odometer: returnData.returnOdometer,
-        extra_km: returnData.returnOdometer - (booking.pickup_odometer ?? 0),
+        extra_km: extraKm,
         extra_km_charge: returnData.extraKmCharge,
         late_fee: returnData.lateFee,
         fuel_charge: returnData.fuelCharge,

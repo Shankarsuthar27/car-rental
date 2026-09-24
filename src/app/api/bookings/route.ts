@@ -233,6 +233,7 @@ export async function POST(req: Request) {
       outstanding_amount: pricing.grandTotal,
       status: 'pending',
       payment_status: 'pending',
+      included_km: days * (vehicle.included_km_per_day || 300),
       extra_km: 0,
       with_driver: withDriver,
       with_insurance: withInsurance,

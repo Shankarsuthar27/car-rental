@@ -62,9 +62,20 @@ export async function POST(req: Request) {
     }
 
     const totalKmDriven = endOdo - startOdo
+
+    // 24-hour rate limit: 300 km included per 24 hours
+    const returnTimestamp = new Date(return_datetime).toISOString()
+    const pickupTimestamp = new Date(booking.pickup_datetime || booking.actual_pickup_datetime || new Date())
+    const diffHours = Math.max(1, (new Date(return_datetime).getTime() - pickupTimestamp.getTime()) / (1000 * 60 * 60))
+    const rentalDays = Math.max(1, Math.ceil(diffHours / 24))
+    const kmLimitPerDay = Number(booking.vehicle?.included_km_per_day || 300)
+    const totalIncludedKm = Number(booking.included_km || (rentalDays * kmLimitPerDay))
+    const extraKm = Math.max(0, totalKmDriven - totalIncludedKm)
+    const extraKmRate = Number(booking.vehicle?.extra_km_charge || 0)
+    const extraKmFee = extra_km_charges !== undefined ? Number(extra_km_charges) : Math.round(extraKm * extraKmRate)
+
     const baseRental = Number(booking.base_rental || 0)
     const lateFee = Number(late_charges) || 0
-    const extraKmFee = Number(extra_km_charges) || 0
     const damageFee = Number(damage_cost) || 0
     const cleaningFee = Number(cleaning_charges) || 0
     const overspeedFee = Number(overspeeding_charges) || 0
@@ -93,8 +104,6 @@ export async function POST(req: Request) {
         ? 'partially_paid'
         : 'pending'
 
-    const returnTimestamp = new Date(return_datetime).toISOString()
-
     // 2. Update booking record to completed
     const { error: updateBookingErr } = await supabase
       .from('bookings')
@@ -103,6 +112,7 @@ export async function POST(req: Request) {
         payment_status: paymentStatus,
         actual_return_datetime: returnTimestamp,
         return_odometer: endOdo,
+        extra_km: extraKm,
         extra_km_charge: extraKmFee,
         late_fee: lateFee,
         discount_amount: discount,
@@ -112,6 +122,7 @@ export async function POST(req: Request) {
         outstanding_amount: Math.max(0, finalGrandTotal - totalPaid),
         admin_notes: [
           booking.admin_notes,
+          extraKm > 0 ? `Extra KM: Driven ${totalKmDriven} km (Exceeded ${totalIncludedKm} km limit by ${extraKm} km @ ₹${extraKmRate}/km)` : null,
           overspeedFee > 0 ? `Speeding Penalty: ₹${overspeedFee}${max_speed_recorded ? ` (Max Speed: ${max_speed_recorded})` : ''}` : null,
           admin_notes ? `Return Note: ${admin_notes}` : null,
         ].filter(Boolean).join('\n'),

@@ -628,6 +628,7 @@ export interface PricingBreakdown {
   grandTotal: number
   lineItems: PricingLineItem[]
   appliedPricingType: PricingType
+  includedKm?: number
 }
 
 export interface PricingLineItem {

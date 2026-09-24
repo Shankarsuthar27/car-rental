@@ -702,6 +702,8 @@ export function AssignCarWorkflow({
                               <span className="capitalize">{car.transmission}</span>
                               <span>•</span>
                               <span className="font-mono font-medium text-foreground">{car.current_odometer || 0} KM</span>
+                              <span>•</span>
+                              <span className="text-primary font-semibold">{car.included_km_per_day || 300} km/24h</span>
                             </div>
                           </div>
                         </div>
@@ -712,8 +714,8 @@ export function AssignCarWorkflow({
                             <span className="font-black text-foreground text-sm block">
                               ₹{car.daily_rate}<span className="text-[10px] font-normal text-muted-foreground">/day</span>
                             </span>
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              ₹{car.hourly_rate}/hr
+                            <span className="text-[10px] text-muted-foreground font-mono block">
+                              Extra: ₹{car.extra_km_charge || 12}/km
                             </span>
                           </div>
 
@@ -898,7 +900,7 @@ export function AssignCarWorkflow({
                       {selectedVehicle.registration_number}
                     </span>
                     <span className="text-[10px] text-muted-foreground block">
-                      Starting Odometer: {startingKm} KM
+                      Starting: {startingKm} KM • Limit: {rentalDuration.days * (selectedVehicle.included_km_per_day || 300)} KM ({selectedVehicle.included_km_per_day || 300} km/24h)
                     </span>
                   </div>
                 </div>
@@ -964,6 +966,24 @@ export function AssignCarWorkflow({
                 <span>Base Rental ({rentalDuration.text})</span>
                 <span className="font-mono font-semibold text-foreground">₹{calculatedBasePrice.toLocaleString('en-IN')}</span>
               </div>
+
+              {selectedVehicle && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>KM Limit (24h rate)</span>
+                  <span className="font-mono font-semibold text-foreground">
+                    {rentalDuration.days * (selectedVehicle.included_km_per_day || 300)} KM ({selectedVehicle.included_km_per_day || 300} km/24h)
+                  </span>
+                </div>
+              )}
+
+              {selectedVehicle && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Extra KM Rate</span>
+                  <span className="font-mono text-foreground">
+                    ₹{selectedVehicle.extra_km_charge || 12}/km (beyond limit)
+                  </span>
+                </div>
+              )}
 
               {withInsurance && (
                 <div className="flex justify-between text-muted-foreground">

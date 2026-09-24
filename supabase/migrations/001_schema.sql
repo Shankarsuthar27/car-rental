@@ -233,7 +233,7 @@ CREATE TABLE vehicles (
   monthly_rate DECIMAL(10,2),
   security_deposit DECIMAL(10,2) DEFAULT 0,
   extra_km_charge DECIMAL(8,2) DEFAULT 0,
-  included_km_per_day INTEGER DEFAULT 200,
+  included_km_per_day INTEGER DEFAULT 300,
   -- Status
   status vehicle_status DEFAULT 'available',
   is_active BOOLEAN DEFAULT TRUE,

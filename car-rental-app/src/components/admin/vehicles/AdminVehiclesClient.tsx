@@ -33,8 +33,11 @@ import {
   RefreshCw,
   SlidersHorizontal,
   ChevronRight,
-  Layers
+  Layers,
+  LayoutGrid,
+  List
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -114,6 +117,7 @@ export function AdminVehiclesClient({
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all')
   const [branchFilter, setBranchFilter] = useState<string>('all')
   const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
 
   // React to searchParams updates (e.g. from sidebar navigation)
   useEffect(() => {
@@ -149,6 +153,7 @@ export function AdminVehiclesClient({
   const [newDailyRate, setNewDailyRate] = useState('2500')
   const [newHourlyRate, setNewHourlyRate] = useState('200')
   const [newDeposit, setNewDeposit] = useState('10000')
+  const [newIncludedKm, setNewIncludedKm] = useState('300')
   const [newExtraKm, setNewExtraKm] = useState('15')
   const [newLateCharge24h, setNewLateCharge24h] = useState('1000')
   const [newBranch, setNewBranch] = useState(branches[0]?.id || '')
@@ -178,6 +183,7 @@ export function AdminVehiclesClient({
   const [editDailyRate, setEditDailyRate] = useState('2500')
   const [editHourlyRate, setEditHourlyRate] = useState('200')
   const [editDeposit, setEditDeposit] = useState('10000')
+  const [editIncludedKm, setEditIncludedKm] = useState('300')
   const [editExtraKm, setEditExtraKm] = useState('15')
   const [editLateCharge24h, setEditLateCharge24h] = useState('1000')
   const [editBranch, setEditBranch] = useState('')
@@ -256,6 +262,7 @@ export function AdminVehiclesClient({
     setEditDailyRate(String(v.daily_rate || 2500))
     setEditHourlyRate(String(v.hourly_rate || 200))
     setEditDeposit(String(v.security_deposit || 10000))
+    setEditIncludedKm(String(v.included_km_per_day || 300))
     setEditExtraKm(String(v.extra_km_charge || 15))
     setEditLateCharge24h(String(v.late_charge_24h ?? (v.meta as any)?.late_charge_24h ?? 1000))
     setEditBranch(v.branch_id || branches[0]?.id || '')
@@ -307,9 +314,9 @@ export function AdminVehiclesClient({
         daily_rate: Number(newDailyRate),
         hourly_rate: Number(newHourlyRate),
         security_deposit: Number(newDeposit),
+        included_km_per_day: Number(newIncludedKm) || 300,
         extra_km_charge: Number(newExtraKm),
         late_charge_24h: Number(newLateCharge24h),
-        included_km_per_day: 200,
         branch_id: newBranch,
         image_url: newImageUrl,
         description: newDescription,
@@ -370,9 +377,9 @@ export function AdminVehiclesClient({
         daily_rate: Number(editDailyRate),
         hourly_rate: Number(editHourlyRate),
         security_deposit: Number(editDeposit),
+        included_km_per_day: Number(editIncludedKm) || 300,
         extra_km_charge: Number(editExtraKm),
         late_charge_24h: Number(editLateCharge24h),
-        included_km_per_day: 200,
         branch_id: editBranch,
         image_url: editImageUrl,
         description: editDescription,
@@ -577,251 +584,569 @@ export function AdminVehiclesClient({
           </Select>
         </div>
 
-        <div className="text-xs text-muted-foreground">
-          Showing <span className="font-bold text-foreground">{filteredVehicles.length}</span> of {vehicles.length}
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-muted-foreground hidden sm:block">
+            Showing <span className="font-bold text-foreground">{filteredVehicles.length}</span> of {vehicles.length}
+          </div>
+          <div className="flex items-center bg-muted/60 p-1 rounded-xl border border-border/60">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                "p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
+                viewMode === 'grid'
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Grid Card View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Cards</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={cn(
+                "p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
+                viewMode === 'table'
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Table View"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Table</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Data Table */}
-      <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-muted/40 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
-              <tr>
-                <th className="p-4">Vehicle Details</th>
-                <th className="p-4">Registration #</th>
-                <th className="p-4">Branch Location</th>
-                <th className="p-4">Rental Rates</th>
-                <th className="p-4">Deposit & Charges</th>
-                <th className="p-4">Live Status</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredVehicles.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12">
-                    <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
-                      <Car className="w-8 h-8 stroke-1 text-muted-foreground/50" />
-                      <p className="text-sm font-medium">No vehicles found matching your criteria</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSearchQuery('')
-                          setStatusFilter('all')
-                          setBranchFilter('all')
-                          setTypeFilter('all')
-                        }}
-                        className="text-xs h-8 mt-2"
-                      >
-                        Reset All Filters
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredVehicles.map(v => {
-                  const primaryImg = v.images?.[0]?.url
-                  return (
-                    <tr key={v.id} className="hover:bg-muted/20 transition-colors group">
-                      {/* Vehicle Details */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-14 h-10 bg-muted/60 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-border/50 shadow-inner">
-                            {primaryImg ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={primaryImg}
-                                alt={`${v.brand} ${v.model}`}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            ) : (
-                              <Car className="w-5 h-5 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-sm text-foreground">
-                                {v.brand} {v.model}
-                              </span>
-                              {v.variant && (
-                                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-medium">
-                                  {v.variant}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[11px] text-muted-foreground capitalize block">
-                              {v.year} • {v.vehicle_type} • {v.fuel_type} • {v.transmission}
-                              {v.color ? ` • ${v.color}` : ''}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
+      {/* Fleet Display: Grid Card View (Default, matching image) OR Data Table */}
+      {viewMode === 'grid' ? (
+        filteredVehicles.length === 0 ? (
+          <div className="bg-card border border-border rounded-3xl p-12 text-center shadow-sm">
+            <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
+              <Car className="w-10 h-10 stroke-1 text-muted-foreground/50" />
+              <p className="text-sm font-medium">No vehicles found matching your criteria</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery('')
+                  setStatusFilter('all')
+                  setBranchFilter('all')
+                  setTypeFilter('all')
+                }}
+                className="text-xs h-8 mt-2"
+              >
+                Reset All Filters
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredVehicles.map(v => {
+              const primaryImg = v.images?.[0]?.url
+              return (
+                <div
+                  key={v.id}
+                  className="bg-card border border-border/80 rounded-3xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 flex flex-col group"
+                >
+                  {/* Vehicle Image Banner with Floating Badges */}
+                  <div className="relative aspect-[16/10] w-full bg-muted overflow-hidden">
+                    {primaryImg ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={primaryImg}
+                        alt={`${v.brand} ${v.model}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-muted to-muted/40 text-muted-foreground">
+                        <Car className="w-12 h-12 stroke-[1.2] mb-1 text-muted-foreground/60" />
+                        <span className="text-xs">No Vehicle Photo</span>
+                      </div>
+                    )}
 
-                      {/* Registration */}
-                      <td className="p-4">
-                        <span className="font-mono font-bold text-xs bg-muted/50 px-2 py-1 rounded-lg border border-border/50 text-foreground">
+                    {/* Floating Top-Left Status Pill Dropdown */}
+                    <div className="absolute top-3.5 left-3.5 z-10">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              "backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-bold tracking-wider flex items-center gap-1.5 uppercase shadow-md border transition-all cursor-pointer",
+                              v.status === 'rented'
+                                ? "bg-[#181a25]/85 text-[#f59e0b] border-amber-500/40 hover:bg-[#181a25]"
+                                : v.status === 'reserved'
+                                ? "bg-[#181a25]/85 text-[#8c9eff] border-indigo-500/40 hover:bg-[#181a25]"
+                                : v.status === 'available'
+                                ? "bg-[#181a25]/85 text-[#10b981] border-emerald-500/40 hover:bg-[#181a25]"
+                                : v.status === 'maintenance'
+                                ? "bg-[#181a25]/85 text-[#f97316] border-orange-500/40 hover:bg-[#181a25]"
+                                : "bg-[#181a25]/85 text-zinc-300 border-zinc-600/40 hover:bg-[#181a25]"
+                            )}
+                            title="Click to change live status"
+                          >
+                            {v.status === 'rented' ? (
+                              <Car className="w-3.5 h-3.5 text-amber-400 fill-current" />
+                            ) : v.status === 'reserved' ? (
+                              <Clock className="w-3.5 h-3.5 text-[#8c9eff]" />
+                            ) : v.status === 'available' ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : v.status === 'maintenance' ? (
+                              <Wrench className="w-3.5 h-3.5 text-orange-400" />
+                            ) : (
+                              <AlertTriangle className="w-3.5 h-3.5 text-zinc-400" />
+                            )}
+                            <span>{v.status}</span>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-44 rounded-2xl shadow-xl p-1.5">
+                          <DropdownMenuItem
+                            onClick={() => handleUpdateStatus(v.id, 'available')}
+                            className="text-xs gap-2 font-medium cursor-pointer rounded-xl"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Available
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleUpdateStatus(v.id, 'reserved')}
+                            className="text-xs gap-2 font-medium cursor-pointer rounded-xl"
+                          >
+                            <Clock className="w-3.5 h-3.5 text-amber-500" /> Reserved
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleUpdateStatus(v.id, 'rented')}
+                            className="text-xs gap-2 font-medium cursor-pointer rounded-xl"
+                          >
+                            <Key className="w-3.5 h-3.5 text-blue-500" /> Rented
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleUpdateStatus(v.id, 'maintenance')}
+                            className="text-xs gap-2 font-medium cursor-pointer rounded-xl"
+                          >
+                            <Wrench className="w-3.5 h-3.5 text-orange-500" /> Maintenance
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleUpdateStatus(v.id, 'inactive')}
+                            className="text-xs gap-2 font-medium cursor-pointer text-muted-foreground rounded-xl"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5 text-zinc-400" /> Inactive
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Floating Top-Right Year Pill & More Menu */}
+                    <div className="absolute top-3.5 right-3.5 z-10 flex items-center gap-1.5">
+                      <span className="bg-[#181a25]/85 backdrop-blur-md text-white/95 text-xs font-semibold px-2.5 py-1 rounded-full border border-white/15 shadow-sm">
+                        {v.year}
+                      </span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="w-7 h-7 rounded-full bg-[#181a25]/85 backdrop-blur-md text-white/80 hover:text-white flex items-center justify-center border border-white/15 shadow-sm cursor-pointer"
+                            title="More options"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 rounded-2xl shadow-xl p-1.5">
+                          <DropdownMenuItem
+                            onClick={() => openEditModal(v)}
+                            className="text-xs gap-2 font-medium cursor-pointer rounded-xl"
+                          >
+                            <Edit className="w-3.5 h-3.5 text-primary" /> Edit Vehicle
+                          </DropdownMenuItem>
+                          {v.status === 'available' && (
+                            <DropdownMenuItem asChild className="text-xs gap-2 font-medium cursor-pointer rounded-xl">
+                              <Link href={`/admin/assign?vehicle_id=${v.id}`}>
+                                <Zap className="w-3.5 h-3.5 text-amber-500" /> Assign Car
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => openDeleteModal(v)}
+                            className="text-xs gap-2 font-medium cursor-pointer text-rose-600 rounded-xl"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-600" /> Delete Vehicle
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      {/* Subtitle: Brand • Variant / Type & Reg # */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase truncate max-w-[200px]">
+                          {v.brand} {v.variant ? `• ${v.variant}` : `• ${v.vehicle_type}`}
+                        </span>
+                        <span className="font-mono text-[10px] text-muted-foreground bg-muted/80 px-2 py-0.5 rounded-md font-semibold border border-border/50 shrink-0">
                           {v.registration_number}
                         </span>
-                        {v.current_odometer !== undefined && (
-                          <span className="text-[10px] text-muted-foreground block mt-1 flex items-center gap-1">
-                            <Gauge className="w-3 h-3 text-muted-foreground/70" />
-                            {v.current_odometer.toLocaleString('en-IN')} km
-                          </span>
-                        )}
-                      </td>
+                      </div>
 
-                      {/* Branch */}
-                      <td className="p-4 text-muted-foreground font-medium">
-                        {v.branch ? (
-                          <div>
-                            <span className="font-semibold text-foreground block">{v.branch.city}</span>
-                            <span className="text-[10px] text-muted-foreground">{v.branch.name}</span>
-                          </div>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
+                      {/* Full Vehicle Title */}
+                      <h3 className="text-lg font-black text-foreground tracking-tight mt-1 line-clamp-1">
+                        {v.brand} {v.model} {v.variant || ''}
+                      </h3>
 
-                      {/* Rates */}
-                      <td className="p-4">
-                        <div className="space-y-0.5">
-                          <span className="font-bold text-foreground block text-xs">
-                            ₹{v.daily_rate?.toLocaleString('en-IN')}<span className="text-[10px] font-normal text-muted-foreground">/day</span>
-                          </span>
-                          <span className="text-[10px] text-muted-foreground block">
-                            ₹{v.hourly_rate}/hr • Extra: ₹{v.extra_km_charge}/km
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Security Deposit & 24h Late Charge */}
-                      <td className="p-4 font-medium text-foreground">
-                        <span className="block font-semibold">₹{v.security_deposit?.toLocaleString('en-IN')}</span>
-                        <span className="text-[10px] text-muted-foreground block">
-                          24h Late: ₹{(v.late_charge_24h ?? (v.meta as any)?.late_charge_24h ?? 1000)?.toLocaleString('en-IN')}
+                      {/* Location with Red MapPin */}
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span className="truncate">
+                          {v.branch ? `${v.branch.city} • ${v.branch.name}` : 'Jalore Main Hub'}
                         </span>
-                      </td>
+                      </div>
 
-                      {/* Status with Live Switcher Dropdown */}
-                      <td className="p-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-full">
-                              <Badge
-                                className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full cursor-pointer hover:opacity-80 transition-all border ${
-                                  STATUS_BADGE_MAP[v.status] || 'bg-muted text-muted-foreground'
-                                }`}
-                              >
-                                {v.status}
-                              </Badge>
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-40 rounded-xl shadow-xl">
-                            <DropdownMenuItem
-                              onClick={() => handleUpdateStatus(v.id, 'available')}
-                              className="text-xs gap-2 font-medium cursor-pointer"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Available
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleUpdateStatus(v.id, 'reserved')}
-                              className="text-xs gap-2 font-medium cursor-pointer"
-                            >
-                              <Clock className="w-3.5 h-3.5 text-amber-500" /> Reserved
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleUpdateStatus(v.id, 'rented')}
-                              className="text-xs gap-2 font-medium cursor-pointer"
-                            >
-                              <Key className="w-3.5 h-3.5 text-blue-500" /> Rented
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleUpdateStatus(v.id, 'maintenance')}
-                              className="text-xs gap-2 font-medium cursor-pointer"
-                            >
-                              <Wrench className="w-3.5 h-3.5 text-orange-500" /> Maintenance
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleUpdateStatus(v.id, 'inactive')}
-                              className="text-xs gap-2 font-medium cursor-pointer text-muted-foreground"
-                            >
-                              <AlertTriangle className="w-3.5 h-3.5 text-zinc-400" /> Inactive / Garage
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
+                      {/* Specifications Row */}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-muted-foreground/80 shrink-0" />
+                          <span>{v.seating_capacity || 5} Seats</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-muted-foreground/80 shrink-0" />
+                          <span className="capitalize">{v.transmission}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Fuel className="w-3.5 h-3.5 text-muted-foreground/80 shrink-0" />
+                          <span className="capitalize">{v.fuel_type}</span>
+                        </div>
+                      </div>
 
-                      {/* Actions */}
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {v.status === 'available' ? (
-                            <Button
-                              size="sm"
-                              asChild
-                              className="h-8 px-3 text-xs gradient-brand text-white border-0 hover:opacity-90 font-bold rounded-xl shadow-xs gap-1 cursor-pointer shrink-0"
-                              title="Assign car to customer"
-                            >
-                              <Link href={`/admin/assign?vehicle_id=${v.id}`}>
-                                <Zap className="w-3.5 h-3.5 fill-current" /> Assign Car
-                              </Link>
-                            </Button>
-                          ) : v.status === 'rented' ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              asChild
-                              className="h-8 px-2.5 text-xs text-blue-600 border-blue-500/30 hover:bg-blue-500/10 rounded-xl font-semibold gap-1 shrink-0"
-                              title="Track running duty"
-                            >
-                              <Link href={`/admin/bookings?status=active`}>
-                                <Key className="w-3.5 h-3.5" /> Running
-                              </Link>
-                            </Button>
-                          ) : null}
+                      {/* 300 km Limit & Extra KM Charge Rule */}
+                      <div className="mt-3 flex items-center justify-between text-[10.5px] text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-xl border border-border/50">
+                        <span>Limit: <strong className="text-foreground">{v.included_km_per_day || 300} km/24h</strong></span>
+                        <span>Extra: <strong className="text-foreground">₹{v.extra_km_charge}/km</strong></span>
+                      </div>
+                    </div>
 
+                    {/* Rates & Actions with Subtle Dashed Divider */}
+                    <div className="pt-3 border-t border-dashed border-border/80 space-y-3">
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <span className="text-[11px] text-muted-foreground block font-medium">Daily Rate</span>
+                          <div className="flex items-baseline gap-1 mt-0.5">
+                            <span className="text-2xl font-black text-foreground">
+                              ₹{v.daily_rate?.toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-xs text-muted-foreground font-normal">/day</span>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="text-[11px] text-muted-foreground block font-medium">Hourly</span>
+                          <div className="text-xs sm:text-sm font-bold text-foreground font-mono mt-0.5">
+                            ₹{v.hourly_rate || Math.round((v.daily_rate || 2000) / 10)} /hr
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons Row */}
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="min-h-[40px] text-xs font-semibold rounded-xl border-border hover:bg-muted"
+                        >
+                          <Link href={`/cars/${v.id}`} target="_blank">
+                            View Details
+                          </Link>
+                        </Button>
+
+                        {v.status === 'available' ? (
                           <Button
-                            variant="ghost"
+                            type="button"
                             size="sm"
                             asChild
-                            className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-lg"
-                            title="View vehicle preview"
+                            className="min-h-[40px] text-xs gradient-brand text-white border-0 hover:opacity-90 font-bold rounded-xl shadow-xs gap-1 cursor-pointer"
                           >
-                            <Link href={`/cars/${v.id}`} target="_blank">
-                              <Eye className="w-3.5 h-3.5 mr-1" /> View
+                            <Link href={`/admin/assign?vehicle_id=${v.id}`}>
+                              <Zap className="w-3.5 h-3.5 fill-current" /> Assign Car
                             </Link>
                           </Button>
-
+                        ) : v.status === 'rented' ? (
                           <Button
-                            variant="ghost"
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            asChild
+                            className="min-h-[40px] text-xs text-blue-600 border-blue-500/30 hover:bg-blue-500/10 rounded-xl font-semibold gap-1"
+                          >
+                            <Link href={`/admin/bookings?status=active`}>
+                              <Key className="w-3.5 h-3.5" /> Running
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
                             size="sm"
                             onClick={() => openEditModal(v)}
-                            className="h-8 px-2.5 text-xs text-primary hover:bg-primary/10 rounded-lg cursor-pointer font-semibold"
-                            title="Edit vehicle details"
+                            className="min-h-[40px] text-xs text-muted-foreground border-border hover:bg-muted rounded-xl font-semibold capitalize"
                           >
-                            <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+                            {v.status === 'inactive' ? 'Unavailable' : v.status}
                           </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      ) : (
+        /* Data Table */
+        <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-muted/40 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
+                <tr>
+                  <th className="p-4">Vehicle Details</th>
+                  <th className="p-4">Registration #</th>
+                  <th className="p-4">Branch Location</th>
+                  <th className="p-4">Rental Rates</th>
+                  <th className="p-4">Deposit & Charges</th>
+                  <th className="p-4">Live Status</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredVehicles.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12">
+                      <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
+                        <Car className="w-8 h-8 stroke-1 text-muted-foreground/50" />
+                        <p className="text-sm font-medium">No vehicles found matching your criteria</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSearchQuery('')
+                            setStatusFilter('all')
+                            setBranchFilter('all')
+                            setTypeFilter('all')
+                          }}
+                          className="text-xs h-8 mt-2"
+                        >
+                          Reset All Filters
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredVehicles.map(v => {
+                    const primaryImg = v.images?.[0]?.url
+                    return (
+                      <tr key={v.id} className="hover:bg-muted/20 transition-colors group">
+                        {/* Vehicle Details */}
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-10 bg-muted/60 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-border/50 shadow-inner">
+                              {primaryImg ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={primaryImg}
+                                  alt={`${v.brand} ${v.model}`}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                              ) : (
+                                <Car className="w-5 h-5 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-sm text-foreground">
+                                  {v.brand} {v.model}
+                                </span>
+                                {v.variant && (
+                                  <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-medium">
+                                    {v.variant}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-muted-foreground capitalize block">
+                                {v.year} • {v.vehicle_type} • {v.fuel_type} • {v.transmission}
+                                {v.color ? ` • ${v.color}` : ''}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
 
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteModal(v)}
-                            className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-lg cursor-pointer font-semibold"
-                            title="Delete vehicle"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                        {/* Registration */}
+                        <td className="p-4">
+                          <span className="font-mono font-bold text-xs bg-muted/50 px-2 py-1 rounded-lg border border-border/50 text-foreground">
+                            {v.registration_number}
+                          </span>
+                          {v.current_odometer !== undefined && (
+                            <span className="text-[10px] text-muted-foreground block mt-1 flex items-center gap-1">
+                              <Gauge className="w-3 h-3 text-muted-foreground/70" />
+                              {v.current_odometer.toLocaleString('en-IN')} km
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Branch */}
+                        <td className="p-4 text-muted-foreground font-medium">
+                          {v.branch ? (
+                            <div>
+                              <span className="font-semibold text-foreground block">{v.branch.city}</span>
+                              <span className="text-[10px] text-muted-foreground">{v.branch.name}</span>
+                            </div>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+
+                        {/* Rates */}
+                        <td className="p-4">
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-foreground block text-xs">
+                              ₹{v.daily_rate?.toLocaleString('en-IN')}<span className="text-[10px] font-normal text-muted-foreground">/day</span>
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block">
+                              ₹{v.hourly_rate}/hr • Limit: {v.included_km_per_day || 300} km/24h • Extra: ₹{v.extra_km_charge}/km
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Security Deposit & 24h Late Charge */}
+                        <td className="p-4 font-medium text-foreground">
+                          <span className="block font-semibold">₹{v.security_deposit?.toLocaleString('en-IN')}</span>
+                          <span className="text-[10px] text-muted-foreground block">
+                            24h Late: ₹{(v.late_charge_24h ?? (v.meta as any)?.late_charge_24h ?? 1000)?.toLocaleString('en-IN')}
+                          </span>
+                        </td>
+
+                        {/* Status with Live Switcher Dropdown */}
+                        <td className="p-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-full">
+                                <Badge
+                                  className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full cursor-pointer hover:opacity-80 transition-all border ${
+                                    STATUS_BADGE_MAP[v.status] || 'bg-muted text-muted-foreground'
+                                  }`}
+                                >
+                                  {v.status}
+                                </Badge>
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-40 rounded-xl shadow-xl">
+                              <DropdownMenuItem
+                                onClick={() => handleUpdateStatus(v.id, 'available')}
+                                className="text-xs gap-2 font-medium cursor-pointer"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Available
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleUpdateStatus(v.id, 'reserved')}
+                                className="text-xs gap-2 font-medium cursor-pointer"
+                              >
+                                <Clock className="w-3.5 h-3.5 text-amber-500" /> Reserved
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleUpdateStatus(v.id, 'rented')}
+                                className="text-xs gap-2 font-medium cursor-pointer"
+                              >
+                                <Key className="w-3.5 h-3.5 text-blue-500" /> Rented
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleUpdateStatus(v.id, 'maintenance')}
+                                className="text-xs gap-2 font-medium cursor-pointer"
+                              >
+                                <Wrench className="w-3.5 h-3.5 text-orange-500" /> Maintenance
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleUpdateStatus(v.id, 'inactive')}
+                                className="text-xs gap-2 font-medium cursor-pointer text-muted-foreground"
+                              >
+                                <AlertTriangle className="w-3.5 h-3.5 text-zinc-400" /> Inactive / Garage
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {v.status === 'available' ? (
+                              <Button
+                                size="sm"
+                                asChild
+                                className="h-8 px-3 text-xs gradient-brand text-white border-0 hover:opacity-90 font-bold rounded-xl shadow-xs gap-1 cursor-pointer shrink-0"
+                                title="Assign car to customer"
+                              >
+                                <Link href={`/admin/assign?vehicle_id=${v.id}`}>
+                                  <Zap className="w-3.5 h-3.5 fill-current" /> Assign Car
+                                </Link>
+                              </Button>
+                            ) : v.status === 'rented' ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                asChild
+                                className="h-8 px-2.5 text-xs text-blue-600 border-blue-500/30 hover:bg-blue-500/10 rounded-xl font-semibold gap-1 shrink-0"
+                                title="Track running duty"
+                              >
+                                <Link href={`/admin/bookings?status=active`}>
+                                  <Key className="w-3.5 h-3.5" /> Running
+                                </Link>
+                              </Button>
+                            ) : null}
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              asChild
+                              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-lg"
+                              title="View vehicle preview"
+                            >
+                              <Link href={`/cars/${v.id}`} target="_blank">
+                                <Eye className="w-3.5 h-3.5 mr-1" /> View
+                              </Link>
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditModal(v)}
+                              className="h-8 px-2.5 text-xs text-primary hover:bg-primary/10 rounded-lg cursor-pointer font-semibold"
+                              title="Edit vehicle details"
+                            >
+                              <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeleteModal(v)}
+                              className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-lg cursor-pointer font-semibold"
+                              title="Delete vehicle"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ======================================================== */}
       {/* 1. REGISTER NEW VEHICLE DIALOG */}
@@ -1002,7 +1327,7 @@ export function AdminVehiclesClient({
                 <DollarSign className="w-3.5 h-3.5 text-primary" /> Rental Pricing & Security Deposit
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 <div className="space-y-1 flex flex-col justify-between">
                   <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Daily Rate (₹)</Label>
                   <Input
@@ -1032,6 +1357,21 @@ export function AdminVehiclesClient({
                   />
                 </div>
                 <div className="space-y-1 flex flex-col justify-between">
+                  <Label
+                    className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center text-primary"
+                    title="Standard limit of up to 300 km per 24 hours. Extra km beyond this will be charged at the per-km rate."
+                  >
+                    Limit (KM / 24h)
+                  </Label>
+                  <Input
+                    type="number"
+                    value={newIncludedKm}
+                    onChange={e => setNewIncludedKm(e.target.value)}
+                    placeholder="300"
+                    className="h-9 text-xs font-bold rounded-xl border-primary/40 focus:ring-primary"
+                  />
+                </div>
+                <div className="space-y-1 flex flex-col justify-between">
                   <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Extra KM (₹/km)</Label>
                   <Input
                     type="number"
@@ -1056,10 +1396,16 @@ export function AdminVehiclesClient({
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-0.5">
-                <Clock className="w-3 h-3 text-primary shrink-0" />
-                <span><strong>24h Late Policy:</strong> Overdue returns charge the 24h fee. If overdue exceeds 24 hours, the next day is automatically counted.</span>
-              </p>
+              <div className="space-y-1 pt-0.5">
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <Gauge className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span><strong>24-Hour KM Rule:</strong> 24-hour rate includes up to <strong>{newIncludedKm || 300} km</strong>. Once it exceeds {newIncludedKm || 300} km, each extra km is billed at <strong>₹{newExtraKm}/km</strong>.</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span><strong>24h Late Policy:</strong> Overdue returns charge the 24h fee. If overdue exceeds 24 hours, the next day is automatically counted.</span>
+                </p>
+              </div>
             </div>
 
             {/* Section: Image & Amenities */}
@@ -1318,7 +1664,7 @@ export function AdminVehiclesClient({
                 <DollarSign className="w-3.5 h-3.5 text-primary" /> Rates & Deposit
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 <div className="space-y-1 flex flex-col justify-between">
                   <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Daily Rate (₹)</Label>
                   <Input
@@ -1348,6 +1694,21 @@ export function AdminVehiclesClient({
                   />
                 </div>
                 <div className="space-y-1 flex flex-col justify-between">
+                  <Label
+                    className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center text-primary"
+                    title="Standard limit of up to 300 km per 24 hours. Extra km beyond this will be charged at the per-km rate."
+                  >
+                    Limit (KM / 24h)
+                  </Label>
+                  <Input
+                    type="number"
+                    value={editIncludedKm}
+                    onChange={e => setEditIncludedKm(e.target.value)}
+                    placeholder="300"
+                    className="h-9 text-xs font-bold rounded-xl border-primary/40 focus:ring-primary"
+                  />
+                </div>
+                <div className="space-y-1 flex flex-col justify-between">
                   <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center">Extra KM (₹/km)</Label>
                   <Input
                     type="number"
@@ -1372,10 +1733,16 @@ export function AdminVehiclesClient({
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-0.5">
-                <Clock className="w-3 h-3 text-primary shrink-0" />
-                <span><strong>24h Late Policy:</strong> Overdue returns charge the 24h fee. If overdue exceeds 24 hours, the next day is automatically counted.</span>
-              </p>
+              <div className="space-y-1 pt-0.5">
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <Gauge className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span><strong>24-Hour KM Rule:</strong> 24-hour rate includes up to <strong>{editIncludedKm || 300} km</strong>. Once it exceeds {editIncludedKm || 300} km, each extra km is billed at <strong>₹{editExtraKm}/km</strong>.</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span><strong>24h Late Policy:</strong> Overdue returns charge the 24h fee. If overdue exceeds 24 hours, the next day is automatically counted.</span>
+                </p>
+              </div>
             </div>
 
             {/* Photo & Features */}

@@ -196,7 +196,7 @@ export function AdminBookingsClient({
   const [maxSpeedRecorded, setMaxSpeedRecorded] = useState<string>('')
   const [otherCharges, setOtherCharges] = useState<string>('0')
   const [returnDiscount, setReturnDiscount] = useState<string>('0')
-  const [depositSettlement, setDepositSettlement] = useState<string>('refunded')
+  const [depositSettlement, setDepositSettlement] = useState<string>('held')
   const [returnPaymentCollected, setReturnPaymentCollected] = useState<string>('0')
   const [returnPaymentMethod, setReturnPaymentMethod] = useState<string>('cash')
   const [returnAdminNotes, setReturnAdminNotes] = useState<string>('Vehicle inspected and returned in good condition.')
@@ -244,6 +244,44 @@ export function AdminBookingsClient({
     }
   }
 
+  // Helper to compute 24-hour rate kilometer limits & extra charges
+  // Rule: 24-hour rate includes up to 300 km limit.
+  // As soon as driven distance exceeds limit (300 km × rental days), extra km are billed at vehicle extra_km_charge (₹/km).
+  const calculateKmDetails = (
+    b: Booking | null,
+    returnDtStr: string,
+    currentEndingKm: string
+  ) => {
+    if (!b) {
+      return { driven: 0, rentalDays: 1, limitPer24h: 300, totalIncludedKm: 300, extraKm: 0, ratePerKm: 0, extraKmCharge: 0, isExceeded: false }
+    }
+    const startKm = Number(b.pickup_odometer || b.vehicle?.current_odometer || 0)
+    const endKm = Number(currentEndingKm) || startKm
+    const driven = Math.max(0, endKm - startKm)
+
+    const pickupDate = new Date(b.pickup_datetime || b.actual_pickup_datetime || new Date())
+    const returnDate = new Date(returnDtStr || new Date())
+    const diffHours = Math.max(1, (returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60))
+    const rentalDays = Math.max(1, Math.ceil(diffHours / 24))
+
+    const limitPer24h = Number(b.vehicle?.included_km_per_day || 300)
+    const totalIncludedKm = Number(b.included_km || (rentalDays * limitPer24h))
+    const extraKm = Math.max(0, driven - totalIncludedKm)
+    const ratePerKm = Number(b.vehicle?.extra_km_charge || 0)
+    const extraKmCharge = Math.round(extraKm * ratePerKm)
+
+    return {
+      driven,
+      rentalDays,
+      limitPer24h,
+      totalIncludedKm,
+      extraKm,
+      ratePerKm,
+      extraKmCharge,
+      isExceeded: extraKm > 0
+    }
+  }
+
   // Open Return Dialog & Prefill
   const openReturnDialog = (b: Booking) => {
     setSelectedBooking(b)
@@ -252,13 +290,16 @@ export function AdminBookingsClient({
     setReturnDatetime(returnDtStr)
 
     const startOdo = Number(b.pickup_odometer || b.vehicle?.current_odometer || 0)
-    setReturnEndingKm(String(startOdo + 120))
+    const initialEnding = String(startOdo + 120)
+    setReturnEndingKm(initialEnding)
 
     // Auto-calculate 24h late fee if overdue
     const lateCalc = calculateOverdueLateFee(b, returnDtStr)
     setLateCharges(String(lateCalc.fee))
 
-    setExtraKmCharges('0')
+    // Auto-calculate extra KM charge based on 300 km/24h limit
+    const kmCalc = calculateKmDetails(b, returnDtStr, initialEnding)
+    setExtraKmCharges(String(kmCalc.extraKmCharge))
     setDamageCost('0')
     setCleaningCharges('0')
     setOverspeedingCharges('0')
@@ -266,6 +307,7 @@ export function AdminBookingsClient({
     setOtherCharges('0')
     setReturnDiscount('0')
     setDamageDescription('')
+    setDepositSettlement('held')
     setReturnModalOpen(true)
   }
 
@@ -306,26 +348,29 @@ export function AdminBookingsClient({
     return calculateOverdueLateFee(selectedBooking, returnDatetime)
   }, [selectedBooking, returnDatetime])
 
-  // Recalculate late fee when return datetime changes
+  // Dynamic calculation of 24h rate KM limit & extra km
+  const activeKmInfo = useMemo(() => {
+    return calculateKmDetails(selectedBooking, returnDatetime, returnEndingKm)
+  }, [selectedBooking, returnDatetime, returnEndingKm])
+
+  // Recalculate late fee and extra KM when return datetime changes
   const handleReturnDatetimeChange = (newDatetime: string) => {
     setReturnDatetime(newDatetime)
     if (selectedBooking) {
       const lateCalc = calculateOverdueLateFee(selectedBooking, newDatetime)
       setLateCharges(String(lateCalc.fee))
+
+      const kmCalc = calculateKmDetails(selectedBooking, newDatetime, returnEndingKm)
+      setExtraKmCharges(String(kmCalc.extraKmCharge))
     }
   }
 
-  // Recalculate extra KM when ending KM changes
+  // Recalculate extra KM when ending KM changes based on 300 km/24h limit
   const handleEndingKmChange = (newEndKm: string) => {
     setReturnEndingKm(newEndKm)
     if (!selectedBooking) return
-    const startKm = Number(selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer || 0)
-    const endKm = Number(newEndKm) || startKm
-    const driven = Math.max(0, endKm - startKm)
-    const included = Number(selectedBooking.included_km || 200)
-    const extraKm = Math.max(0, driven - included)
-    const ratePerKm = Number(selectedBooking.vehicle?.extra_km_charge || 12)
-    setExtraKmCharges(String(extraKm * ratePerKm))
+    const kmCalc = calculateKmDetails(selectedBooking, returnDatetime, newEndKm)
+    setExtraKmCharges(String(kmCalc.extraKmCharge))
   }
 
   // Submit Return Process
@@ -537,46 +582,26 @@ export function AdminBookingsClient({
   const cancelledCount = bookings.filter(b => b.status === 'cancelled' || b.status === 'rejected').length
 
   return (
-    <div className="w-full space-y-4 sm:space-y-6 p-3.5 sm:p-5 md:p-8 max-w-7xl mx-auto">
+    <div className="w-full space-y-4 sm:space-y-5 p-3.5 sm:p-5 md:p-8 max-w-7xl mx-auto">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl gradient-brand flex items-center justify-center text-white shrink-0 shadow-sm shadow-primary/25">
-              <Key className="w-5 h-5 fill-current" aria-hidden="true" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-foreground truncate">
-                Rental Operations & Fleet
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Track active rentals, overdue status, vehicle returns, inspections, and billing settlements.
-              </p>
-            </div>
-          </div>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-foreground">
+            Rental Operations &amp; Fleet
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Dashboard for active rentals, fleet status, and billing.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <Link
-            href="/admin/assign"
-            prefetch={true}
-            className="uiverse-assign-btn inline-flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold shadow-md w-full sm:w-auto"
-          >
-            <span>Assign New Car</span>
-            <div className="arrow-circle w-6 h-6 shrink-0">
-              <svg
-                className="w-3.5 h-3.5 shrink-0"
-                viewBox="0 0 16 19"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M7 18C7 18.5523 7.44772 19 8 19C8.55228 19 9 18.5523 9 18H7ZM8.70711 0.292893C8.31658 -0.0976311 7.68342 -0.0976311 7.29289 0.292893L0.928932 6.65685C0.538408 7.04738 0.538408 7.68054 0.928932 8.07107C1.31946 8.46159 1.95262 8.46159 2.34315 8.07107L8 2.41421L13.6569 8.07107C14.0474 8.46159 14.6805 8.46159 15.0711 8.07107C15.4616 7.68054 15.4616 7.04738 15.0711 6.65685L8.70711 0.292893ZM9 18L9 1H7L7 18H9Z"
-                  className="arrow-icon"
-                />
-              </svg>
-            </div>
-          </Link>
-        </div>
+        <Link
+          href="/admin/assign"
+          prefetch={true}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-border bg-card hover:bg-muted transition-colors shrink-0 shadow-xs"
+        >
+          <Plus className="w-4 h-4" aria-hidden="true" />
+          Assign New Car
+        </Link>
       </div>
 
       {/* Global Feedback Alert */}
@@ -601,74 +626,88 @@ export function AdminBookingsClient({
         </motion.div>
       )}
 
-      {/* Search and Tabs Filter Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3.5 sm:p-4 bg-card border border-border/80 rounded-2xl sm:rounded-3xl shadow-xs">
+      {/* Search + Status Tab Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 bg-card border border-border/80 rounded-2xl shadow-xs">
         {/* Search Input */}
-        <div className="relative w-full lg:max-w-md">
-          <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
           <Input
             value={searchQuery}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
             placeholder="Search rental #, customer, car model, reg no..."
-            className="pl-10 min-h-[44px] text-xs sm:text-sm rounded-xl bg-muted/40 w-full focus-visible:ring-primary"
+            className="pl-9 h-10 text-xs rounded-xl bg-muted/40 w-full focus-visible:ring-primary"
             aria-label="Search rental assignments"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[32px] flex items-center justify-center text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               aria-label="Clear search"
             >
-              <X className="w-4 h-4" aria-hidden="true" />
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           )}
         </div>
 
-        {/* Tab Filters with Smooth Horizontal Touch Scrolling */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
-          <Button
-            size="sm"
-            variant={activeTab === 'active' ? 'default' : 'outline'}
+        {/* Status Tab Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+          <button
+            type="button"
             onClick={() => setActiveTab('active')}
             className={cn(
-              'min-h-[44px] px-3.5 text-xs rounded-xl font-bold gap-1.5 shrink-0',
-              activeTab === 'active' && 'shadow-xs'
+              'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+              activeTab === 'active'
+                ? 'bg-foreground text-background border-foreground shadow-xs'
+                : 'border-border bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
             aria-pressed={activeTab === 'active'}
           >
-            <span>🔵 Running ({activeCount})</span>
-          </Button>
+            {activeTab === 'active' && <span className="w-2 h-2 rounded-full bg-current opacity-70" />}
+            Running ({activeCount})
+          </button>
 
-          <Button
-            size="sm"
-            variant={activeTab === 'completed' ? 'default' : 'outline'}
+          <button
+            type="button"
             onClick={() => setActiveTab('completed')}
-            className="min-h-[44px] px-3.5 text-xs rounded-xl font-semibold gap-1.5 shrink-0"
+            className={cn(
+              'inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+              activeTab === 'completed'
+                ? 'bg-foreground text-background border-foreground shadow-xs'
+                : 'border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
+            )}
             aria-pressed={activeTab === 'completed'}
           >
-            <span>Completed ({completedCount})</span>
-          </Button>
+            Completed ({completedCount})
+          </button>
 
-          <Button
-            size="sm"
-            variant={activeTab === 'cancelled' ? 'default' : 'outline'}
+          <button
+            type="button"
             onClick={() => setActiveTab('cancelled')}
-            className="min-h-[44px] px-3.5 text-xs rounded-xl font-semibold gap-1.5 shrink-0"
+            className={cn(
+              'inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+              activeTab === 'cancelled'
+                ? 'bg-foreground text-background border-foreground shadow-xs'
+                : 'border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
+            )}
             aria-pressed={activeTab === 'cancelled'}
           >
-            <span>Cancelled ({cancelledCount})</span>
-          </Button>
+            Cancelled ({cancelledCount})
+          </button>
 
-          <Button
-            size="sm"
-            variant={activeTab === 'all' ? 'default' : 'ghost'}
+          <button
+            type="button"
             onClick={() => setActiveTab('all')}
-            className="min-h-[44px] px-3 text-xs rounded-xl text-muted-foreground shrink-0"
+            className={cn(
+              'inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+              activeTab === 'all'
+                ? 'bg-foreground text-background border-foreground shadow-xs'
+                : 'border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
+            )}
             aria-pressed={activeTab === 'all'}
           >
-            <span>All ({bookings.length})</span>
-          </Button>
+            All ({bookings.length})
+          </button>
         </div>
       </div>
 
@@ -867,21 +906,21 @@ export function AdminBookingsClient({
       {/* ============================================================ */}
       {/* 2. DESKTOP TABULAR VIEW (>= lg: 1024px+)                       */}
       {/* ============================================================ */}
-      <div className="hidden lg:block bg-card border border-border/80 rounded-3xl overflow-hidden shadow-xs">
+      <div className="hidden lg:block bg-card border border-border/80 rounded-2xl overflow-hidden shadow-xs">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-xs text-left border-collapse">
-            <thead className="bg-muted/40 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
+            <thead className="bg-muted/40 border-b border-border/60">
               <tr>
-                <th className="p-4">Car & Reg No</th>
-                <th className="p-4">Customer Details</th>
-                <th className="p-4">Rental Duration</th>
-                <th className="p-4">Status & Overdue Tracker</th>
-                <th className="p-4">Odometer</th>
-                <th className="p-4">Payment</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Car &amp; Reg No</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Customer<br/>Details</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rental Duration</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Odometer</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Payment</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-border/60">
               {filteredBookings.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-muted-foreground">
@@ -898,86 +937,106 @@ export function AdminBookingsClient({
 
                   return (
                     <tr key={b.id} className="hover:bg-muted/20 transition-colors">
-                      {/* Car Details */}
-                      <td className="p-4">
+                      {/* Car & Reg No */}
+                      <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={thumbnail}
                             alt={`${car?.brand} ${car?.model}`}
-                            className="w-12 h-9 rounded-xl object-cover border border-border shrink-0 shadow-2xs"
+                            className="w-12 h-9 rounded-lg object-cover border border-border shrink-0"
                           />
                           <div>
-                            <span className="font-black text-sm text-foreground block">
+                            <span className="font-bold text-sm text-foreground block leading-tight">
                               {car ? `${car.brand} ${car.model}` : 'Vehicle'}
                             </span>
-                            <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-bold inline-block">
+                            <span className="font-mono text-[10px] text-muted-foreground block mt-0.5">
                               {car?.registration_number || '—'}
                             </span>
-                            <span className="font-mono text-[10px] text-primary block mt-0.5">
-                              #{b.booking_number}
+                            <span className="font-mono text-[10px] text-primary block">
+                              ID: {b.booking_number}
                             </span>
                           </div>
                         </div>
                       </td>
 
                       {/* Customer */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-xl gradient-brand text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shrink-0">
                             {customerName[0] || 'C'}
                           </div>
                           <div className="min-w-0">
-                            <span className="font-bold text-foreground block truncate max-w-[160px]">{customerName}</span>
-                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Phone className="w-2.5 h-2.5 text-primary shrink-0" aria-hidden="true" /> {customerPhone || '—'}
-                            </span>
+                            <span className="font-semibold text-foreground block truncate max-w-[140px] text-[11px]">{customerName}</span>
+                            <a
+                              href={`tel:${customerPhone}`}
+                              className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 mt-0.5"
+                            >
+                              <Phone className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
+                              {customerPhone || '—'}
+                            </a>
                           </div>
                         </div>
                       </td>
 
                       {/* Rental Duration */}
-                      <td className="p-4 space-y-0.5 text-muted-foreground">
+                      <td className="px-4 py-3.5 text-[11px] text-muted-foreground space-y-1">
                         <div>
-                          <span className="text-foreground font-medium">Pickup:</span>{' '}
+                          <span className="text-foreground font-medium">Pickup: </span>
                           {format(new Date(b.pickup_datetime), 'dd MMM yyyy, hh:mm a')}
                         </div>
                         <div>
-                          <span className="text-foreground font-medium">Return:</span>{' '}
+                          <span className="text-foreground font-medium">Return: </span>
                           {format(new Date(b.return_datetime), 'dd MMM yyyy, hh:mm a')}
                         </div>
                       </td>
 
-                      {/* Status / Overdue */}
-                      <td className="p-4 space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <Badge
-                            className={cn(
-                              'text-[10px] font-bold capitalize border',
-                              b.status === 'active' && 'bg-blue-500/10 text-blue-600 border-blue-500/30',
-                              b.status === 'completed' && 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
-                              b.status === 'confirmed' && 'bg-purple-500/10 text-purple-600 border-purple-500/30',
-                              b.status === 'cancelled' && 'bg-rose-500/10 text-rose-600 border-rose-500/30'
-                            )}
-                          >
-                            {b.status === 'active' ? '🔵 Running' : b.status}
-                          </Badge>
+                      {/* Status */}
+                      <td className="px-4 py-3.5">
+                        <div className="space-y-1.5">
+                          {b.status === 'active' ? (
+                            overdue.isOverdue ? (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-rose-500 text-white">
+                                OVERDUE
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-emerald-500 text-white">
+                                RUNNING
+                              </span>
+                            )
+                          ) : b.status === 'completed' ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-zinc-500/15 text-zinc-600 border border-zinc-500/30 dark:text-zinc-400">
+                              COMPLETED
+                            </span>
+                          ) : b.status === 'cancelled' || b.status === 'rejected' ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-rose-500/15 text-rose-600 border border-rose-500/30">
+                              CANCELLED
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-600 border border-amber-500/30">
+                              {b.status?.toUpperCase()}
+                            </span>
+                          )}
+                          {b.status === 'active' && (
+                            <div className="text-[10px] text-muted-foreground">
+                              {overdue.isOverdue
+                                ? `(${overdue.label.replace('🔴 Overdue ', '').trim()} Late)`
+                                : overdue.label.includes('Due in')
+                                ? `(On Time, Due in ${overdue.label.match(/(\d+h)/)?.[1] || 'soon'})`
+                                : overdue.label}
+                            </div>
+                          )}
                         </div>
-                        {b.status === 'active' && (
-                          <Badge className={cn('text-[9px] border block w-fit', overdue.badgeClass)}>
-                            {overdue.label}
-                          </Badge>
-                        )}
                       </td>
 
                       {/* Odometer */}
-                      <td className="p-4">
-                        <div className="font-mono text-xs">
-                          <span className="text-muted-foreground block text-[10px]">
+                      <td className="px-4 py-3.5">
+                        <div className="font-mono text-[11px]">
+                          <span className="text-muted-foreground block">
                             Start: {b.pickup_odometer || car?.current_odometer || 0} KM
                           </span>
                           {b.return_odometer && (
-                            <span className="font-bold text-foreground block">
+                            <span className="font-semibold text-foreground block mt-0.5">
                               End: {b.return_odometer} KM
                             </span>
                           )}
@@ -985,37 +1044,36 @@ export function AdminBookingsClient({
                       </td>
 
                       {/* Payment */}
-                      <td className="p-4">
+                      <td className="px-4 py-3.5">
                         <span className="font-black text-foreground text-sm block font-mono">
                           ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
                         </span>
-                        <Badge
-                          variant="outline"
+                        <span
                           className={cn(
-                            'text-[9px] px-1.5 py-0 h-4 border uppercase font-bold mt-0.5',
+                            'text-[9px] px-2 py-0.5 rounded-md font-bold uppercase mt-1 inline-block border',
                             b.payment_status === 'paid'
                               ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                              : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                              : 'bg-amber-500/10 text-amber-700 border-amber-500/30'
                           )}
                         >
-                          {b.payment_status}
-                        </Badge>
+                          {b.payment_status === 'paid' ? 'PAID' : 'PENDING'}
+                        </span>
                       </td>
 
-                      {/* Actions with Minimum 44px Touch Targets */}
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      {/* Actions */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5">
                           {b.status === 'active' && (
                             <>
                               <Button
                                 type="button"
                                 size="sm"
                                 onClick={() => openReturnDialog(b)}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs min-h-[44px] px-3 gap-1.5 rounded-xl shadow-xs"
+                                className="h-8 px-3 text-[11px] font-bold bg-foreground text-background hover:bg-foreground/90 rounded-lg gap-1.5"
                                 aria-label={`Process vehicle return for booking ${b.booking_number}`}
                               >
-                                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-                                <span>Mark Returned</span>
+                                <RotateCcw className="w-3 h-3" aria-hidden="true" />
+                                Mark Returned
                               </Button>
 
                               <Button
@@ -1023,7 +1081,7 @@ export function AdminBookingsClient({
                                 size="sm"
                                 variant="outline"
                                 onClick={() => openExtendDialog(b)}
-                                className="text-xs min-h-[44px] px-3 rounded-xl text-primary border-primary/30 hover:bg-primary/10"
+                                className="h-8 px-2.5 text-[11px] font-semibold rounded-lg border-border hover:bg-muted"
                                 aria-label={`Extend duration for booking ${b.booking_number}`}
                               >
                                 Extend
@@ -1039,10 +1097,10 @@ export function AdminBookingsClient({
                               setSelectedBooking(b)
                               setViewDetailsOpen(true)
                             }}
-                            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl"
+                            className="h-8 w-8 p-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground"
                             aria-label={`View details for booking ${b.booking_number}`}
                           >
-                            <Eye className="w-4 h-4" aria-hidden="true" />
+                            <Eye className="w-3.5 h-3.5" aria-hidden="true" />
                           </Button>
                         </div>
                       </td>
@@ -1108,20 +1166,36 @@ export function AdminBookingsClient({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="ret-km" className="text-xs font-semibold">
-                    Ending Odometer (KM) *
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="ret-km" className="text-xs font-semibold">
+                      Ending Odometer (KM) *
+                    </Label>
+                    {activeKmInfo.isExceeded && (
+                      <span className="text-[10px] text-rose-600 font-bold">
+                        +{activeKmInfo.extraKm} km limit exceeded
+                      </span>
+                    )}
+                  </div>
                   <Input
                     id="ret-km"
                     type="number"
                     required
                     value={returnEndingKm}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleEndingKmChange(e.target.value)}
-                    className="min-h-[44px] text-xs sm:text-sm rounded-xl font-mono"
+                    className={cn(
+                      "min-h-[44px] text-xs sm:text-sm rounded-xl font-mono",
+                      activeKmInfo.isExceeded && "border-rose-500/50 bg-rose-500/5 focus:border-rose-500"
+                    )}
                   />
-                  <span className="text-[10px] text-muted-foreground block">
-                    Start: {selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer} KM
-                  </span>
+                  <div className="text-[10px] space-y-0.5 text-muted-foreground block">
+                    <div className="flex items-center justify-between">
+                      <span>Start: {selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer} KM</span>
+                      <span className="font-semibold text-foreground">Driven: {activeKmInfo.driven} KM</span>
+                    </div>
+                    <div className="text-[10px]">
+                      Limit: <strong className="text-foreground">{activeKmInfo.totalIncludedKm} KM</strong> ({activeKmInfo.limitPer24h} km/24h × {activeKmInfo.rentalDays} day{activeKmInfo.rentalDays > 1 ? 's' : ''})
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -1143,284 +1217,303 @@ export function AdminBookingsClient({
                 </div>
               </div>
 
-              {/* Damage & Repair Assessment */}
-              <div className="p-3.5 bg-muted/30 border border-border/60 rounded-2xl space-y-3">
-                <span className="text-xs font-bold text-foreground block">Vehicle Condition & Damage Notes</span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2 space-y-1">
-                    <Label htmlFor="ret-damage-desc" className="text-[11px] font-semibold">
-                      Damage or Scratch Details (Optional)
-                    </Label>
-                    <Input
-                      id="ret-damage-desc"
-                      placeholder="e.g. Scratched front bumper, clean interior"
-                      value={damageDescription}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDamageDescription(e.target.value)}
-                      className="min-h-[44px] text-xs rounded-xl"
-                    />
-                  </div>
+              {/* Incidentals & Extra Charges (Simple & Compact) */}
+              <div className="p-3 bg-muted/30 border border-border/60 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground">Incidentals & Extra Charges (Optional)</span>
+                  {activeOverdueInfo.isOverdue && (
+                    <span className="text-[10px] text-amber-600 font-bold">
+                      ⚠ Overdue: {activeOverdueInfo.days}d (₹{activeOverdueInfo.fee.toLocaleString('en-IN')})
+                    </span>
+                  )}
+                </div>
 
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <div className="space-y-1">
-                    <Label htmlFor="ret-damage-cost" className="text-[11px] font-semibold">
-                      Repair / Dent Cost (₹)
+                    <Label htmlFor="ret-damage-cost" className="text-[11px] font-semibold text-muted-foreground">
+                      Damage Cost (₹)
                     </Label>
                     <Input
                       id="ret-damage-cost"
                       type="number"
                       value={damageCost}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDamageCost(e.target.value)}
-                      className="min-h-[44px] text-xs rounded-xl font-mono"
+                      className="min-h-[40px] text-xs rounded-xl font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="late-fee" className="text-[11px] font-semibold text-muted-foreground">
+                      Late Fee (₹)
+                    </Label>
+                    <Input
+                      id="late-fee"
+                      type="number"
+                      value={lateCharges}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLateCharges(e.target.value)}
+                      className="min-h-[40px] text-xs rounded-xl font-mono text-amber-600 font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="extra-km-fee" className="text-[11px] font-semibold text-muted-foreground">
+                      Extra KM (₹)
+                    </Label>
+                    <Input
+                      id="extra-km-fee"
+                      type="number"
+                      value={extraKmCharges}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExtraKmCharges(e.target.value)}
+                      className={cn(
+                        "min-h-[40px] text-xs rounded-xl font-mono",
+                        activeKmInfo.isExceeded && "text-rose-600 font-bold border-rose-500/40"
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="disc-fee" className="text-[11px] font-semibold text-muted-foreground">
+                      Discount (₹)
+                    </Label>
+                    <Input
+                      id="disc-fee"
+                      type="number"
+                      value={returnDiscount}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReturnDiscount(e.target.value)}
+                      className="min-h-[40px] text-xs rounded-xl font-mono text-emerald-600"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Over Speeding Penalty Check */}
-              <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-2.5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                  <Label className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    Over Speeding & Telematics Violations
-                  </Label>
-                  <span className="text-[10px] text-muted-foreground">Standard Speed Cap: 90 km/h</span>
-                </div>
+              {/* Security Deposit Escrow Account & FINANCIAL SETTLEMENT */}
+              {(() => {
+                // Compute dynamic durations & rates
+                const pickupDate = selectedBooking ? new Date(selectedBooking.pickup_datetime || selectedBooking.actual_pickup_datetime || new Date()) : new Date()
+                const returnDate = selectedBooking ? new Date(returnDatetime || selectedBooking.return_datetime || new Date()) : new Date()
+                const diffMs = Math.max(0, returnDate.getTime() - pickupDate.getTime())
+                const totalHours = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)))
+                const totalDays = Math.max(1, Math.floor(totalHours / 24))
+                const durationText = `${totalDays} Day${totalDays > 1 ? 's' : ''} / ${totalHours} Hrs`
 
-                {/* Quick Selection Buttons with Accessible Touch Targets */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOverspeedingCharges('0')
-                      setMaxSpeedRecorded('')
-                    }}
-                    className={cn(
-                      'min-h-[44px] text-xs px-2.5 py-1.5 rounded-xl border font-semibold transition-all text-center flex items-center justify-center',
-                      numOverspeed === 0
-                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 font-bold'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    No Violation (₹0)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOverspeedingCharges('500')
-                      setMaxSpeedRecorded('98 km/h (1x Alert)')
-                    }}
-                    className={cn(
-                      'min-h-[44px] text-xs px-2.5 py-1.5 rounded-xl border font-semibold transition-all text-center flex items-center justify-center',
-                      numOverspeed === 500
-                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-600 font-bold'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    1 Alert (+₹500)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOverspeedingCharges('1000')
-                      setMaxSpeedRecorded('110 km/h (2x Alerts)')
-                    }}
-                    className={cn(
-                      'min-h-[44px] text-xs px-2.5 py-1.5 rounded-xl border font-semibold transition-all text-center flex items-center justify-center',
-                      numOverspeed === 1000
-                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-600 font-bold'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    2 Alerts (+₹1,000)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOverspeedingCharges('2000')
-                      setMaxSpeedRecorded('130+ km/h (Severe Violation)')
-                    }}
-                    className={cn(
-                      'min-h-[44px] text-xs px-2.5 py-1.5 rounded-xl border font-semibold transition-all text-center flex items-center justify-center',
-                      numOverspeed === 2000
-                        ? 'bg-rose-500/20 border-rose-500/40 text-rose-600 font-bold'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    Severe (+₹2,000)
-                  </button>
-                </div>
-              </div>
+                const depositAmt = Number(
+                  selectedBooking?.security_deposit ??
+                  (selectedBooking?.vehicle as any)?.security_deposit ??
+                  2000
+                )
+                const insuranceAmt = Number(
+                  selectedBooking?.insurance_charge ??
+                  (selectedBooking?.with_insurance ? 1200 : 1200)
+                )
 
-              {/* Overdue Alert Banner if rental has exceeded scheduled time */}
-              {activeOverdueInfo.isOverdue && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                  <div className="flex items-start sm:items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
-                    <div className="text-amber-900 dark:text-amber-200 leading-tight">
-                      <span className="font-bold">Overdue Return ({activeOverdueInfo.hours}h late):</span>{' '}
-                      {activeOverdueInfo.hours > 24
-                        ? `Exceeds 24 hours — ${activeOverdueInfo.days} full days automatically counted.`
-                        : 'Charged for 1 full day (24h overdue block).'}
-                      <span className="text-[11px] text-amber-700 dark:text-amber-400 block mt-0.5">
-                        Rate: ₹{activeOverdueInfo.rate24h.toLocaleString('en-IN')}/24h &bull; Auto-calculated: ₹{activeOverdueInfo.fee.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setLateCharges(String(activeOverdueInfo.fee))}
-                    className="text-[11px] px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 rounded-xl font-semibold transition-colors shrink-0 self-start sm:self-auto"
-                  >
-                    Reset to ₹{activeOverdueInfo.fee}
-                  </button>
-                </div>
-              )}
+                // Subtotal calculation
+                const dynamicSubtotal = Math.max(
+                  0,
+                  baseRentalAmount +
+                  insuranceAmt +
+                  numLate +
+                  numExtraKm +
+                  numDamage +
+                  numCleaning +
+                  numOverspeed +
+                  numOther -
+                  numDiscount
+                )
+                const dynamicTax = Math.round(dynamicSubtotal * (taxRate / 100))
+                const totalSettlementPaid = dynamicSubtotal + dynamicTax + depositAmt
 
-              {/* Additional Charges Breakdown */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="late-fee" className="text-[11px] font-semibold">Late Fee (₹)</Label>
-                    {activeOverdueInfo.isOverdue && (
-                      <span className="text-[10px] text-amber-600 font-bold">
-                        {activeOverdueInfo.days}d (24h)
-                      </span>
-                    )}
-                  </div>
-                  <Input
-                    id="late-fee"
-                    type="number"
-                    value={lateCharges}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLateCharges(e.target.value)}
-                    className="min-h-[44px] text-xs rounded-xl font-mono text-amber-600 font-bold"
-                  />
-                </div>
+                // Escrow deductions and refunds
+                const depositDeductions =
+                  depositSettlement === 'forfeited'
+                    ? depositAmt
+                    : depositSettlement === 'deducted'
+                      ? Math.min(depositAmt, numDamage + numOverspeed + Math.max(0, remainingSettlementDue))
+                      : 0
 
-                <div className="space-y-1">
-                  <Label htmlFor="extra-km-fee" className="text-[11px] font-semibold">Extra KM (₹)</Label>
-                  <Input
-                    id="extra-km-fee"
-                    type="number"
-                    value={extraKmCharges}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExtraKmCharges(e.target.value)}
-                    className="min-h-[44px] text-xs rounded-xl font-mono"
-                  />
-                </div>
+                const depositRefundedToBank =
+                  depositSettlement === 'refunded'
+                    ? depositAmt
+                    : depositSettlement === 'held'
+                      ? 0
+                      : depositSettlement === 'forfeited'
+                        ? 0
+                        : Math.max(0, depositAmt - depositDeductions)
 
-                <div className="space-y-1">
-                  <Label htmlFor="speeding-fee" className="text-[11px] font-semibold">Speeding (₹)</Label>
-                  <Input
-                    id="speeding-fee"
-                    type="number"
-                    value={overspeedingCharges}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOverspeedingCharges(e.target.value)}
-                    className="min-h-[44px] text-xs rounded-xl font-mono text-amber-600 font-bold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="clean-fee" className="text-[11px] font-semibold">Cleaning (₹)</Label>
-                  <Input
-                    id="clean-fee"
-                    type="number"
-                    value={cleaningCharges}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCleaningCharges(e.target.value)}
-                    className="min-h-[44px] text-xs rounded-xl font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="disc-fee" className="text-[11px] font-semibold">Discount (₹)</Label>
-                  <Input
-                    id="disc-fee"
-                    type="number"
-                    value={returnDiscount}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReturnDiscount(e.target.value)}
-                    className="min-h-[44px] text-xs rounded-xl font-mono text-emerald-600"
-                  />
-                </div>
-              </div>
-
-              {/* Live Formula Calculated Summary */}
-              <div className="p-4 bg-card border-2 border-emerald-500/30 rounded-2xl space-y-2.5 text-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between font-bold text-foreground border-b border-border pb-2 gap-1">
-                  <span>Live Formula Calculation:</span>
-                  <span className="font-mono text-[10.5px] text-muted-foreground">
-                    Rental + Late + Extra KM + Damage + Speeding + Cleaning - Discount
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-muted-foreground pt-1">
-                  <div>Base Hire: <span className="font-mono font-semibold text-foreground">₹{baseRentalAmount}</span></div>
-                  <div>Late Charges: <span className="font-mono font-semibold text-foreground">+₹{numLate}</span></div>
-                  <div>Extra KM Charges: <span className="font-mono font-semibold text-foreground">+₹{numExtraKm}</span></div>
-                  <div>Damage / Repair: <span className="font-mono font-semibold text-foreground">+₹{numDamage}</span></div>
-                  <div>Speeding Penalty: <span className={cn('font-mono font-bold', numOverspeed > 0 ? 'text-amber-600' : 'text-foreground')}>+₹{numOverspeed}</span></div>
-                  <div>Cleaning / Other: <span className="font-mono font-semibold text-foreground">+₹{numCleaning + numOther}</span></div>
-                  <div className="col-span-2 sm:col-span-3">Discount: <span className="font-mono font-semibold text-emerald-600">-₹{numDiscount}</span></div>
-                </div>
-
-                <div className="border-t border-border pt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <span className="text-sm font-black text-foreground block">Final Grand Total (incl. GST)</span>
-                    <span className="text-[11px] text-muted-foreground">Advance Paid: ₹{alreadyPaid}</span>
-                  </div>
-                  <div className="text-left sm:text-right">
-                    <span className="text-xl sm:text-2xl font-black font-mono text-emerald-600 block">
-                      ₹{returnFinalAmount.toLocaleString('en-IN')}
-                    </span>
-                    <span className="text-xs font-bold font-mono text-rose-600">
-                      Balance Due: ₹{remainingSettlementDue.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Security Deposit Settlement */}
-              {selectedBooking && Number(selectedBooking.security_deposit || 0) > 0 && (() => {
-                const depositAmt = Number(selectedBooking.security_deposit || 0)
-                const depositDeducted = numDamage + numOverspeed + (depositSettlement === 'deducted' ? Math.max(0, remainingSettlementDue) : 0)
-                const depositRefundAmt = Math.max(0, depositAmt - depositDeducted)
+                const escrowStatusLabel =
+                  depositSettlement === 'refunded'
+                    ? 'REFUNDED'
+                    : depositSettlement === 'forfeited'
+                      ? 'FORFEITED'
+                      : depositSettlement === 'deducted'
+                        ? 'DEDUCTED'
+                        : 'HELD'
 
                 return (
-                  <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl space-y-3 text-xs">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-bold text-foreground flex items-center gap-1.5">
-                        <ShieldCheck className="w-4 h-4 text-blue-600" aria-hidden="true" />
-                        Security Deposit Settlement
-                      </Label>
-                      <span className="font-mono text-sm font-black text-foreground">
-                        ₹{depositAmt.toLocaleString('en-IN')}
-                      </span>
-                    </div>
+                  <div className="space-y-4">
+                    {/* Top Escrow Account Banner (Sand/Tan Tone matching mockup) */}
+                    <div className="p-4 sm:p-5 bg-[#d3c2b2]/45 dark:bg-amber-950/30 border border-[#c4b09e]/70 dark:border-amber-800/40 rounded-2xl space-y-3 shadow-xs">
+                      {/* Banner Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-[#b48039] shrink-0" aria-hidden="true" />
+                          <span className="font-bold text-xs sm:text-sm text-[#b48039] tracking-tight">
+                            Security Deposit Escrow Account
+                          </span>
+                        </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                      {[
-                        { value: 'refunded', label: '✅ Full Refund' },
-                        { value: 'deducted', label: '🔻 Deduct Dues' },
-                        { value: 'held', label: '⏸ Hold Deposit' },
-                        { value: 'forfeited', label: '❌ Forfeit All' },
-                      ].map(opt => (
+                        {/* Status Badge (Clickable to switch: HELD / REFUNDED / DEDUCTED) */}
                         <button
-                          key={opt.value}
                           type="button"
-                          onClick={() => setDepositSettlement(opt.value)}
-                          className={cn(
-                            'min-h-[44px] text-xs py-2 px-2.5 rounded-xl border font-bold transition-all text-center flex items-center justify-center',
-                            depositSettlement === opt.value
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                              : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                          )}
+                          onClick={() => setDepositSettlement(prev => prev === 'held' ? 'refunded' : prev === 'refunded' ? 'deducted' : 'held')}
+                          title="Click to toggle status: HELD / REFUNDED / DEDUCTED"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-full shadow-2xs cursor-pointer hover:bg-slate-50 transition-colors"
                         >
-                          {opt.label}
+                          <Clock className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" aria-hidden="true" />
+                          <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-slate-700 dark:text-slate-300 uppercase">
+                            {escrowStatusLabel}
+                          </span>
                         </button>
-                      ))}
+                      </div>
+
+                      {/* 3-Column Stats Row */}
+                      <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-1">
+                        <div>
+                          <span className="block text-[11px] text-[#a57a44] dark:text-amber-400/90 font-medium">
+                            Total Escrowed:
+                          </span>
+                          <span className="block font-mono font-bold text-xs sm:text-sm text-[#b48039] dark:text-amber-400">
+                            ₹{depositAmt.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="block text-[11px] text-[#a57a44] dark:text-amber-400/90 font-medium">
+                            Deductions (Fuel/Late):
+                          </span>
+                          <span className="block font-mono font-bold text-xs sm:text-sm text-rose-600 dark:text-rose-400">
+                            ₹{depositDeductions.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="block text-[11px] text-[#a57a44] dark:text-amber-400/90 font-medium">
+                            Refunded to Bank:
+                          </span>
+                          <span className="block font-mono font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400">
+                            ₹{depositRefundedToBank.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="p-3 bg-background rounded-xl border border-border/80 flex items-center justify-between">
-                      <span className="text-muted-foreground">Net Refundable to Customer:</span>
-                      <span className="font-mono font-bold text-sm text-emerald-600">
-                        ₹{(depositSettlement === 'refunded' ? depositAmt : depositSettlement === 'forfeited' ? 0 : depositRefundAmt).toLocaleString('en-IN')}
-                      </span>
+                    {/* FINANCIAL SETTLEMENT Section */}
+                    <div className="space-y-2 pt-1">
+                      <h4 className="text-xs font-black tracking-wider uppercase text-foreground">
+                        FINANCIAL SETTLEMENT
+                      </h4>
+
+                      <div className="rounded-2xl border border-slate-200/90 dark:border-border/80 bg-white dark:bg-card p-4 sm:p-5 space-y-3.5 shadow-2xs">
+                        {/* Table Header */}
+                        <div className="flex items-center justify-between text-xs font-bold text-foreground pb-1">
+                          <span>Description</span>
+                          <span>Amount (INR)</span>
+                        </div>
+
+                        {/* Itemized Rows */}
+                        <div className="space-y-3 text-xs">
+                          {/* Base Rental */}
+                          <div className="flex items-center justify-between text-foreground/90">
+                            <span>Base Rental ({durationText})</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              ₹{baseRentalAmount.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+
+                          {/* Zero-Depreciation Insurance Waiver */}
+                          <div className="flex items-center justify-between text-foreground/90">
+                            <span>Zero-Depreciation Insurance Waiver</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              ₹{insuranceAmt.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+
+                          {/* Extra KM if applicable */}
+                          {numExtraKm > 0 && (
+                            <div className="flex items-center justify-between text-foreground/90">
+                              <span>Extra Distance Charges ({activeKmInfo.extraKm} km limit exceeded)</span>
+                              <span className="font-mono font-semibold text-foreground">
+                                +₹{numExtraKm.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Late Fee if applicable */}
+                          {numLate > 0 && (
+                            <div className="flex items-center justify-between text-foreground/90">
+                              <span>Late Overdue Fee ({activeOverdueInfo.days} Day{activeOverdueInfo.days > 1 ? 's' : ''})</span>
+                              <span className="font-mono font-semibold text-foreground">
+                                +₹{numLate.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Damage & Repair if applicable */}
+                          {numDamage > 0 && (
+                            <div className="flex items-center justify-between text-foreground/90">
+                              <span>Damage & Repair Assessment</span>
+                              <span className="font-mono font-semibold text-foreground">
+                                +₹{numDamage.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Discount if applicable */}
+                          {numDiscount > 0 && (
+                            <div className="flex items-center justify-between text-emerald-600">
+                              <span>Promotional Discount Applied</span>
+                              <span className="font-mono font-semibold">
+                                -₹{numDiscount.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Goods & Services Tax (GST @ 18%) */}
+                          <div className="flex items-center justify-between text-foreground/90">
+                            <span>Goods & Services Tax (GST @ {taxRate}%)</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              ₹{dynamicTax.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+
+                          {/* Refundable Security Deposit (Liability) - Highlighted in Amber/Gold */}
+                          <div className="flex items-center justify-between text-[#d97706] dark:text-[#f59e0b] font-semibold">
+                            <span>Refundable Security Deposit (Liability)</span>
+                            <span className="font-mono">
+                              ₹{depositAmt.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Total Amount Paid Row */}
+                        <div className="border-t border-slate-200/80 dark:border-border/80 pt-3 flex items-center justify-between">
+                          <span className="text-sm font-black text-foreground">
+                            Total Amount Paid
+                          </span>
+                          <span className="font-mono text-base font-black text-foreground">
+                            ₹{totalSettlementPaid.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        {/* Payment Status Info Subtitle */}
+                        {alreadyPaid > 0 && (
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-dashed border-slate-200/60 dark:border-border/60">
+                            <span>Advance Paid: ₹{alreadyPaid.toLocaleString('en-IN')}</span>
+                            <span className={cn('font-bold font-mono', remainingSettlementDue > 0 ? 'text-rose-600' : 'text-emerald-600')}>
+                              {remainingSettlementDue > 0 ? `Net Balance to Collect: ₹${remainingSettlementDue.toLocaleString('en-IN')}` : 'Full Rental Settled'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
@@ -1590,12 +1683,20 @@ export function AdminBookingsClient({
                 </div>
               </div>
 
-              {/* Schedule */}
+              {/* Schedule & Odometer Breakdown */}
               <div className="p-3.5 bg-muted/20 border border-border/60 rounded-2xl space-y-1.5 font-medium">
                 <div>Pickup: {format(new Date(selectedBooking.pickup_datetime), 'dd MMM yyyy, hh:mm a')}</div>
                 <div>Return: {format(new Date(selectedBooking.return_datetime), 'dd MMM yyyy, hh:mm a')}</div>
-                <div>Starting Odometer: {selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer} KM</div>
-                {selectedBooking.return_odometer && <div>Ending Odometer: {selectedBooking.return_odometer} KM</div>}
+                <div className="pt-1 border-t border-border/50 text-[11px]">
+                  <div>Starting Odometer: {selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer} KM</div>
+                  {selectedBooking.return_odometer && (
+                    <>
+                      <div>Ending Odometer: {selectedBooking.return_odometer} KM (Total: {selectedBooking.return_odometer - Number(selectedBooking.pickup_odometer || 0)} KM driven)</div>
+                      <div>24h Limit: {selectedBooking.included_km || 300} KM ({selectedBooking.vehicle?.included_km_per_day || 300} km/24h)</div>
+                      <div>Extra Distance: {selectedBooking.extra_km ? `${selectedBooking.extra_km} KM beyond limit (Charge: ₹${selectedBooking.extra_km_charge})` : '0 KM (Within limit)'}</div>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Financial Summary */}

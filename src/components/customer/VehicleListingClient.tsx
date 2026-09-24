@@ -572,7 +572,7 @@ export function VehicleListingClient({
 
                         {/* Mileage / Extras */}
                         <div className="text-xs text-muted-foreground flex items-center justify-between">
-                          <span>Included: {v.included_km_per_day} km/day</span>
+                          <span>Limit: {v.included_km_per_day || 300} km/24h</span>
                           <span>Extra: ₹{v.extra_km_charge}/km</span>
                         </div>
                       </div>

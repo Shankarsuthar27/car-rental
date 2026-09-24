@@ -110,7 +110,7 @@ export function AdminBookingsClient({
   const [maxSpeedRecorded, setMaxSpeedRecorded] = useState('')
   const [otherCharges, setOtherCharges] = useState('0')
   const [returnDiscount, setReturnDiscount] = useState('0')
-  const [depositSettlement, setDepositSettlement] = useState('refunded')
+  const [depositSettlement, setDepositSettlement] = useState('held')
   const [returnPaymentCollected, setReturnPaymentCollected] = useState('0')
   const [returnPaymentMethod, setReturnPaymentMethod] = useState('cash')
   const [returnAdminNotes, setReturnAdminNotes] = useState('Vehicle inspected and returned in good condition.')
@@ -158,6 +158,44 @@ export function AdminBookingsClient({
     }
   }
 
+  // Helper to compute 24-hour rate kilometer limits & extra charges
+  // Rule: 24-hour rate includes up to 300 km limit.
+  // As soon as driven distance exceeds limit (300 km × rental days), extra km are billed at vehicle extra_km_charge (₹/km).
+  const calculateKmDetails = (
+    b: Booking | null,
+    returnDtStr: string,
+    currentEndingKm: string
+  ) => {
+    if (!b) {
+      return { driven: 0, rentalDays: 1, limitPer24h: 300, totalIncludedKm: 300, extraKm: 0, ratePerKm: 0, extraKmCharge: 0, isExceeded: false }
+    }
+    const startKm = Number(b.pickup_odometer || b.vehicle?.current_odometer || 0)
+    const endKm = Number(currentEndingKm) || startKm
+    const driven = Math.max(0, endKm - startKm)
+
+    const pickupDate = new Date(b.pickup_datetime || b.actual_pickup_datetime || new Date())
+    const returnDate = new Date(returnDtStr || new Date())
+    const diffHours = Math.max(1, (returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60))
+    const rentalDays = Math.max(1, Math.ceil(diffHours / 24))
+
+    const limitPer24h = Number(b.vehicle?.included_km_per_day || 300)
+    const totalIncludedKm = Number(b.included_km || (rentalDays * limitPer24h))
+    const extraKm = Math.max(0, driven - totalIncludedKm)
+    const ratePerKm = Number(b.vehicle?.extra_km_charge || 0)
+    const extraKmCharge = Math.round(extraKm * ratePerKm)
+
+    return {
+      driven,
+      rentalDays,
+      limitPer24h,
+      totalIncludedKm,
+      extraKm,
+      ratePerKm,
+      extraKmCharge,
+      isExceeded: extraKm > 0
+    }
+  }
+
   // Open Return Dialog & Prefill
   const openReturnDialog = (b: Booking) => {
     setSelectedBooking(b)
@@ -166,13 +204,16 @@ export function AdminBookingsClient({
     setReturnDatetime(returnDtStr)
 
     const startOdo = Number(b.pickup_odometer || b.vehicle?.current_odometer || 0)
-    setReturnEndingKm(String(startOdo + 120)) // sensible default
+    const initialEnding = String(startOdo + 120)
+    setReturnEndingKm(initialEnding)
 
     // Auto-calculate 24h late fee if overdue
     const lateCalc = calculateOverdueLateFee(b, returnDtStr)
     setLateCharges(String(lateCalc.fee))
 
-    setExtraKmCharges('0')
+    // Auto-calculate extra KM charge based on 300 km/24h limit
+    const kmCalc = calculateKmDetails(b, returnDtStr, initialEnding)
+    setExtraKmCharges(String(kmCalc.extraKmCharge))
     setDamageCost('0')
     setCleaningCharges('0')
     setOverspeedingCharges('0')
@@ -180,6 +221,7 @@ export function AdminBookingsClient({
     setOtherCharges('0')
     setReturnDiscount('0')
     setDamageDescription('')
+    setDepositSettlement('held')
     setReturnModalOpen(true)
   }
 
@@ -221,26 +263,29 @@ export function AdminBookingsClient({
     return calculateOverdueLateFee(selectedBooking, returnDatetime)
   }, [selectedBooking, returnDatetime])
 
-  // Recalculate late fee when return datetime changes
+  // Dynamic calculation of 24h rate KM limit & extra km
+  const activeKmInfo = useMemo(() => {
+    return calculateKmDetails(selectedBooking, returnDatetime, returnEndingKm)
+  }, [selectedBooking, returnDatetime, returnEndingKm])
+
+  // Recalculate late fee and extra KM when return datetime changes
   const handleReturnDatetimeChange = (newDatetime: string) => {
     setReturnDatetime(newDatetime)
     if (selectedBooking) {
       const lateCalc = calculateOverdueLateFee(selectedBooking, newDatetime)
       setLateCharges(String(lateCalc.fee))
+
+      const kmCalc = calculateKmDetails(selectedBooking, newDatetime, returnEndingKm)
+      setExtraKmCharges(String(kmCalc.extraKmCharge))
     }
   }
 
-  // Recalculate extra KM when ending KM changes
+  // Recalculate extra KM when ending KM changes based on 300 km/24h limit
   const handleEndingKmChange = (newEndKm: string) => {
     setReturnEndingKm(newEndKm)
     if (!selectedBooking) return
-    const startKm = Number(selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer || 0)
-    const endKm = Number(newEndKm) || startKm
-    const driven = Math.max(0, endKm - startKm)
-    const included = Number(selectedBooking.included_km || 200)
-    const extraKm = Math.max(0, driven - included)
-    const ratePerKm = Number(selectedBooking.vehicle?.extra_km_charge || 12)
-    setExtraKmCharges(String(extraKm * ratePerKm))
+    const kmCalc = calculateKmDetails(selectedBooking, returnDatetime, newEndKm)
+    setExtraKmCharges(String(kmCalc.extraKmCharge))
   }
 
   // Submit Return Process
@@ -791,17 +836,33 @@ export function AdminBookingsClient({
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Ending Odometer (KM) *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">Ending Odometer (KM) *</Label>
+                    {activeKmInfo.isExceeded && (
+                      <span className="text-[10px] text-rose-600 font-bold">
+                        +{activeKmInfo.extraKm} km limit exceeded
+                      </span>
+                    )}
+                  </div>
                   <Input
                     type="number"
                     required
                     value={returnEndingKm}
                     onChange={e => handleEndingKmChange(e.target.value)}
-                    className="h-9 text-xs rounded-xl font-mono"
+                    className={cn(
+                      "h-9 text-xs rounded-xl font-mono",
+                      activeKmInfo.isExceeded && "border-rose-500/50 bg-rose-500/5 focus:border-rose-500"
+                    )}
                   />
-                  <span className="text-[10px] text-muted-foreground block">
-                    Start: {selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer} KM
-                  </span>
+                  <div className="text-[10px] space-y-0.5 text-muted-foreground block">
+                    <div className="flex items-center justify-between">
+                      <span>Start: {selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer} KM</span>
+                      <span className="font-semibold text-foreground">Driven: {activeKmInfo.driven} KM</span>
+                    </div>
+                    <div className="text-[10px]">
+                      Limit: <strong className="text-foreground">{activeKmInfo.totalIncludedKm} KM</strong> ({activeKmInfo.limitPer24h} km/24h × {activeKmInfo.rentalDays} day{activeKmInfo.rentalDays > 1 ? 's' : ''})
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-1">
@@ -821,237 +882,303 @@ export function AdminBookingsClient({
                 </div>
               </div>
 
-              {/* Damage Report */}
-              <div className="p-3.5 bg-muted/20 border border-border/80 rounded-2xl space-y-2">
+              {/* Incidentals & Extra Charges (Simple & Compact) */}
+              <div className="p-3 bg-muted/30 border border-border/60 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-foreground">Damage Check & Cost</Label>
-                  <span className="text-[10px] text-muted-foreground">Leave 0 if vehicle returned scratchless</span>
+                  <span className="text-xs font-bold text-foreground">Incidentals & Extra Charges (Optional)</span>
+                  {activeOverdueInfo.isOverdue && (
+                    <span className="text-[10px] text-amber-600 font-bold">
+                      ⚠ Overdue: {activeOverdueInfo.days}d (₹{activeOverdueInfo.fee.toLocaleString('en-IN')})
+                    </span>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <Input
-                      value={damageDescription}
-                      onChange={e => setDamageDescription(e.target.value)}
-                      placeholder="e.g. Scratched left rear bumper during parking"
-                      className="h-9 text-xs rounded-xl"
-                    />
-                  </div>
-                  <div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-muted-foreground">
+                      Damage Cost (₹)
+                    </Label>
                     <Input
                       type="number"
                       value={damageCost}
                       onChange={e => setDamageCost(e.target.value)}
-                      placeholder="Damage Cost ₹"
                       className="h-9 text-xs rounded-xl font-mono"
                     />
                   </div>
-                </div>
-              </div>
 
-              {/* Over Speeding Violation Check */}
-              <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Gauge className="w-3.5 h-3.5 text-amber-500" /> Over Speeding Penalty Check
-                  </Label>
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    Standard Fleet Limit: 80 km/h
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <Input
-                      value={maxSpeedRecorded}
-                      onChange={e => setMaxSpeedRecorded(e.target.value)}
-                      placeholder="e.g. 115 km/h on Highway (2 alerts logged)"
-                      className="h-9 text-xs rounded-xl"
-                    />
-                  </div>
-                  <div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-muted-foreground">
+                      Late Fee (₹)
+                    </Label>
                     <Input
                       type="number"
-                      value={overspeedingCharges}
-                      onChange={e => setOverspeedingCharges(e.target.value)}
-                      placeholder="Speeding Fine ₹"
-                      className="h-9 text-xs rounded-xl font-mono text-amber-600 dark:text-amber-400 font-bold"
+                      value={lateCharges}
+                      onChange={e => setLateCharges(e.target.value)}
+                      className="h-9 text-xs rounded-xl font-mono text-amber-600 font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-muted-foreground">
+                      Extra KM (₹)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={extraKmCharges}
+                      onChange={e => setExtraKmCharges(e.target.value)}
+                      className={cn(
+                        "h-9 text-xs rounded-xl font-mono",
+                        activeKmInfo.isExceeded && "text-rose-600 font-bold border-rose-500/40"
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-muted-foreground">
+                      Discount (₹)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={returnDiscount}
+                      onChange={e => setReturnDiscount(e.target.value)}
+                      className="h-9 text-xs rounded-xl font-mono text-emerald-600"
                     />
                   </div>
                 </div>
-
-                {/* Quick Speed Penalty Presets */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                  <span className="text-[10px] text-muted-foreground mr-1">Quick Presets:</span>
-                  <button
-                    type="button"
-                    onClick={() => { setOverspeedingCharges('0'); setMaxSpeedRecorded('') }}
-                    className={cn(
-                      'text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all',
-                      numOverspeed === 0
-                        ? 'bg-primary/10 border-primary/30 text-primary font-bold'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    No Fine (₹0)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setOverspeedingCharges('500'); setMaxSpeedRecorded('95 km/h (1x Alert)') }}
-                    className={cn(
-                      'text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all',
-                      numOverspeed === 500
-                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-600 font-bold'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    1 Alert (+₹500)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setOverspeedingCharges('1000'); setMaxSpeedRecorded('110 km/h (2x Alerts)') }}
-                    className={cn(
-                      'text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all',
-                      numOverspeed === 1000
-                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-600 font-bold'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    2 Alerts (+₹1,000)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setOverspeedingCharges('2000'); setMaxSpeedRecorded('130+ km/h (Severe Violation)') }}
-                    className={cn(
-                      'text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all',
-                      numOverspeed === 2000
-                        ? 'bg-rose-500/20 border-rose-500/40 text-rose-600 font-bold'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    Severe / 3+ (+₹2,000)
-                  </button>
-                </div>
               </div>
 
-              {/* Overdue Alert Banner if rental has exceeded scheduled time */}
-              {activeOverdueInfo.isOverdue && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                  <div className="flex items-start sm:items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
-                    <div className="text-amber-900 dark:text-amber-200 leading-tight">
-                      <span className="font-bold">Overdue Return ({activeOverdueInfo.hours}h late):</span>{' '}
-                      {activeOverdueInfo.hours > 24
-                        ? `Exceeds 24 hours — ${activeOverdueInfo.days} full days automatically counted.`
-                        : 'Charged for 1 full day (24h overdue block).'}
-                      <span className="text-[11px] text-amber-700 dark:text-amber-400 block mt-0.5">
-                        Rate: ₹{activeOverdueInfo.rate24h.toLocaleString('en-IN')}/24h &bull; Auto-calculated: ₹{activeOverdueInfo.fee.toLocaleString('en-IN')}
-                      </span>
+              {/* Security Deposit Escrow Account & FINANCIAL SETTLEMENT */}
+              {(() => {
+                // Compute dynamic durations & rates
+                const pickupDate = selectedBooking ? new Date(selectedBooking.pickup_datetime || selectedBooking.actual_pickup_datetime || new Date()) : new Date()
+                const returnDate = selectedBooking ? new Date(returnDatetime || selectedBooking.return_datetime || new Date()) : new Date()
+                const diffMs = Math.max(0, returnDate.getTime() - pickupDate.getTime())
+                const totalHours = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)))
+                const totalDays = Math.max(1, Math.floor(totalHours / 24))
+                const durationText = `${totalDays} Day${totalDays > 1 ? 's' : ''} / ${totalHours} Hrs`
+
+                const depositAmt = Number(
+                  selectedBooking?.security_deposit ??
+                  (selectedBooking?.vehicle as any)?.security_deposit ??
+                  2000
+                )
+                const insuranceAmt = Number(
+                  selectedBooking?.insurance_charge ??
+                  (selectedBooking?.with_insurance ? 1200 : 1200)
+                )
+
+                // Subtotal calculation
+                const dynamicSubtotal = Math.max(
+                  0,
+                  baseRentalAmount +
+                  insuranceAmt +
+                  numLate +
+                  numExtraKm +
+                  numDamage +
+                  numCleaning +
+                  numOverspeed +
+                  numOther -
+                  numDiscount
+                )
+                const dynamicTax = Math.round(dynamicSubtotal * (taxRate / 100))
+                const totalSettlementPaid = dynamicSubtotal + dynamicTax + depositAmt
+
+                // Escrow deductions and refunds
+                const depositDeductions =
+                  depositSettlement === 'forfeited'
+                    ? depositAmt
+                    : depositSettlement === 'deducted'
+                      ? Math.min(depositAmt, numDamage + numOverspeed + Math.max(0, remainingSettlementDue))
+                      : 0
+
+                const depositRefundedToBank =
+                  depositSettlement === 'refunded'
+                    ? depositAmt
+                    : depositSettlement === 'held'
+                      ? 0
+                      : depositSettlement === 'forfeited'
+                        ? 0
+                        : Math.max(0, depositAmt - depositDeductions)
+
+                const escrowStatusLabel =
+                  depositSettlement === 'refunded'
+                    ? 'REFUNDED'
+                    : depositSettlement === 'forfeited'
+                      ? 'FORFEITED'
+                      : depositSettlement === 'deducted'
+                        ? 'DEDUCTED'
+                        : 'HELD'
+
+                return (
+                  <div className="space-y-4">
+                    {/* Top Escrow Account Banner (Sand/Tan Tone matching mockup) */}
+                    <div className="p-4 sm:p-5 bg-[#d3c2b2]/45 dark:bg-amber-950/30 border border-[#c4b09e]/70 dark:border-amber-800/40 rounded-2xl space-y-3 shadow-xs">
+                      {/* Banner Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-[#b48039] shrink-0" aria-hidden="true" />
+                          <span className="font-bold text-xs sm:text-sm text-[#b48039] tracking-tight">
+                            Security Deposit Escrow Account
+                          </span>
+                        </div>
+
+                        {/* Status Badge (Clickable to switch: HELD / REFUNDED / DEDUCTED) */}
+                        <button
+                          type="button"
+                          onClick={() => setDepositSettlement(prev => prev === 'held' ? 'refunded' : prev === 'refunded' ? 'deducted' : 'held')}
+                          title="Click to toggle status: HELD / REFUNDED / DEDUCTED"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-full shadow-2xs cursor-pointer hover:bg-slate-50 transition-colors"
+                        >
+                          <Clock className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" aria-hidden="true" />
+                          <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-slate-700 dark:text-slate-300 uppercase">
+                            {escrowStatusLabel}
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* 3-Column Stats Row */}
+                      <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-1">
+                        <div>
+                          <span className="block text-[11px] text-[#a57a44] dark:text-amber-400/90 font-medium">
+                            Total Escrowed:
+                          </span>
+                          <span className="block font-mono font-bold text-xs sm:text-sm text-[#b48039] dark:text-amber-400">
+                            ₹{depositAmt.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="block text-[11px] text-[#a57a44] dark:text-amber-400/90 font-medium">
+                            Deductions (Fuel/Late):
+                          </span>
+                          <span className="block font-mono font-bold text-xs sm:text-sm text-rose-600 dark:text-rose-400">
+                            ₹{depositDeductions.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="block text-[11px] text-[#a57a44] dark:text-amber-400/90 font-medium">
+                            Refunded to Bank:
+                          </span>
+                          <span className="block font-mono font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400">
+                            ₹{depositRefundedToBank.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* FINANCIAL SETTLEMENT Section */}
+                    <div className="space-y-2 pt-1">
+                      <h4 className="text-xs font-black tracking-wider uppercase text-foreground">
+                        FINANCIAL SETTLEMENT
+                      </h4>
+
+                      <div className="rounded-2xl border border-slate-200/90 dark:border-border/80 bg-white dark:bg-card p-4 sm:p-5 space-y-3.5 shadow-2xs">
+                        {/* Table Header */}
+                        <div className="flex items-center justify-between text-xs font-bold text-foreground pb-1">
+                          <span>Description</span>
+                          <span>Amount (INR)</span>
+                        </div>
+
+                        {/* Itemized Rows */}
+                        <div className="space-y-3 text-xs">
+                          {/* Base Rental */}
+                          <div className="flex items-center justify-between text-foreground/90">
+                            <span>Base Rental ({durationText})</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              ₹{baseRentalAmount.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+
+                          {/* Zero-Depreciation Insurance Waiver */}
+                          <div className="flex items-center justify-between text-foreground/90">
+                            <span>Zero-Depreciation Insurance Waiver</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              ₹{insuranceAmt.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+
+                          {/* Extra KM if applicable */}
+                          {numExtraKm > 0 && (
+                            <div className="flex items-center justify-between text-foreground/90">
+                              <span>Extra Distance Charges ({activeKmInfo.extraKm} km limit exceeded)</span>
+                              <span className="font-mono font-semibold text-foreground">
+                                +₹{numExtraKm.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Late Fee if applicable */}
+                          {numLate > 0 && (
+                            <div className="flex items-center justify-between text-foreground/90">
+                              <span>Late Overdue Fee ({activeOverdueInfo.days} Day{activeOverdueInfo.days > 1 ? 's' : ''})</span>
+                              <span className="font-mono font-semibold text-foreground">
+                                +₹{numLate.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Damage & Repair if applicable */}
+                          {numDamage > 0 && (
+                            <div className="flex items-center justify-between text-foreground/90">
+                              <span>Damage & Repair Assessment</span>
+                              <span className="font-mono font-semibold text-foreground">
+                                +₹{numDamage.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Discount if applicable */}
+                          {numDiscount > 0 && (
+                            <div className="flex items-center justify-between text-emerald-600">
+                              <span>Promotional Discount Applied</span>
+                              <span className="font-mono font-semibold">
+                                -₹{numDiscount.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Goods & Services Tax (GST @ 18%) */}
+                          <div className="flex items-center justify-between text-foreground/90">
+                            <span>Goods & Services Tax (GST @ {taxRate}%)</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              ₹{dynamicTax.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+
+                          {/* Refundable Security Deposit (Liability) - Highlighted in Amber/Gold */}
+                          <div className="flex items-center justify-between text-[#d97706] dark:text-[#f59e0b] font-semibold">
+                            <span>Refundable Security Deposit (Liability)</span>
+                            <span className="font-mono">
+                              ₹{depositAmt.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Total Amount Paid Row */}
+                        <div className="border-t border-slate-200/80 dark:border-border/80 pt-3 flex items-center justify-between">
+                          <span className="text-sm font-black text-foreground">
+                            Total Amount Paid
+                          </span>
+                          <span className="font-mono text-base font-black text-foreground">
+                            ₹{totalSettlementPaid.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        {/* Payment Status Info Subtitle */}
+                        {alreadyPaid > 0 && (
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-dashed border-slate-200/60 dark:border-border/60">
+                            <span>Advance Paid: ₹{alreadyPaid.toLocaleString('en-IN')}</span>
+                            <span className={cn('font-bold font-mono', remainingSettlementDue > 0 ? 'text-rose-600' : 'text-emerald-600')}>
+                              {remainingSettlementDue > 0 ? `Net Balance to Collect: ₹${remainingSettlementDue.toLocaleString('en-IN')}` : 'Full Rental Settled'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setLateCharges(String(activeOverdueInfo.fee))}
-                    className="text-[11px] px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 rounded-xl font-semibold transition-colors shrink-0 self-start sm:self-auto"
-                  >
-                    Reset to ₹{activeOverdueInfo.fee}
-                  </button>
-                </div>
-              )}
-
-              {/* Additional Charges Breakdown */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[11px] font-semibold">Late Fee (₹)</Label>
-                    {activeOverdueInfo.isOverdue && (
-                      <span className="text-[10px] text-amber-600 font-bold">
-                        {activeOverdueInfo.days}d (24h)
-                      </span>
-                    )}
-                  </div>
-                  <Input
-                    type="number"
-                    value={lateCharges}
-                    onChange={e => setLateCharges(e.target.value)}
-                    className="h-8.5 text-xs rounded-xl font-mono text-amber-600 font-bold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold">Extra KM (₹)</Label>
-                  <Input
-                    type="number"
-                    value={extraKmCharges}
-                    onChange={e => setExtraKmCharges(e.target.value)}
-                    className="h-8.5 text-xs rounded-xl font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold">Speeding (₹)</Label>
-                  <Input
-                    type="number"
-                    value={overspeedingCharges}
-                    onChange={e => setOverspeedingCharges(e.target.value)}
-                    className="h-8.5 text-xs rounded-xl font-mono text-amber-600 dark:text-amber-400 font-bold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold">Cleaning (₹)</Label>
-                  <Input
-                    type="number"
-                    value={cleaningCharges}
-                    onChange={e => setCleaningCharges(e.target.value)}
-                    className="h-8.5 text-xs rounded-xl font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold">Discount (₹)</Label>
-                  <Input
-                    type="number"
-                    value={returnDiscount}
-                    onChange={e => setReturnDiscount(e.target.value)}
-                    className="h-8.5 text-xs rounded-xl font-mono text-emerald-600"
-                  />
-                </div>
-              </div>
-
-              {/* Live Calculated Final Bill Box */}
-              <div className="p-4 bg-card border-2 border-emerald-500/30 rounded-2xl space-y-2 text-xs">
-                <div className="flex items-center justify-between font-bold text-foreground border-b border-border pb-1.5">
-                  <span>Live Formula Calculation:</span>
-                  <span className="font-mono text-[10.5px] text-muted-foreground truncate max-w-[340px]">
-                    Rental + Late + Extra KM + Damage + Speeding + Cleaning - Discount
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-muted-foreground pt-1">
-                  <div>Base Rental: <span className="font-mono font-semibold text-foreground">₹{baseRentalAmount}</span></div>
-                  <div>Late Charges: <span className="font-mono font-semibold text-foreground">+₹{numLate}</span></div>
-                  <div>Extra KM Charges: <span className="font-mono font-semibold text-foreground">+₹{numExtraKm}</span></div>
-                  <div>Damage / Repair: <span className="font-mono font-semibold text-foreground">+₹{numDamage}</span></div>
-                  <div>Speeding Fine: <span className={cn('font-mono font-bold', numOverspeed > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>+₹{numOverspeed}</span></div>
-                  <div>Cleaning / Other: <span className="font-mono font-semibold text-foreground">+₹{numCleaning + numOther}</span></div>
-                  <div className="sm:col-span-3">Discount Applied: <span className="font-mono font-semibold text-emerald-600">-₹{numDiscount}</span></div>
-                </div>
-
-                <div className="border-t border-border pt-2 flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-black text-foreground block">Final Grand Total (incl. GST)</span>
-                    <span className="text-[10px] text-muted-foreground">Already Paid: ₹{alreadyPaid}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 block">
-                      ₹{returnFinalAmount.toLocaleString('en-IN')}
-                    </span>
-                    <span className="text-xs font-bold font-mono text-rose-600 dark:text-rose-400">
-                      Balance Due: ₹{remainingSettlementDue.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                )
+              })()}
 
               {/* Settle Balance Payment */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">

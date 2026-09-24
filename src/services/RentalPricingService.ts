@@ -318,34 +318,98 @@ export class RentalPricingService {
       holidays
     )
 
-    // ── Base Rental ──────────────────────────────────────────
-    const optimal = selectOptimalPricingType(billableHours, vehicle, pricingPlan)
-    const baseRentalBeforeMultiplier = optimal.baseAmount
-    const baseRental = Math.round(baseRentalBeforeMultiplier * holidayMultiplier * 100) / 100
+    // ── Check if mixed (days + remaining hours) is more cost-effective ──
+    const fullDays = Math.floor(billableHours / 24)
+    const extraHours = Math.round(billableHours % 24)
+    let isSplitDaysAndHours = false
+    let daysCost = 0
+    let hoursCost = 0
+    let appliedPricingType: PricingType = 'daily'
 
-    // Pricing label
-    const pricingTypeLabel: Record<PricingType, string> = {
-      hourly: `${Math.ceil(billableHours)} hours × ₹${optimal.rate}/hr`,
-      daily: `${optimal.quantity} day${optimal.quantity > 1 ? 's' : ''} × ₹${optimal.rate}/day`,
-      weekly: `${optimal.quantity} week${optimal.quantity > 1 ? 's' : ''} × ₹${optimal.rate}/week`,
-      monthly: `${optimal.quantity} month${optimal.quantity > 1 ? 's' : ''} × ₹${optimal.rate}/month`,
-      custom: `Custom pricing`,
+    if (
+      fullDays >= 1 &&
+      extraHours > 0 &&
+      vehicle.daily_rate &&
+      vehicle.hourly_rate
+    ) {
+      daysCost = fullDays * vehicle.daily_rate
+      hoursCost = extraHours * vehicle.hourly_rate
+      if (daysCost + hoursCost < Math.ceil(billableHours / 24) * vehicle.daily_rate) {
+        isSplitDaysAndHours = true
+      }
     }
 
-    lineItems.push({
-      description: `Base Rental (${pricingTypeLabel[optimal.type]})`,
-      quantity: optimal.quantity,
-      unit: optimal.type === 'hourly' ? 'hours' : optimal.type === 'daily' ? 'days' : optimal.type,
-      unitPrice: optimal.rate,
-      total: baseRental,
-      type: 'base',
-    })
-
-    if (holidayMultiplier > 1) {
+    let baseRental = 0
+    if (isSplitDaysAndHours) {
+      baseRental = daysCost + hoursCost
+      appliedPricingType = 'daily'
       lineItems.push({
-        description: `Holiday/Season Surcharge (${Math.round((holidayMultiplier - 1) * 100)}%)`,
-        total: baseRental - baseRentalBeforeMultiplier,
-        unitPrice: 0,
+        description: `Rental Duration (${fullDays} Day${fullDays > 1 ? 's' : ''})`,
+        quantity: fullDays,
+        unit: 'days',
+        unitPrice: vehicle.daily_rate!,
+        total: daysCost,
+        type: 'base',
+      })
+      lineItems.push({
+        description: `Additional Hours (${extraHours} Hr${extraHours > 1 ? 's' : ''})`,
+        quantity: extraHours,
+        unit: 'hours',
+        unitPrice: vehicle.hourly_rate!,
+        total: hoursCost,
+        type: 'extra',
+      })
+    } else {
+      const optimal = selectOptimalPricingType(billableHours, vehicle, pricingPlan)
+      appliedPricingType = optimal.type
+      const baseRentalBeforeMultiplier = optimal.baseAmount
+      baseRental = Math.round(baseRentalBeforeMultiplier * holidayMultiplier * 100) / 100
+
+      const pricingTypeLabel: Record<PricingType, string> = {
+        hourly: `${Math.ceil(billableHours)} hours × ₹${optimal.rate}/hr`,
+        daily: `${optimal.quantity} day${optimal.quantity > 1 ? 's' : ''} × ₹${optimal.rate}/day`,
+        weekly: `${optimal.quantity} week${optimal.quantity > 1 ? 's' : ''} × ₹${optimal.rate}/week`,
+        monthly: `${optimal.quantity} month${optimal.quantity > 1 ? 's' : ''} × ₹${optimal.rate}/month`,
+        custom: `Custom pricing`,
+      }
+
+      lineItems.push({
+        description: `Rental Duration (${pricingTypeLabel[optimal.type]})`,
+        quantity: optimal.quantity,
+        unit: optimal.type === 'hourly' ? 'hours' : optimal.type === 'daily' ? 'days' : optimal.type,
+        unitPrice: optimal.rate,
+        total: baseRental,
+        type: 'base',
+      })
+
+      if (holidayMultiplier > 1) {
+        lineItems.push({
+          description: `Holiday/Season Surcharge (${Math.round((holidayMultiplier - 1) * 100)}%)`,
+          total: baseRental - baseRentalBeforeMultiplier,
+          unitPrice: 0,
+          type: 'extra',
+        })
+      }
+    }
+
+    // ── Dynamic Weekend Surcharge (+15%) ──────────────────────
+    let weekendSurcharge = 0
+    let hasWeekend = false
+    const curDate = new Date(pickupDateTime)
+    while (curDate <= returnDateTime) {
+      if (curDate.getDay() === 0 || curDate.getDay() === 6) {
+        hasWeekend = true
+        break
+      }
+      curDate.setHours(curDate.getHours() + 12)
+    }
+
+    if (hasWeekend) {
+      weekendSurcharge = Math.round(baseRental * 0.15)
+      lineItems.push({
+        description: 'Weekend Dynamic Surcharge (+15%)',
+        total: weekendSurcharge,
+        unitPrice: weekendSurcharge,
         type: 'extra',
       })
     }
@@ -354,8 +418,10 @@ export class RentalPricingService {
     let extraKmCharge = 0
     if (extraKm > 0 && vehicle.extra_km_charge > 0) {
       extraKmCharge = Math.round(extraKm * vehicle.extra_km_charge * 100) / 100
+      const daysCount = Math.max(1, Math.ceil(billableHours / 24))
+      const kmLimit = (vehicle.included_km_per_day ?? 300) * daysCount
       lineItems.push({
-        description: `Extra KM (${extraKm} km × ₹${vehicle.extra_km_charge}/km)`,
+        description: `Extra KM (${extraKm} km × ₹${vehicle.extra_km_charge}/km beyond ${kmLimit} km limit)`,
         quantity: extraKm,
         unit: 'km',
         unitPrice: vehicle.extra_km_charge,
@@ -377,9 +443,6 @@ export class RentalPricingService {
               vehicle.daily_rate ??
               1000
             ))
-      // 24 hours late charge rule:
-      // If overdue <= 24h -> 1 day counted (1 × 24h rate)
-      // If overdue > 24h -> next day is automatically counted (ceil(lateFeeHours / 24) × 24h rate)
       const lateDays = Math.max(1, Math.ceil(lateFeeHours / 24))
       lateFee = Math.round(lateDays * lateRate24h * 100) / 100
       lineItems.push({
@@ -394,8 +457,9 @@ export class RentalPricingService {
 
     // ── Driver Charge ────────────────────────────────────────
     if (driverCharge > 0) {
+      const driverDays = Math.max(1, Math.ceil(billableHours / 24))
       lineItems.push({
-        description: 'Driver Charge',
+        description: `Professional Chauffeur Driver (${driverDays} Day${driverDays > 1 ? 's' : ''})`,
         total: driverCharge,
         unitPrice: driverCharge,
         type: 'extra',
@@ -404,8 +468,9 @@ export class RentalPricingService {
 
     // ── Insurance Charge ─────────────────────────────────────
     if (insuranceCharge > 0) {
+      const insDays = Math.max(1, Math.ceil(billableHours / 24))
       lineItems.push({
-        description: 'Insurance',
+        description: `Zero-Depreciation Insurance Cover (${insDays} Day${insDays > 1 ? 's' : ''})`,
         total: insuranceCharge,
         unitPrice: insuranceCharge,
         type: 'extra',
@@ -425,6 +490,7 @@ export class RentalPricingService {
     // ── Subtotal (before discounts) ──────────────────────────
     const subtotalBeforeDiscount =
       baseRental +
+      weekendSurcharge +
       extraKmCharge +
       lateFee +
       driverCharge +
@@ -464,10 +530,10 @@ export class RentalPricingService {
     const subtotal = subtotalBeforeDiscount - actualDiscount - couponDiscount
 
     // ── Tax (GST) ────────────────────────────────────────────
-    const taxAmount = Math.round((subtotal * taxRate) / 100 * 100) / 100
+    const taxAmount = Math.round((subtotal * taxRate) / 100)
     if (taxAmount > 0) {
       lineItems.push({
-        description: `GST (${taxRate}%)`,
+        description: `Goods & Services Tax (GST @ ${taxRate}%)`,
         total: taxAmount,
         unitPrice: taxAmount,
         type: 'tax',
@@ -478,7 +544,7 @@ export class RentalPricingService {
     const securityDeposit = includeDeposit ? (vehicle.security_deposit ?? 0) : 0
     if (securityDeposit > 0) {
       lineItems.push({
-        description: 'Security Deposit (refundable)',
+        description: 'Refundable Security Deposit (Non-Revenue)',
         total: securityDeposit,
         unitPrice: securityDeposit,
         type: 'deposit',
@@ -504,7 +570,8 @@ export class RentalPricingService {
       securityDeposit,
       grandTotal,
       lineItems,
-      appliedPricingType: optimal.type,
+      appliedPricingType,
+      includedKm: durationInfo.days * (vehicle.included_km_per_day ?? 300),
     }
   }
 
@@ -546,17 +613,23 @@ export class RentalPricingService {
 
   /**
    * Calculate extra KM charges at return.
+   * 24-hour rate limit: up to 300 km included per 24-hour day block.
+   * As soon as actual KM exceeds included KM (300 km × rental days),
+   * extra KM is charged at vehicle's extra_km_charge rate.
    */
   static calculateExtraKmCharge(
     vehicle: Vehicle,
     pickupOdometer: number,
     returnOdometer: number,
-    rentalDays: number
+    rentalDays: number = 1
   ): { actualKm: number; includedKm: number; extraKm: number; charge: number } {
-    const actualKm = returnOdometer - pickupOdometer
-    const includedKm = (vehicle.included_km_per_day ?? 200) * rentalDays
+    const actualKm = Math.max(0, returnOdometer - pickupOdometer)
+    const effectiveDays = Math.max(1, rentalDays)
+    const kmLimitPerDay = vehicle.included_km_per_day ?? 300
+    const includedKm = kmLimitPerDay * effectiveDays
     const extraKm = Math.max(0, actualKm - includedKm)
-    const charge = Math.round(extraKm * vehicle.extra_km_charge * 100) / 100
+    const extraKmRate = vehicle.extra_km_charge ?? 0
+    const charge = Math.round(extraKm * extraKmRate * 100) / 100
 
     return { actualKm, includedKm, extraKm, charge }
   }
