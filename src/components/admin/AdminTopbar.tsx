@@ -50,10 +50,15 @@ function generateBreadcrumbs(pathname: string) {
 
   for (const seg of segments) {
     href += `/${seg}`
+    if (seg.toLowerCase() === 'admin') continue
     const label = seg
       .replace(/-/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase())
     crumbs.push({ label, href })
+  }
+
+  if (crumbs.length === 0) {
+    crumbs.push({ label: 'Dashboard', href: '/admin/dashboard' })
   }
 
   return crumbs
