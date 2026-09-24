@@ -201,23 +201,62 @@ export function AdminBookingsClient({
   const [returnPaymentMethod, setReturnPaymentMethod] = useState<string>('cash')
   const [returnAdminNotes, setReturnAdminNotes] = useState<string>('Vehicle inspected and returned in good condition.')
 
+  // Helper to calculate 24h late fee for overdue booking
+  // Rule:
+  // - If overdue <= 24 hours: 1 day counted (1 × 24h rate)
+  // - If overdue > 24 hours: next day is automatically counted (ceil(hoursLate / 24) × 24h rate)
+  const calculateOverdueLateFee = (b: Booking | null, actualReturnIsoOrLocal: string) => {
+    if (!b?.return_datetime || !actualReturnIsoOrLocal) {
+      return { hours: 0, days: 0, fee: 0, rate24h: 0, isOverdue: false }
+    }
+    const scheduledTime = new Date(b.return_datetime)
+    const actualTime = new Date(actualReturnIsoOrLocal)
+    const diffMs = actualTime.getTime() - scheduledTime.getTime()
+
+    if (diffMs <= 0) {
+      return { hours: 0, days: 0, fee: 0, rate24h: 0, isOverdue: false }
+    }
+
+    const lateMinutes = diffMs / (1000 * 60)
+    const hoursLate = Math.ceil(lateMinutes / 60)
+    if (hoursLate <= 0) {
+      return { hours: 0, days: 0, fee: 0, rate24h: 0, isOverdue: false }
+    }
+
+    // 24-hour late charge rule:
+    // If overdue <= 24 hours -> 1 day counted
+    // If overdue > 24 hours -> next day automatically counted (ceil(hoursLate / 24))
+    const lateDays = Math.max(1, Math.ceil(hoursLate / 24))
+    const rate24h = Number(
+      (b.vehicle as any)?.late_charge_24h ??
+      (b.vehicle?.meta as any)?.late_charge_24h ??
+      b.vehicle?.daily_rate ??
+      1000
+    )
+    const fee = lateDays * rate24h
+
+    return {
+      hours: hoursLate,
+      days: lateDays,
+      fee,
+      rate24h,
+      isOverdue: true,
+    }
+  }
+
   // Open Return Dialog & Prefill
   const openReturnDialog = (b: Booking) => {
     setSelectedBooking(b)
     const now = new Date()
-    setReturnDatetime(format(now, "yyyy-MM-dd'T'HH:mm"))
+    const returnDtStr = format(now, "yyyy-MM-dd'T'HH:mm")
+    setReturnDatetime(returnDtStr)
 
     const startOdo = Number(b.pickup_odometer || b.vehicle?.current_odometer || 0)
     setReturnEndingKm(String(startOdo + 120))
 
-    // Auto-calculate late fee if overdue
-    const returnTime = new Date(b.return_datetime)
-    if (isPast(returnTime)) {
-      const hoursLate = Math.max(1, differenceInHours(now, returnTime))
-      setLateCharges(String(hoursLate * 200))
-    } else {
-      setLateCharges('0')
-    }
+    // Auto-calculate 24h late fee if overdue
+    const lateCalc = calculateOverdueLateFee(b, returnDtStr)
+    setLateCharges(String(lateCalc.fee))
 
     setExtraKmCharges('0')
     setDamageCost('0')
@@ -261,6 +300,20 @@ export function AdminBookingsClient({
 
   const alreadyPaid = selectedBooking ? Number(selectedBooking.amount_paid || 0) : 0
   const remainingSettlementDue = Math.max(0, returnFinalAmount - alreadyPaid)
+
+  // Dynamic calculation of overdue info
+  const activeOverdueInfo = useMemo(() => {
+    return calculateOverdueLateFee(selectedBooking, returnDatetime)
+  }, [selectedBooking, returnDatetime])
+
+  // Recalculate late fee when return datetime changes
+  const handleReturnDatetimeChange = (newDatetime: string) => {
+    setReturnDatetime(newDatetime)
+    if (selectedBooking) {
+      const lateCalc = calculateOverdueLateFee(selectedBooking, newDatetime)
+      setLateCharges(String(lateCalc.fee))
+    }
+  }
 
   // Recalculate extra KM when ending KM changes
   const handleEndingKmChange = (newEndKm: string) => {
@@ -1049,7 +1102,7 @@ export function AdminBookingsClient({
                     id="ret-dt"
                     type="datetime-local"
                     value={returnDatetime}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReturnDatetime(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleReturnDatetimeChange(e.target.value)}
                     className="min-h-[44px] text-xs sm:text-sm rounded-xl"
                   />
                 </div>
@@ -1197,16 +1250,48 @@ export function AdminBookingsClient({
                 </div>
               </div>
 
+              {/* Overdue Alert Banner if rental has exceeded scheduled time */}
+              {activeOverdueInfo.isOverdue && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="flex items-start sm:items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+                    <div className="text-amber-900 dark:text-amber-200 leading-tight">
+                      <span className="font-bold">Overdue Return ({activeOverdueInfo.hours}h late):</span>{' '}
+                      {activeOverdueInfo.hours > 24
+                        ? `Exceeds 24 hours — ${activeOverdueInfo.days} full days automatically counted.`
+                        : 'Charged for 1 full day (24h overdue block).'}
+                      <span className="text-[11px] text-amber-700 dark:text-amber-400 block mt-0.5">
+                        Rate: ₹{activeOverdueInfo.rate24h.toLocaleString('en-IN')}/24h &bull; Auto-calculated: ₹{activeOverdueInfo.fee.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setLateCharges(String(activeOverdueInfo.fee))}
+                    className="text-[11px] px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 rounded-xl font-semibold transition-colors shrink-0 self-start sm:self-auto"
+                  >
+                    Reset to ₹{activeOverdueInfo.fee}
+                  </button>
+                </div>
+              )}
+
               {/* Additional Charges Breakdown */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                 <div className="space-y-1">
-                  <Label htmlFor="late-fee" className="text-[11px] font-semibold">Late Fee (₹)</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="late-fee" className="text-[11px] font-semibold">Late Fee (₹)</Label>
+                    {activeOverdueInfo.isOverdue && (
+                      <span className="text-[10px] text-amber-600 font-bold">
+                        {activeOverdueInfo.days}d (24h)
+                      </span>
+                    )}
+                  </div>
                   <Input
                     id="late-fee"
                     type="number"
                     value={lateCharges}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLateCharges(e.target.value)}
-                    className="min-h-[44px] text-xs rounded-xl font-mono"
+                    className="min-h-[44px] text-xs rounded-xl font-mono text-amber-600 font-bold"
                   />
                 </div>
 

@@ -1041,7 +1041,12 @@ export function AdminVehiclesClient({
                   />
                 </div>
                 <div className="space-y-1 flex flex-col justify-between">
-                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center" title="24 Hours Late Charge">24h Late Charge (₹)</Label>
+                  <Label
+                    className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center"
+                    title="24-Hour Late Charge: Applied per 24 hours overdue. If overdue exceeds 24 hours, each additional day is automatically counted."
+                  >
+                    24h Late Charge (₹)
+                  </Label>
                   <Input
                     type="number"
                     placeholder="e.g. 1000"
@@ -1051,6 +1056,10 @@ export function AdminVehiclesClient({
                   />
                 </div>
               </div>
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-0.5">
+                <Clock className="w-3 h-3 text-primary shrink-0" />
+                <span><strong>24h Late Policy:</strong> Overdue returns charge the 24h fee. If overdue exceeds 24 hours, the next day is automatically counted.</span>
+              </p>
             </div>
 
             {/* Section: Image & Amenities */}
@@ -1348,7 +1357,12 @@ export function AdminVehiclesClient({
                   />
                 </div>
                 <div className="space-y-1 flex flex-col justify-between">
-                  <Label className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center" title="24 Hours Late Charge">24h Late Charge (₹)</Label>
+                  <Label
+                    className="text-xs font-semibold whitespace-nowrap min-h-[20px] flex items-center"
+                    title="24-Hour Late Charge: Applied per 24 hours overdue. If overdue exceeds 24 hours, each additional day is automatically counted."
+                  >
+                    24h Late Charge (₹)
+                  </Label>
                   <Input
                     type="number"
                     placeholder="e.g. 1000"
@@ -1358,6 +1372,10 @@ export function AdminVehiclesClient({
                   />
                 </div>
               </div>
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-0.5">
+                <Clock className="w-3 h-3 text-primary shrink-0" />
+                <span><strong>24h Late Policy:</strong> Overdue returns charge the 24h fee. If overdue exceeds 24 hours, the next day is automatically counted.</span>
+              </p>
             </div>
 
             {/* Photo & Features */}

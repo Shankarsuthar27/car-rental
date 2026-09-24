@@ -260,6 +260,7 @@ export interface ExtendedPricingInput extends PricingInput {
   holidays?: Holiday[]
   lateFeeHours?: number
   lateFeeRatePerHour?: number
+  lateFeeRate24h?: number
 }
 
 export class RentalPricingService {
@@ -293,6 +294,7 @@ export class RentalPricingService {
       holidays = [],
       lateFeeHours = 0,
       lateFeeRatePerHour,
+      lateFeeRate24h,
     } = input
 
     const lineItems: PricingLineItem[] = []
@@ -362,16 +364,29 @@ export class RentalPricingService {
       })
     }
 
-    // ── Late Fee ─────────────────────────────────────────────
+    // ── Late Fee (24-Hour Block & Auto Next-Day Rule) ────────
     let lateFee = 0
     if (lateFeeHours > 0) {
-      const lateRate = lateFeeRatePerHour ?? (vehicle.hourly_rate ?? (vehicle.daily_rate ?? 0) / 24) * 1.5
-      lateFee = Math.round(lateFeeHours * lateRate * 100) / 100
+      const lateRate24h =
+        lateFeeRate24h ??
+        (lateFeeRatePerHour !== undefined
+          ? lateFeeRatePerHour * 24
+          : Number(
+              vehicle.late_charge_24h ??
+              (vehicle.meta as any)?.late_charge_24h ??
+              vehicle.daily_rate ??
+              1000
+            ))
+      // 24 hours late charge rule:
+      // If overdue <= 24h -> 1 day counted (1 × 24h rate)
+      // If overdue > 24h -> next day is automatically counted (ceil(lateFeeHours / 24) × 24h rate)
+      const lateDays = Math.max(1, Math.ceil(lateFeeHours / 24))
+      lateFee = Math.round(lateDays * lateRate24h * 100) / 100
       lineItems.push({
-        description: `Late Return Fee (${lateFeeHours}h × ₹${lateRate}/hr)`,
-        quantity: lateFeeHours,
-        unit: 'hours',
-        unitPrice: lateRate,
+        description: `24h Late Charge (${lateFeeHours}h late → ${lateDays} day${lateDays > 1 ? 's' : ''} × ₹${lateRate24h})`,
+        quantity: lateDays,
+        unit: 'days (24h)',
+        unitPrice: lateRate24h,
         total: lateFee,
         type: 'extra',
       })
@@ -495,28 +510,38 @@ export class RentalPricingService {
 
   /**
    * Calculate late fee for an overdue rental.
+   * Rule: 24-hour late charge (₹).
+   * - Up to 24 hours overdue: 1 day counted (1 × 24h rate).
+   * - Above 24 hours overdue: money for the next day is automatically counted (ceil(hours / 24) × 24h rate).
    */
   static calculateLateFee(
     vehicle: Vehicle,
     scheduledReturnDateTime: Date,
     actualReturnDateTime: Date,
     gracePeriodMinutes: number = 30
-  ): { hours: number; fee: number } {
+  ): { hours: number; days: number; fee: number; rate24h: number } {
     const lateMs =
       actualReturnDateTime.getTime() - scheduledReturnDateTime.getTime()
     const lateMinutes = lateMs / (1000 * 60)
 
     if (lateMinutes <= gracePeriodMinutes) {
-      return { hours: 0, fee: 0 }
+      return { hours: 0, days: 0, fee: 0, rate24h: 0 }
     }
 
-    const lateHours = Math.ceil((lateMinutes - gracePeriodMinutes) / 60)
-    const ratePerHour =
-      vehicle.hourly_rate ??
-      (vehicle.daily_rate ? vehicle.daily_rate / 24 : 0)
-    const fee = Math.round(lateHours * ratePerHour * 1.5 * 100) / 100
+    const netLateMinutes = lateMinutes - gracePeriodMinutes
+    const lateHours = Math.ceil(netLateMinutes / 60)
+    // 24-hour late charge rule:
+    // If overdue > 24 hours, the charge for the next day is automatically counted.
+    const lateDays = Math.max(1, Math.ceil(lateHours / 24))
+    const rate24h = Number(
+      vehicle.late_charge_24h ??
+      (vehicle.meta as any)?.late_charge_24h ??
+      vehicle.daily_rate ??
+      1000
+    )
+    const fee = Math.round(lateDays * rate24h * 100) / 100
 
-    return { hours: lateHours, fee }
+    return { hours: lateHours, days: lateDays, fee, rate24h }
   }
 
   /**
