@@ -182,6 +182,7 @@ export function AdminCustomersClient({
   const [editEmergencyName, setEditEmergencyName] = useState('')
   const [editEmergencyPhone, setEditEmergencyPhone] = useState('')
   const [editKycStatus, setEditKycStatus] = useState<KycStatus>('verified')
+  const [editLicense, setEditLicense] = useState('')
   const [editNotes, setEditNotes] = useState('')
 
   useEffect(() => {
@@ -433,6 +434,7 @@ export function AdminCustomersClient({
     setEditEmergencyName(c.emergency_contact_name || '')
     setEditEmergencyPhone(c.emergency_contact_phone || '')
     setEditKycStatus(c.kyc_status || 'verified')
+    setEditLicense(c.driving_license_number || '')
     setEditNotes(c.kyc_notes || '')
     setEditModalOpen(true)
   }
@@ -451,6 +453,7 @@ export function AdminCustomersClient({
           full_name: editName.trim(),
           phone: editPhone.trim(),
           email: editEmail.trim(),
+          driving_license_number: editLicense.trim(),
           address: editAddress.trim(),
           city: editCity.trim(),
           emergency_contact_name: editEmergencyName.trim(),
@@ -476,6 +479,7 @@ export function AdminCustomersClient({
       if (existing) {
         const updated: Customer = {
           ...existing,
+          driving_license_number: editLicense.trim() || existing.driving_license_number,
           profile: {
             id: existing.profile?.id || `prof-${editId}`,
             role: existing.profile?.role || 'customer',
@@ -572,23 +576,20 @@ export function AdminCustomersClient({
         throw new Error(result.error?.message || 'Failed to delete customer.')
       }
 
-      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id))
-      setDeleteModalOpen(false)
-      if (editModalOpen && editId === customerToDelete.id) {
-        setEditModalOpen(false)
-      }
-      if (viewDetailsOpen && selectedCust?.id === customerToDelete.id) {
-        setViewDetailsOpen(false)
-      }
       const custName =
         customerToDelete.profile?.full_name ||
         customerToDelete.emergency_contact_name ||
         'Customer'
+
+      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id))
+      setDeleteModalOpen(false)
+      if (editModalOpen && editId === customerToDelete.id) setEditModalOpen(false)
+      if (viewDetailsOpen && selectedCust?.id === customerToDelete.id) setViewDetailsOpen(false)
       showFeedback('success', `Customer "${custName}" deleted successfully!`)
-      setCustomerToDelete(null)
     } catch (err: any) {
       showFeedback('error', err.message || 'Failed to delete customer.')
     } finally {
+      setCustomerToDelete(null)
       setProcessing(false)
     }
   }
@@ -1553,13 +1554,26 @@ export function AdminCustomersClient({
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold">Admin Notes & DL Number</Label>
-              <Textarea
-                value={editNotes}
-                onChange={e => setEditNotes(e.target.value)}
-                className="text-xs rounded-xl min-h-16"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Driving License No.</Label>
+                <Input
+                  value={editLicense}
+                  onChange={e => setEditLicense(e.target.value)}
+                  placeholder="RJ14 2024001928"
+                  className="h-9 text-xs rounded-xl font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Admin Notes</Label>
+                <Input
+                  value={editNotes}
+                  onChange={e => setEditNotes(e.target.value)}
+                  placeholder="Internal remarks"
+                  className="h-9 text-xs rounded-xl"
+                />
+              </div>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0 pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
