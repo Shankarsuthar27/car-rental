@@ -44,7 +44,7 @@ export default async function AdminBookingsPage() {
   const { bookings, branches } = await getBookingsData()
 
   return (
-    <div className="p-3 sm:p-6 md:p-8">
+    <div className="p-2.5 sm:p-6 md:p-8 max-w-full overflow-x-hidden">
       <AdminBookingsClient initialBookings={bookings} branches={branches} />
     </div>
   )

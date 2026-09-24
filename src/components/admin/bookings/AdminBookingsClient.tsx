@@ -641,7 +641,10 @@ export function AdminBookingsClient({
         {/* Running Fleet */}
         <button
           type="button"
-          onClick={() => setActiveTab('active')}
+          onClick={() => {
+            setActiveTab('active')
+            router.replace('/admin/bookings?status=active', { scroll: false })
+          }}
           className={cn(
             "p-3 rounded-2xl border text-left transition-all",
             activeTab === 'active'
@@ -659,10 +662,37 @@ export function AdminBookingsClient({
           </div>
         </button>
 
+        {/* Completed */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('completed')
+            router.replace('/admin/bookings?status=completed', { scroll: false })
+          }}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all",
+            activeTab === 'completed'
+              ? "bg-emerald-500/10 border-emerald-500/40 ring-1 ring-emerald-500/20"
+              : "bg-card border-border/80 hover:bg-muted/40"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted-foreground">Completed</span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" />
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-xl font-black font-mono text-foreground">{completedCount}</span>
+            <span className="text-[10px] text-muted-foreground">settled</span>
+          </div>
+        </button>
+
         {/* Overdue */}
         <button
           type="button"
-          onClick={() => setActiveTab('active')}
+          onClick={() => {
+            setActiveTab('active')
+            router.replace('/admin/bookings?status=active', { scroll: false })
+          }}
           className={cn(
             "p-3 rounded-2xl border text-left transition-all",
             overdueCount > 0
@@ -686,31 +716,13 @@ export function AdminBookingsClient({
           </div>
         </button>
 
-        {/* Due Today */}
-        <button
-          type="button"
-          onClick={() => setActiveTab('active')}
-          className={cn(
-            "p-3 rounded-2xl border text-left transition-all",
-            dueTodayCount > 0
-              ? "bg-amber-500/10 border-amber-500/40"
-              : "bg-card border-border/80 hover:bg-muted/40"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted-foreground">Due Today</span>
-            <Clock className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
-          </div>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-xl font-black font-mono text-foreground">{dueTodayCount}</span>
-            <span className="text-[10px] text-muted-foreground">returns</span>
-          </div>
-        </button>
-
         {/* Pending Due */}
         <button
           type="button"
-          onClick={() => setActiveTab('active')}
+          onClick={() => {
+            setActiveTab('all')
+            router.replace('/admin/bookings?status=all', { scroll: false })
+          }}
           className="p-3 rounded-2xl border text-left bg-card border-border/80 hover:bg-muted/40 transition-all"
         >
           <div className="flex items-center justify-between">
@@ -770,21 +782,23 @@ export function AdminBookingsClient({
           )}
         </div>
 
-        {/* Status Tab Pills with horizontal scroll */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0 pb-0.5">
+        {/* Status Tab Pills: 4-Column Segmented Bar on Mobile, Flex on Desktop */}
+        <div className="grid grid-cols-4 sm:flex sm:items-center gap-1.5 w-full sm:w-auto">
           <button
             type="button"
-            onClick={() => setActiveTab('active')}
+            onClick={() => {
+              setActiveTab('active')
+              router.replace('/admin/bookings?status=active', { scroll: false })
+            }}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0',
+              'flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all border w-full sm:w-auto',
               activeTab === 'active'
                 ? 'bg-foreground text-background border-foreground shadow-xs'
                 : 'border-border bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
             aria-pressed={activeTab === 'active'}
           >
-            {activeTab === 'active' && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
-            <span>Running</span>
+            <span className="truncate">Running</span>
             <span className={cn(
               "px-1.5 py-0.2 text-[10px] font-black rounded-full",
               activeTab === 'active' ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
@@ -795,16 +809,19 @@ export function AdminBookingsClient({
 
           <button
             type="button"
-            onClick={() => setActiveTab('completed')}
+            onClick={() => {
+              setActiveTab('completed')
+              router.replace('/admin/bookings?status=completed', { scroll: false })
+            }}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0',
+              'flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all border w-full sm:w-auto',
               activeTab === 'completed'
                 ? 'bg-foreground text-background border-foreground shadow-xs'
                 : 'border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
             aria-pressed={activeTab === 'completed'}
           >
-            <span>Completed</span>
+            <span className="truncate">Completed</span>
             <span className={cn(
               "px-1.5 py-0.2 text-[10px] font-black rounded-full",
               activeTab === 'completed' ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
@@ -815,16 +832,19 @@ export function AdminBookingsClient({
 
           <button
             type="button"
-            onClick={() => setActiveTab('cancelled')}
+            onClick={() => {
+              setActiveTab('cancelled')
+              router.replace('/admin/bookings?status=cancelled', { scroll: false })
+            }}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0',
+              'flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all border w-full sm:w-auto',
               activeTab === 'cancelled'
                 ? 'bg-foreground text-background border-foreground shadow-xs'
                 : 'border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
             aria-pressed={activeTab === 'cancelled'}
           >
-            <span>Cancelled</span>
+            <span className="truncate">Cancelled</span>
             <span className={cn(
               "px-1.5 py-0.2 text-[10px] font-black rounded-full",
               activeTab === 'cancelled' ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
@@ -835,16 +855,19 @@ export function AdminBookingsClient({
 
           <button
             type="button"
-            onClick={() => setActiveTab('all')}
+            onClick={() => {
+              setActiveTab('all')
+              router.replace('/admin/bookings?status=all', { scroll: false })
+            }}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0',
+              'flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all border w-full sm:w-auto',
               activeTab === 'all'
                 ? 'bg-foreground text-background border-foreground shadow-xs'
                 : 'border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
             aria-pressed={activeTab === 'all'}
           >
-            <span>All</span>
+            <span className="truncate">All</span>
             <span className={cn(
               "px-1.5 py-0.2 text-[10px] font-black rounded-full",
               activeTab === 'all' ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
@@ -913,14 +936,50 @@ export function AdminBookingsClient({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
                 className={cn(
-                  "bg-card border rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs space-y-3 flex flex-col justify-between transition-all",
+                  "bg-card border rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5 flex flex-col justify-between transition-all w-full max-w-full overflow-hidden",
                   overdue.isOverdue
                     ? "border-rose-500/50 bg-rose-500/[0.02] ring-1 ring-rose-500/20"
                     : "border-border/80 hover:border-primary/30"
                 )}
               >
-                {/* 1. Vehicle & Status Header */}
-                <div className="flex items-start gap-3">
+                {/* 1. Card Top Utility Bar: Booking ID & Status / Overdue Badges */}
+                <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-border/60">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-mono text-xs font-bold text-foreground truncate">
+                      #{b.booking_number}
+                    </span>
+                    {b.status === 'active' && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Live
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {b.status === 'active' && overdue.isOverdue && (
+                      <Badge className="text-[9px] font-black bg-rose-500 text-white border-0 py-0.5 px-2 animate-pulse shrink-0">
+                        OVERDUE
+                      </Badge>
+                    )}
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-lg border shadow-2xs shrink-0',
+                        b.status === 'active' && 'bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400',
+                        b.status === 'completed' && 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400',
+                        b.status === 'confirmed' && 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+                        b.status === 'cancelled' && 'bg-rose-500/10 text-rose-600 border-rose-500/30'
+                      )}
+                    >
+                      {b.status === 'completed' && <CheckCircle2 className="w-3 h-3 mr-1 inline text-emerald-600 shrink-0" />}
+                      {b.status === 'active' ? 'RUNNING' : b.status?.toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* 2. Vehicle Hero Row */}
+                <div className="flex items-center gap-3 min-w-0">
                   <div className="relative shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -928,59 +987,35 @@ export function AdminBookingsClient({
                       alt={car ? `${car.brand} ${car.model}` : 'Vehicle'}
                       className="w-16 h-14 sm:w-20 sm:h-16 rounded-2xl object-cover border border-border/80 bg-muted shrink-0 shadow-2xs"
                     />
-                    {b.status === 'active' && (
-                      <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-card" />
-                      </span>
-                    )}
                   </div>
 
                   <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-start justify-between gap-1.5">
-                      <div className="min-w-0">
-                        <span className="font-black text-sm sm:text-base text-foreground block truncate leading-tight">
-                          {car ? `${car.brand} ${car.model}` : 'Fleet Car'}
-                        </span>
-                        <span className="font-mono text-[11px] text-muted-foreground font-semibold block mt-0.5">
-                          ID: #{b.booking_number}
-                        </span>
-                      </div>
-
-                      {/* Status badge */}
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg shrink-0 border',
-                          b.status === 'active' && 'bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400',
-                          b.status === 'completed' && 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30 dark:text-zinc-300',
-                          b.status === 'confirmed' && 'bg-purple-500/10 text-purple-600 border-purple-500/30',
-                          b.status === 'cancelled' && 'bg-rose-500/10 text-rose-600 border-rose-500/30'
-                        )}
-                      >
-                        {b.status === 'active' ? 'RUNNING' : b.status?.toUpperCase()}
-                      </Badge>
-                    </div>
-
-                    {/* Registration plate & Overdue Pill */}
+                    <h3 className="font-black text-sm sm:text-base text-foreground leading-snug truncate">
+                      {car ? `${car.brand} ${car.model}` : 'Fleet Car'}
+                    </h3>
                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                       {/* Indian HSRP License Plate Look */}
-                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-mono font-black text-[10px] sm:text-[11px] tracking-wide border border-amber-500 shadow-2xs">
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-mono font-black text-[10px] sm:text-[11px] tracking-wide border border-amber-500 shadow-2xs shrink-0">
                         <span className="text-[8px] font-extrabold text-slate-800">IND</span>
                         <span className="w-1 h-1 rounded-full bg-slate-950/60" />
                         <span>{car?.registration_number || 'RJ-SELFDRIVE'}</span>
                       </div>
 
-                      {b.status === 'active' && (
-                        <Badge className={cn('text-[9px] border py-0.5 px-2 font-bold', overdue.badgeClass)}>
-                          {overdue.label}
-                        </Badge>
+                      {car?.transmission && (
+                        <span className="text-[10px] font-semibold text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded capitalize">
+                          {car.transmission}
+                        </span>
+                      )}
+                      {car?.fuel_type && (
+                        <span className="text-[10px] font-semibold text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded uppercase">
+                          {car.fuel_type}
+                        </span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Customer Section with 1-Tap Call and WhatsApp */}
+                {/* 3. Customer Section with 1-Tap Call and WhatsApp */}
                 <div className="p-3 bg-muted/30 border border-border/60 rounded-2xl flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-8 h-8 rounded-xl gradient-brand text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
@@ -1021,7 +1056,7 @@ export function AdminBookingsClient({
                   </div>
                 </div>
 
-                {/* 3. Rental Duration & Odometer Cards */}
+                {/* 4. Rental Timeline & Odometer Cards */}
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {/* Pickup Details */}
@@ -1038,11 +1073,11 @@ export function AdminBookingsClient({
                       </span>
                     </div>
 
-                    {/* Return Due Details */}
+                    {/* Return Due / Returned Details */}
                     <div className="p-2.5 bg-background rounded-xl border border-border/70 space-y-1">
                       <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase">
-                        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", overdue.isOverdue ? "bg-rose-500" : "bg-primary")} />
-                        <span>Return Due</span>
+                        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", b.status === 'completed' ? "bg-emerald-500" : overdue.isOverdue ? "bg-rose-500" : "bg-primary")} />
+                        <span>{b.status === 'completed' ? 'Returned' : 'Return Due'}</span>
                       </div>
                       <span className="font-semibold text-foreground text-[11px] block leading-tight">
                         {format(returnDate, 'dd MMM, hh:mm a')}
@@ -1052,6 +1087,16 @@ export function AdminBookingsClient({
                       </span>
                     </div>
                   </div>
+
+                  {/* Completed Driven Mileage Strip */}
+                  {b.status === 'completed' && b.return_odometer && b.pickup_odometer && (
+                    <div className="px-2.5 py-1.5 bg-emerald-500/5 border border-emerald-500/20 rounded-xl flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">Total Distance Driven:</span>
+                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                        {Number(b.return_odometer) - Number(b.pickup_odometer)} KM
+                      </span>
+                    </div>
+                  )}
 
                   {/* Rental Timeline Progress (For running bookings) */}
                   {b.status === 'active' && (
@@ -1075,7 +1120,7 @@ export function AdminBookingsClient({
                   )}
                 </div>
 
-                {/* 4. Financial & Settlement Row */}
+                {/* 5. Financial & Settlement Row */}
                 <div className="p-3 bg-muted/20 border border-border/60 rounded-2xl flex items-center justify-between gap-2">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-muted-foreground block">
@@ -1088,12 +1133,14 @@ export function AdminBookingsClient({
 
                   <div className="flex items-center gap-2">
                     {/* Security Deposit Info Tag */}
-                    <div className="text-right">
-                      <span className="text-[9px] uppercase font-bold text-muted-foreground block">Deposit</span>
-                      <span className="font-mono text-xs font-semibold text-foreground block">
-                        ₹{Number(b.security_deposit || 0).toLocaleString('en-IN')}
-                      </span>
-                    </div>
+                    {Number(b.security_deposit || 0) > 0 && (
+                      <div className="text-right">
+                        <span className="text-[9px] uppercase font-bold text-muted-foreground block">Deposit</span>
+                        <span className="font-mono text-xs font-semibold text-foreground block">
+                          ₹{Number(b.security_deposit || 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Payment Status Badge */}
                     <Badge
@@ -1105,13 +1152,13 @@ export function AdminBookingsClient({
                           : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
                       )}
                     >
-                      {b.payment_status === 'paid' ? 'PAID' : 'PENDING'}
+                      {b.payment_status === 'paid' ? 'PAID ✓' : 'PENDING'}
                     </Badge>
                   </div>
                 </div>
 
-                {/* 5. Mobile Action Buttons (Accessible min 44px touch targets) */}
-                <div className="space-y-2 pt-1">
+                {/* 6. Action Buttons */}
+                <div className="space-y-2 pt-0.5">
                   {b.status === 'active' ? (
                     <div className="grid grid-cols-2 gap-2">
                       <Button
@@ -1160,7 +1207,7 @@ export function AdminBookingsClient({
                           setSelectedBooking(b)
                           setViewDetailsOpen(true)
                         }}
-                        className="w-full min-h-[44px] text-xs font-bold rounded-xl border-border hover:bg-muted gap-2 active:scale-[0.98] transition-all"
+                        className="w-full min-h-[44px] text-xs font-bold rounded-xl border-border/80 bg-card hover:bg-muted/80 text-foreground gap-2 active:scale-[0.98] transition-all shadow-2xs"
                         aria-label={`View full record for booking ${b.booking_number}`}
                       >
                         <FileText className="w-4 h-4 text-primary" aria-hidden="true" />
