@@ -26,6 +26,7 @@ import {
   Wrench,
   AlertOctagon,
   XCircle,
+  X,
   Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -147,6 +148,12 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
     router.push('/login')
   }
 
+  const handleNavClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      onToggle()
+    }
+  }
+
   const isLinkActive = (href: string) => {
     const [path, query] = href.split('?')
     if (query) {
@@ -174,8 +181,12 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
         className="flex flex-col h-screen bg-sidebar border-r border-sidebar-border fixed left-0 top-0 z-30 overflow-hidden shadow-sm select-none"
       >
         {/* Header Logo */}
-        <div className="flex items-center h-16 px-4 border-b border-sidebar-border shrink-0 bg-sidebar/50 backdrop-blur-sm">
-          <Link href="/admin/dashboard" className="flex items-center gap-2.5 overflow-hidden w-full group">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border shrink-0 bg-sidebar/50 backdrop-blur-sm">
+          <Link
+            href="/admin/dashboard"
+            onClick={handleNavClick}
+            className="flex items-center gap-2.5 overflow-hidden flex-1 group min-w-0"
+          >
             <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-md ring-2 ring-primary/25 bg-slate-950 flex items-center justify-center transition-transform group-hover:scale-105">
               <Image
                 src="/logo.png"
@@ -196,11 +207,21 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                   JSD
                 </span>
                 <span className="text-[9px] font-extrabold uppercase tracking-widest text-primary block truncate">
-                  Jalore Self Drive Car Rental • Fleet
+                  Jalore Self Drive • Fleet
                 </span>
               </motion.div>
             )}
           </Link>
+
+          {/* Mobile Close Button */}
+          <button
+            type="button"
+            onClick={onToggle}
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer shrink-0"
+            aria-label="Close navigation drawer"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Navigation Items */}
@@ -220,6 +241,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                 <Link
                   key={group.label}
                   href={group.href!}
+                  onClick={handleNavClick}
                   prefetch={true}
                   className={cn(
                     'uiverse-assign-btn w-10 h-10 flex items-center justify-center mx-auto my-1.5',
@@ -243,6 +265,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                 <Link
                   key={group.label}
                   href={group.href!}
+                  onClick={handleNavClick}
                   prefetch={true}
                   className={cn(
                     'uiverse-assign-btn w-full flex items-center justify-between px-3.5 py-2 my-1.5 text-xs font-extrabold tracking-wide',
@@ -290,6 +313,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                 <Link
                   key={group.label}
                   href={group.href}
+                  onClick={handleNavClick}
                   prefetch={true}
                   className={cn(
                     'flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs transition-all duration-150 group',
@@ -403,6 +427,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                           <Link
                             key={child.href}
                             href={child.href}
+                            onClick={handleNavClick}
                             prefetch={true}
                             className={cn(
                               'flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] transition-all duration-150',

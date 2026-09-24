@@ -4,16 +4,7 @@ import { useState } from 'react'
 import {
   CreditCard,
   Search,
-  Plus,
-  RotateCcw,
-  CheckCircle2,
-  AlertCircle,
-  FileText,
-  DollarSign,
-  QrCode,
-  Building,
-  ArrowDownLeft,
-  ArrowUpRight
+  Plus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,12 +45,6 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // Refund Modal
-  const [refundModalOpen, setRefundModalOpen] = useState(false)
-  const [selectedPayment, setSelectedPayment] = useState<any>(null)
-  const [refundAmount, setRefundAmount] = useState('1000')
-  const [refundReason, setRefundReason] = useState('Security deposit refund after vehicle return')
-  const [processingRefund, setProcessingRefund] = useState(false)
 
   const filtered = payments.filter(p => {
     const bookingNum = p.booking?.booking_number || ''
@@ -102,41 +87,6 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
       setManualModalOpen(false)
     }
     setSaving(false)
-  }
-
-  // Handle Refund Initiation
-  const handleProcessRefund = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedPayment) return
-    setProcessingRefund(true)
-
-    const supabase = createClient()
-
-    // 1. Insert refund record
-    await supabase.from('refunds').insert({
-      booking_id: selectedPayment.booking_id,
-      payment_id: selectedPayment.id,
-      customer_id: selectedPayment.customer_id,
-      amount: Number(refundAmount),
-      reason: refundReason,
-      status: 'completed',
-      processed_at: new Date().toISOString()
-    })
-
-    // 2. Update payment status
-    await supabase
-      .from('payments')
-      .update({ status: 'refunded', updated_at: new Date().toISOString() })
-      .eq('id', selectedPayment.id)
-
-    setPayments(prev =>
-      prev.map(p =>
-        p.id === selectedPayment.id ? { ...p, status: 'refunded' } : p
-      )
-    )
-
-    setProcessingRefund(false)
-    setRefundModalOpen(false)
   }
 
   const totalCollected = payments
@@ -279,8 +229,7 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
                 <th className="p-4">Method & Channel</th>
                 <th className="p-4">Date & Time</th>
                 <th className="p-4">Status</th>
-                <th className="p-4">Amount</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-4 text-right">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -328,25 +277,8 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
                     </Badge>
                   </td>
 
-                  <td className="p-4 font-black text-sm text-foreground">
+                  <td className="p-4 text-right font-black text-sm text-foreground">
                     ₹{Number(p.amount).toLocaleString('en-IN')}
-                  </td>
-
-                  <td className="p-4 text-right">
-                    {p.status === 'paid' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPayment(p)
-                          setRefundAmount(String(p.amount))
-                          setRefundModalOpen(true)
-                        }}
-                        className="h-7 text-xs text-rose-600 hover:text-rose-700"
-                      >
-                        <RotateCcw className="w-3 h-3 mr-1" /> Refund
-                      </Button>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -354,70 +286,6 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
           </table>
         </div>
       </div>
-
-      {/* REFUND MODAL */}
-      <Dialog open={refundModalOpen} onOpenChange={setRefundModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <RotateCcw className="w-4 h-4 text-rose-600" /> Process Transaction Refund
-            </DialogTitle>
-          </DialogHeader>
-
-          {selectedPayment && (
-            <form onSubmit={handleProcessRefund} className="space-y-3 pt-2">
-              <div className="p-3 bg-muted/40 rounded-2xl text-xs space-y-1">
-                <span className="font-bold text-foreground block">
-                  Original Transaction Amount: ₹{selectedPayment.amount.toLocaleString('en-IN')}
-                </span>
-                <span className="text-muted-foreground block">
-                  Booking #{selectedPayment.booking?.booking_number}
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Refund Amount (₹)</Label>
-                <Input
-                  required
-                  type="number"
-                  value={refundAmount}
-                  max={selectedPayment.amount}
-                  onChange={e => setRefundAmount(e.target.value)}
-                  className="h-9 text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Reason for Refund</Label>
-                <Input
-                  value={refundReason}
-                  onChange={e => setRefundReason(e.target.value)}
-                  className="h-9 text-xs"
-                />
-              </div>
-
-              <DialogFooter className="pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRefundModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={processingRefund}
-                  size="sm"
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
-                >
-                  {processingRefund ? 'Refunding...' : 'Confirm & Settle Refund'}
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

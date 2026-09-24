@@ -114,7 +114,7 @@ export default function CustomerDashboardLayout({
       {/* Mobile Navigation Drawer Overlay */}
       <AnimatePresence>
         {mobileOpen && (
-          <>
+          <div className="fixed inset-0 z-50 md:hidden">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -122,65 +122,102 @@ export default function CustomerDashboardLayout({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden"
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
               aria-hidden="true"
             />
 
-            {/* Mobile Drawer */}
+            {/* Mobile Side Sheet Drawer */}
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="fixed top-16 left-0 right-0 bg-card border-b border-border z-50 md:hidden max-h-[calc(100dvh-4rem)] overflow-y-auto shadow-2xl rounded-b-3xl p-4 sm:p-6 space-y-3"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="fixed top-0 left-0 bottom-0 w-full max-w-[320px] bg-background border-r border-border z-50 flex flex-col shadow-2xl overflow-hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Customer Account Navigation"
             >
-              <div className="px-2 pb-2 border-b border-border/60 flex items-center justify-between">
-                <span className="text-xs uppercase font-black tracking-wider text-muted-foreground">
-                  Customer Account
-                </span>
-                <span className="text-xs font-semibold text-primary">JSD Portal</span>
+              {/* Drawer Top Header */}
+              <div className="h-16 px-4 border-b border-border flex items-center justify-between bg-card/60 backdrop-blur-md shrink-0">
+                <BrandLogo href="/" size="xs" textVariant="compact" onClick={() => setMobileOpen(false)} />
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(false)}
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  aria-label="Close navigation drawer"
+                >
+                  <X className="w-5 h-5" aria-hidden="true" />
+                </button>
               </div>
 
-              <nav className="space-y-1" aria-label="Customer Mobile Navigation">
-                {customerNavItems.map(item => {
-                  const Icon = item.icon
-                  const isActive = pathname === item.href
+              {/* Drawer Navigation Links */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase font-black tracking-wider text-muted-foreground px-2 block">
+                    Customer Account
+                  </span>
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className={cn(
-                        'flex items-center justify-between p-3.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all min-h-[44px]',
-                        isActive
-                          ? 'bg-primary text-white shadow-xs font-bold'
-                          : 'text-foreground hover:bg-muted/60 bg-muted/20'
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-white' : 'text-primary')} aria-hidden="true" />
-                        <span>{item.label}</span>
-                      </div>
-                      <ChevronRight className="w-4 h-4 opacity-70" aria-hidden="true" />
-                    </Link>
-                  )
-                })}
-              </nav>
+                  <nav className="space-y-1" aria-label="Customer Mobile Navigation">
+                    {customerNavItems.map(item => {
+                      const Icon = item.icon
+                      const isActive = pathname === item.href
 
-              <div className="pt-2 border-t border-border/60">
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            'flex items-center justify-between p-3 rounded-2xl text-xs font-semibold transition-all min-h-[44px]',
+                            isActive
+                              ? 'bg-primary text-white shadow-xs font-bold'
+                              : 'text-foreground hover:bg-muted/60 bg-muted/20'
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-white' : 'text-primary')} aria-hidden="true" />
+                            <span>{item.label}</span>
+                          </div>
+                          <ChevronRight className="w-4 h-4 opacity-70" aria-hidden="true" />
+                        </Link>
+                      )
+                    })}
+                  </nav>
+                </div>
+
+                {/* Quick Fleet Link */}
+                <div className="pt-2 border-t border-border/60 space-y-1">
+                  <span className="text-[10px] uppercase font-black tracking-wider text-muted-foreground px-2 block">
+                    Quick Booking
+                  </span>
+                  <Link
+                    href="/cars"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-between p-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold min-h-[44px]"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Car className="w-4 h-4" />
+                      <span>Book Another Car</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Drawer Footer with Logout */}
+              <div className="p-4 border-t border-border bg-muted/20 shrink-0 space-y-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
-                  className="w-full min-h-[44px] text-xs font-bold rounded-xl text-rose-600 border-border hover:bg-rose-500/10 justify-center gap-2"
+                  className="w-full min-h-[44px] text-xs font-bold rounded-xl text-rose-600 border-rose-500/20 hover:bg-rose-500/10 justify-center gap-2"
                 >
                   <LogOut className="w-4 h-4" aria-hidden="true" />
                   <span>Log out</span>
                 </Button>
               </div>
             </motion.div>
-          </>
+          </div>
         )}
       </AnimatePresence>
 

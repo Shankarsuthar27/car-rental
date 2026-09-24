@@ -13,6 +13,7 @@ export interface BrandLogoProps {
   textClassName?: string
   subtextClassName?: string
   priority?: boolean
+  onClick?: () => void
 }
 
 const sizeMap = {
@@ -57,6 +58,7 @@ export function BrandLogo({
   textClassName,
   subtextClassName,
   priority = false,
+  onClick,
 }: BrandLogoProps) {
   const config = sizeMap[size] || sizeMap.md
 
@@ -65,7 +67,7 @@ export function BrandLogo({
       {/* Circular Logo Badge */}
       <div
         className={cn(
-          'relative rounded-full overflow-hidden shrink-0 shadow-md ring-2 ring-primary/20 bg-slate-950 flex items-center justify-center transition-transform hover:scale-105',
+          'relative rounded-full overflow-hidden shrink-0 shadow-md ring-2 ring-primary/20 bg-slate-950 flex items-center justify-center transition-transform group-hover:scale-105',
           config.badge
         )}
       >
@@ -119,9 +121,17 @@ export function BrandLogo({
 
   if (href) {
     return (
-      <Link href={href} className="inline-flex items-center group">
+      <Link href={href} onClick={onClick} className="inline-flex items-center group">
         {content}
       </Link>
+    )
+  }
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className="inline-flex items-center group text-left cursor-pointer">
+        {content}
+      </button>
     )
   }
 

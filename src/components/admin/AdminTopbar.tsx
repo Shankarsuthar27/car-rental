@@ -137,14 +137,14 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
     : 'AD'
 
   return (
-    <header className="h-16 border-b border-border bg-background/85 backdrop-blur-md flex items-center px-4 md:px-6 gap-4 sticky top-0 z-20 select-none">
+    <header className="h-16 border-b border-border bg-background/85 backdrop-blur-md flex items-center justify-between px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 sticky top-0 z-20 select-none">
       {/* Mobile menu toggle & brand badge */}
-      <div className="flex items-center gap-1.5 md:hidden">
+      <div className="flex items-center gap-1.5 md:hidden shrink-0">
         <Button
           variant="ghost"
           size="icon"
           onClick={onMobileMenuToggle}
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-foreground"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-foreground hover:bg-muted/80"
           aria-label="Open navigation drawer"
         >
           <Menu className="w-5 h-5" aria-hidden="true" />
@@ -181,23 +181,25 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
         />
       </form>
 
-      {/* Quick Action: Assign Car */}
-      <Link href="/admin/assign" className="hidden sm:inline-flex">
-        <Button size="sm" className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs min-h-[38px] px-3.5 rounded-xl gap-1.5 shadow-sm shadow-primary/20">
-          <Zap className="w-3.5 h-3.5 fill-current" aria-hidden="true" /> Assign Car
-        </Button>
-      </Link>
+      {/* Right Controls Container */}
+      <div className="flex items-center gap-1 sm:gap-2 ml-auto shrink-0">
+        {/* Quick Action: Assign Car */}
+        <Link href="/admin/assign" className="hidden sm:inline-flex">
+          <Button size="sm" className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs min-h-[38px] px-3.5 rounded-xl gap-1.5 shadow-sm shadow-primary/20">
+            <Zap className="w-3.5 h-3.5 fill-current" aria-hidden="true" /> Assign Car
+          </Button>
+        </Link>
 
-      {/* Theme toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleTheme}
-        className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl"
-        aria-label="Toggle theme"
-      >
-        {isDark ? <Sun className="w-4 h-4 text-amber-400" aria-hidden="true" /> : <Moon className="w-4 h-4 text-indigo-500" aria-hidden="true" />}
-      </Button>
+        {/* Theme toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-muted/80"
+          aria-label="Toggle theme"
+        >
+          {isDark ? <Sun className="w-4 h-4 text-amber-400" aria-hidden="true" /> : <Moon className="w-4 h-4 text-indigo-500" aria-hidden="true" />}
+        </Button>
 
       {/* Notifications Popover */}
       <Popover>
@@ -318,6 +320,7 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </header>
   )
 }
