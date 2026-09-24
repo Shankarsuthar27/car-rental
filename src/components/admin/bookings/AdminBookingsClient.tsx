@@ -31,7 +31,8 @@ import {
   Fuel,
   Printer,
   X,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -135,6 +136,15 @@ function getVehicleThumbnail(vehicle?: Vehicle | null): string {
     if (imgs[0]?.url) return imgs[0].url
   }
   return 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80'
+}
+
+function getWhatsAppUrl(phone?: string, name?: string, bookingNo?: string): string | null {
+  if (!phone) return null
+  const cleaned = phone.replace(/[^0-9]/g, '')
+  if (cleaned.length < 10) return null
+  const num = cleaned.length === 10 ? `91${cleaned}` : cleaned
+  const msg = encodeURIComponent(`Hi ${name || 'Customer'}, regarding your car rental booking #${bookingNo || ''}:`)
+  return `https://wa.me/${num}?text=${msg}`
 }
 
 export function AdminBookingsClient({
@@ -576,20 +586,42 @@ export function AdminBookingsClient({
     })
   }, [bookings, searchQuery, activeTab])
 
-  // Active counts
+  // Active counts & metrics
   const activeCount = bookings.filter(b => b.status === 'active').length
   const completedCount = bookings.filter(b => b.status === 'completed').length
   const cancelledCount = bookings.filter(b => b.status === 'cancelled' || b.status === 'rejected').length
 
+  const overdueCount = useMemo(() => {
+    return bookings.filter(b => b.status === 'active' && isPast(new Date(b.return_datetime))).length
+  }, [bookings])
+
+  const dueTodayCount = useMemo(() => {
+    const now = new Date()
+    return bookings.filter(b => {
+      if (b.status !== 'active') return false
+      const ret = new Date(b.return_datetime)
+      return !isPast(ret) && differenceInHours(ret, now) <= 24
+    }).length
+  }, [bookings])
+
+  const pendingPaymentsCount = useMemo(() => {
+    return bookings.filter(b => b.status === 'active' && b.payment_status !== 'paid').length
+  }, [bookings])
+
   return (
-    <div className="w-full space-y-4 sm:space-y-5 p-3.5 sm:p-5 md:p-8 max-w-7xl mx-auto">
+    <div className="w-full space-y-3.5 sm:space-y-5 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border/70 p-4 sm:p-5 rounded-2xl shadow-xs">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-foreground">
-            Rental Operations &amp; Fleet
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-primary/10 text-primary shrink-0">
+              <Car className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight text-foreground">
+              Rental Operations &amp; Fleet
+            </h1>
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Dashboard for active rentals, fleet status, and billing.
           </p>
         </div>
@@ -597,11 +629,99 @@ export function AdminBookingsClient({
         <Link
           href="/admin/assign"
           prefetch={true}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-border bg-card hover:bg-muted transition-colors shrink-0 shadow-xs"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-xl gradient-brand text-white shadow-sm shadow-primary/20 hover:opacity-95 active:scale-[0.98] transition-all min-h-[44px] shrink-0"
         >
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          Assign New Car
+          <Plus className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
+          <span>Assign New Car</span>
         </Link>
+      </div>
+
+      {/* Mobile Fleet Quick KPI Summary (Under 1024px) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 lg:hidden">
+        {/* Running Fleet */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('active')}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all",
+            activeTab === 'active'
+              ? "bg-blue-500/10 border-blue-500/40 ring-1 ring-blue-500/20"
+              : "bg-card border-border/80 hover:bg-muted/40"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted-foreground">Running Fleet</span>
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-xl font-black font-mono text-foreground">{activeCount}</span>
+            <span className="text-[10px] text-muted-foreground">on road</span>
+          </div>
+        </button>
+
+        {/* Overdue */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('active')}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all",
+            overdueCount > 0
+              ? "bg-rose-500/10 border-rose-500/40 ring-1 ring-rose-500/20"
+              : "bg-card border-border/80 hover:bg-muted/40"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted-foreground">Overdue</span>
+            {overdueCount > 0 ? (
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" aria-hidden="true" />
+            ) : (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" />
+            )}
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className={cn("text-xl font-black font-mono", overdueCount > 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground")}>
+              {overdueCount}
+            </span>
+            <span className="text-[10px] text-muted-foreground">{overdueCount > 0 ? 'action needed' : 'all on time'}</span>
+          </div>
+        </button>
+
+        {/* Due Today */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('active')}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all",
+            dueTodayCount > 0
+              ? "bg-amber-500/10 border-amber-500/40"
+              : "bg-card border-border/80 hover:bg-muted/40"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted-foreground">Due Today</span>
+            <Clock className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-xl font-black font-mono text-foreground">{dueTodayCount}</span>
+            <span className="text-[10px] text-muted-foreground">returns</span>
+          </div>
+        </button>
+
+        {/* Pending Due */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('active')}
+          className="p-3 rounded-2xl border text-left bg-card border-border/80 hover:bg-muted/40 transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted-foreground">Pending Dues</span>
+            <CreditCard className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-xl font-black font-mono text-foreground">{pendingPaymentsCount}</span>
+            <span className="text-[10px] text-muted-foreground">to settle</span>
+          </div>
+        </button>
       </div>
 
       {/* Global Feedback Alert */}
@@ -635,14 +755,14 @@ export function AdminBookingsClient({
             value={searchQuery}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
             placeholder="Search rental #, customer, car model, reg no..."
-            className="pl-9 h-10 text-xs rounded-xl bg-muted/40 w-full focus-visible:ring-primary"
+            className="pl-9 h-11 text-xs sm:text-sm rounded-xl bg-muted/40 w-full focus-visible:ring-primary"
             aria-label="Search rental assignments"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
               aria-label="Clear search"
             >
               <X className="w-3.5 h-3.5" aria-hidden="true" />
@@ -650,63 +770,87 @@ export function AdminBookingsClient({
           )}
         </div>
 
-        {/* Status Tab Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+        {/* Status Tab Pills with horizontal scroll */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0 pb-0.5">
           <button
             type="button"
             onClick={() => setActiveTab('active')}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+              'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0',
               activeTab === 'active'
                 ? 'bg-foreground text-background border-foreground shadow-xs'
                 : 'border-border bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
             aria-pressed={activeTab === 'active'}
           >
-            {activeTab === 'active' && <span className="w-2 h-2 rounded-full bg-current opacity-70" />}
-            Running ({activeCount})
+            {activeTab === 'active' && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
+            <span>Running</span>
+            <span className={cn(
+              "px-1.5 py-0.2 text-[10px] font-black rounded-full",
+              activeTab === 'active' ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
+            )}>
+              {activeCount}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('completed')}
             className={cn(
-              'inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+              'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0',
               activeTab === 'completed'
                 ? 'bg-foreground text-background border-foreground shadow-xs'
                 : 'border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
             aria-pressed={activeTab === 'completed'}
           >
-            Completed ({completedCount})
+            <span>Completed</span>
+            <span className={cn(
+              "px-1.5 py-0.2 text-[10px] font-black rounded-full",
+              activeTab === 'completed' ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
+            )}>
+              {completedCount}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('cancelled')}
             className={cn(
-              'inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+              'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0',
               activeTab === 'cancelled'
                 ? 'bg-foreground text-background border-foreground shadow-xs'
                 : 'border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
             aria-pressed={activeTab === 'cancelled'}
           >
-            Cancelled ({cancelledCount})
+            <span>Cancelled</span>
+            <span className={cn(
+              "px-1.5 py-0.2 text-[10px] font-black rounded-full",
+              activeTab === 'cancelled' ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
+            )}>
+              {cancelledCount}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('all')}
             className={cn(
-              'inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+              'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0',
               activeTab === 'all'
                 ? 'bg-foreground text-background border-foreground shadow-xs'
                 : 'border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
             aria-pressed={activeTab === 'all'}
           >
-            All ({bookings.length})
+            <span>All</span>
+            <span className={cn(
+              "px-1.5 py-0.2 text-[10px] font-black rounded-full",
+              activeTab === 'all' ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
+            )}>
+              {bookings.length}
+            </span>
           </button>
         </div>
       </div>
@@ -717,13 +861,32 @@ export function AdminBookingsClient({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 lg:hidden">
         {filteredBookings.length === 0 ? (
           <div className="col-span-full p-8 text-center bg-card border border-border/80 rounded-3xl space-y-3">
-            <Car className="w-8 h-8 text-muted-foreground/40 mx-auto" aria-hidden="true" />
-            <p className="text-sm font-bold text-foreground">No rental operations found in this category.</p>
-            <Link href="/admin/assign">
-              <Button size="sm" className="gradient-brand text-white border-0 min-h-[44px] px-4 font-bold text-xs rounded-xl mt-2">
-                <Zap className="w-4 h-4 mr-1.5 fill-current" aria-hidden="true" /> Assign Car Now
-              </Button>
-            </Link>
+            <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto text-muted-foreground">
+              <Car className="w-6 h-6" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground">No rental operations found</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {searchQuery ? `No results matching "${searchQuery}"` : `No bookings currently in "${activeTab}" status.`}
+              </p>
+            </div>
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+              {searchQuery && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSearchQuery('')}
+                  className="text-xs rounded-xl min-h-[44px]"
+                >
+                  Clear Search
+                </Button>
+              )}
+              <Link href="/admin/assign">
+                <Button size="sm" className="gradient-brand text-white border-0 min-h-[44px] px-5 font-bold text-xs rounded-xl shadow-xs">
+                  <Zap className="w-4 h-4 mr-1.5 fill-current" aria-hidden="true" /> Assign Car Now
+                </Button>
+              </Link>
+            </div>
           </div>
         ) : (
           filteredBookings.map((b) => {
@@ -732,6 +895,16 @@ export function AdminBookingsClient({
             const customerPhone = getSafeCustomerPhone(b.customer)
             const overdue = getOverdueStatus(b.return_datetime)
             const thumbnail = getVehicleThumbnail(car)
+            const waUrl = getWhatsAppUrl(customerPhone, customerName, b.booking_number)
+
+            // Duration and progress
+            const pickupDate = new Date(b.pickup_datetime)
+            const returnDate = new Date(b.return_datetime)
+            const totalDurationMinutes = differenceInMinutes(returnDate, pickupDate)
+            const elapsedMinutes = differenceInMinutes(new Date(), pickupDate)
+            const progressPercent = totalDurationMinutes > 0
+              ? Math.min(100, Math.max(0, Math.round((elapsedMinutes / totalDurationMinutes) * 100)))
+              : 0
 
             return (
               <motion.div
@@ -739,46 +912,67 @@ export function AdminBookingsClient({
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                className="bg-card border border-border/80 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5 flex flex-col justify-between"
+                className={cn(
+                  "bg-card border rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs space-y-3 flex flex-col justify-between transition-all",
+                  overdue.isOverdue
+                    ? "border-rose-500/50 bg-rose-500/[0.02] ring-1 ring-rose-500/20"
+                    : "border-border/80 hover:border-primary/30"
+                )}
               >
-                {/* Card Top: Car info, status, reg number */}
+                {/* 1. Vehicle & Status Header */}
                 <div className="flex items-start gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={thumbnail}
-                    alt={car ? `${car.brand} ${car.model}` : 'Vehicle'}
-                    className="w-16 h-14 rounded-2xl object-cover border border-border/80 shrink-0 bg-muted"
-                  />
-                  <div className="min-w-0 flex-1">
+                  <div className="relative shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={thumbnail}
+                      alt={car ? `${car.brand} ${car.model}` : 'Vehicle'}
+                      className="w-16 h-14 sm:w-20 sm:h-16 rounded-2xl object-cover border border-border/80 bg-muted shrink-0 shadow-2xs"
+                    />
+                    {b.status === 'active' && (
+                      <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-card" />
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-start justify-between gap-1.5">
-                      <div>
-                        <span className="font-black text-sm sm:text-base text-foreground block truncate">
+                      <div className="min-w-0">
+                        <span className="font-black text-sm sm:text-base text-foreground block truncate leading-tight">
                           {car ? `${car.brand} ${car.model}` : 'Fleet Car'}
                         </span>
-                        <span className="font-mono text-[11px] text-primary font-bold block">
-                          #{b.booking_number}
+                        <span className="font-mono text-[11px] text-muted-foreground font-semibold block mt-0.5">
+                          ID: #{b.booking_number}
                         </span>
                       </div>
+
+                      {/* Status badge */}
                       <Badge
                         variant="outline"
                         className={cn(
-                          'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg shrink-0 border',
-                          b.status === 'active' && 'bg-blue-500/10 text-blue-600 border-blue-500/30',
-                          b.status === 'completed' && 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+                          'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg shrink-0 border',
+                          b.status === 'active' && 'bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400',
+                          b.status === 'completed' && 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30 dark:text-zinc-300',
                           b.status === 'confirmed' && 'bg-purple-500/10 text-purple-600 border-purple-500/30',
                           b.status === 'cancelled' && 'bg-rose-500/10 text-rose-600 border-rose-500/30'
                         )}
                       >
-                        {b.status === 'active' ? 'Running' : b.status}
+                        {b.status === 'active' ? 'RUNNING' : b.status?.toUpperCase()}
                       </Badge>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="font-mono text-[10px] bg-muted px-2 py-0.5 rounded text-foreground font-bold border border-border/60">
-                        {car?.registration_number || 'RJ-SELFDRIVE'}
-                      </span>
+                    {/* Registration plate & Overdue Pill */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      {/* Indian HSRP License Plate Look */}
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-mono font-black text-[10px] sm:text-[11px] tracking-wide border border-amber-500 shadow-2xs">
+                        <span className="text-[8px] font-extrabold text-slate-800">IND</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-950/60" />
+                        <span>{car?.registration_number || 'RJ-SELFDRIVE'}</span>
+                      </div>
+
                       {b.status === 'active' && (
-                        <Badge className={cn('text-[9px] border py-0 px-1.5', overdue.badgeClass)}>
+                        <Badge className={cn('text-[9px] border py-0.5 px-2 font-bold', overdue.badgeClass)}>
                           {overdue.label}
                         </Badge>
                       )}
@@ -786,85 +980,147 @@ export function AdminBookingsClient({
                   </div>
                 </div>
 
-                {/* Customer Details */}
+                {/* 2. Customer Section with 1-Tap Call and WhatsApp */}
                 <div className="p-3 bg-muted/30 border border-border/60 rounded-2xl flex items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-xl gradient-brand text-white flex items-center justify-center font-black text-xs shrink-0">
-                      {customerName[0] || 'C'}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl gradient-brand text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                      {customerName[0]?.toUpperCase() || 'C'}
                     </div>
                     <div className="min-w-0">
-                      <span className="font-bold text-foreground block truncate">{customerName}</span>
-                      <span className="text-[10px] text-muted-foreground block">Renter</span>
+                      <span className="font-bold text-foreground text-xs sm:text-sm block truncate">{customerName}</span>
+                      <span className="text-[10px] text-muted-foreground block truncate">
+                        {customerPhone ? customerPhone : 'No phone listed'}
+                      </span>
                     </div>
                   </div>
 
-                  {customerPhone && (
-                    <a
-                      href={`tel:${customerPhone}`}
-                      className="min-h-[44px] px-2.5 text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 shrink-0"
-                      aria-label={`Call ${customerName} at ${customerPhone}`}
-                    >
-                      <Phone className="w-3.5 h-3.5" aria-hidden="true" />
-                      <span>{customerPhone}</span>
-                    </a>
+                  {/* 1-Tap Contact Action Buttons */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {customerPhone && (
+                      <a
+                        href={`tel:${customerPhone}`}
+                        className="inline-flex items-center justify-center gap-1 min-h-[36px] px-2.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 active:scale-95 transition-all text-xs font-bold"
+                        aria-label={`Call customer ${customerName}`}
+                      >
+                        <Phone className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Call</span>
+                      </a>
+                    )}
+                    {waUrl && (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-1 min-h-[36px] px-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition-all text-xs font-bold shadow-xs"
+                        aria-label={`WhatsApp customer ${customerName}`}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                        <span>WhatsApp</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Rental Duration & Odometer Cards */}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {/* Pickup Details */}
+                    <div className="p-2.5 bg-background rounded-xl border border-border/70 space-y-1">
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span>Pickup</span>
+                      </div>
+                      <span className="font-semibold text-foreground text-[11px] block leading-tight">
+                        {format(pickupDate, 'dd MMM, hh:mm a')}
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground font-medium block">
+                        Start: {b.pickup_odometer || car?.current_odometer || 0} KM
+                      </span>
+                    </div>
+
+                    {/* Return Due Details */}
+                    <div className="p-2.5 bg-background rounded-xl border border-border/70 space-y-1">
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase">
+                        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", overdue.isOverdue ? "bg-rose-500" : "bg-primary")} />
+                        <span>Return Due</span>
+                      </div>
+                      <span className="font-semibold text-foreground text-[11px] block leading-tight">
+                        {format(returnDate, 'dd MMM, hh:mm a')}
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground font-medium block">
+                        {b.return_odometer ? `End: ${b.return_odometer} KM` : 'On Road'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Rental Timeline Progress (For running bookings) */}
+                  {b.status === 'active' && (
+                    <div className="px-2.5 py-1.5 bg-muted/20 border border-border/50 rounded-xl space-y-1">
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground font-medium">
+                        <span>Elapsed ({progressPercent}%)</span>
+                        <span className={overdue.isOverdue ? "text-rose-600 font-bold" : "text-foreground font-semibold"}>
+                          {overdue.isOverdue ? "Rental Overdue" : `${Math.max(0, Math.round(differenceInHours(returnDate, new Date())))}h remaining`}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full transition-all duration-500 rounded-full",
+                            overdue.isOverdue ? "bg-rose-500" : "bg-primary"
+                          )}
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                {/* Rental Timeline & Odometer */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="space-y-0.5 p-2.5 bg-background rounded-xl border border-border/60">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Pickup</span>
-                    <span className="font-medium text-foreground text-[11px] block">
-                      {format(new Date(b.pickup_datetime), 'dd MMM, hh:mm a')}
-                    </span>
-                    <span className="font-mono text-[10px] text-muted-foreground block">
-                      Start: {b.pickup_odometer || car?.current_odometer || 0} KM
-                    </span>
-                  </div>
-
-                  <div className="space-y-0.5 p-2.5 bg-background rounded-xl border border-border/60">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Return Due</span>
-                    <span className="font-medium text-foreground text-[11px] block">
-                      {format(new Date(b.return_datetime), 'dd MMM, hh:mm a')}
-                    </span>
-                    <span className="font-mono text-[10px] text-muted-foreground block">
-                      {b.return_odometer ? `End: ${b.return_odometer} KM` : 'Running on road'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Amount & Settlement Status */}
-                <div className="flex items-center justify-between pt-1 border-t border-border/60">
+                {/* 4. Financial & Settlement Row */}
+                <div className="p-3 bg-muted/20 border border-border/60 rounded-2xl flex items-center justify-between gap-2">
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total Bill</span>
-                    <span className="font-mono font-black text-sm sm:text-base text-foreground">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                      Total Rental
+                    </span>
+                    <span className="font-mono font-black text-sm sm:text-base text-foreground block">
                       ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
                     </span>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'text-[10px] uppercase font-bold px-2 py-0.5',
-                      b.payment_status === 'paid'
-                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                        : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
-                    )}
-                  >
-                    {b.payment_status}
-                  </Badge>
+
+                  <div className="flex items-center gap-2">
+                    {/* Security Deposit Info Tag */}
+                    <div className="text-right">
+                      <span className="text-[9px] uppercase font-bold text-muted-foreground block">Deposit</span>
+                      <span className="font-mono text-xs font-semibold text-foreground block">
+                        ₹{Number(b.security_deposit || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    {/* Payment Status Badge */}
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-[10px] uppercase font-black px-2.5 py-1 rounded-lg border',
+                        b.payment_status === 'paid'
+                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                          : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                      )}
+                    >
+                      {b.payment_status === 'paid' ? 'PAID' : 'PENDING'}
+                    </Badge>
+                  </div>
                 </div>
 
-                {/* Accessible Action Buttons (Min 44px Height) */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                {/* 5. Mobile Action Buttons (Accessible min 44px touch targets) */}
+                <div className="space-y-2 pt-1">
                   {b.status === 'active' ? (
-                    <>
+                    <div className="grid grid-cols-2 gap-2">
                       <Button
                         type="button"
                         onClick={() => openReturnDialog(b)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] text-xs font-bold rounded-xl shadow-xs gap-1.5"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] text-xs font-bold rounded-xl shadow-xs gap-1.5 active:scale-[0.98] transition-all"
                         aria-label={`Mark car ${car?.model || ''} returned`}
                       >
-                        <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                        <RotateCcw className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
                         <span>Return Car</span>
                       </Button>
 
@@ -872,15 +1128,31 @@ export function AdminBookingsClient({
                         type="button"
                         variant="outline"
                         onClick={() => openExtendDialog(b)}
-                        className="min-h-[44px] text-xs font-semibold rounded-xl border-primary/30 text-primary hover:bg-primary/10 gap-1.5"
+                        className="min-h-[44px] text-xs font-bold rounded-xl border-primary/30 text-primary hover:bg-primary/10 gap-1.5 active:scale-[0.98] transition-all"
                         aria-label={`Extend rental duration for booking ${b.booking_number}`}
                       >
                         <Clock className="w-4 h-4" aria-hidden="true" />
                         <span>Extend</span>
                       </Button>
-                    </>
+
+                      <div className="col-span-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedBooking(b)
+                            setViewDetailsOpen(true)
+                          }}
+                          className="w-full min-h-[38px] text-xs font-semibold rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 gap-1.5"
+                          aria-label={`View full details for booking ${b.booking_number}`}
+                        >
+                          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+                          <span>View Full Rental Record & Agreement</span>
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="col-span-2">
+                    <div>
                       <Button
                         type="button"
                         variant="outline"
@@ -888,11 +1160,11 @@ export function AdminBookingsClient({
                           setSelectedBooking(b)
                           setViewDetailsOpen(true)
                         }}
-                        className="w-full min-h-[44px] text-xs font-bold rounded-xl border-border hover:bg-muted gap-1.5"
+                        className="w-full min-h-[44px] text-xs font-bold rounded-xl border-border hover:bg-muted gap-2 active:scale-[0.98] transition-all"
                         aria-label={`View full record for booking ${b.booking_number}`}
                       >
-                        <Eye className="w-4 h-4" aria-hidden="true" />
-                        <span>View Full Rental Record</span>
+                        <FileText className="w-4 h-4 text-primary" aria-hidden="true" />
+                        <span>View Full Rental Record & Invoice</span>
                       </Button>
                     </div>
                   )}
@@ -908,7 +1180,7 @@ export function AdminBookingsClient({
       {/* ============================================================ */}
       <div className="hidden lg:block bg-card border border-border/80 rounded-2xl overflow-hidden shadow-xs">
         <div className="w-full overflow-x-auto">
-          <table className="w-full text-xs text-left border-collapse">
+          <table className="w-full min-w-[850px] text-xs text-left border-collapse">
             <thead className="bg-muted/40 border-b border-border/60">
               <tr>
                 <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Car &amp; Reg No</th>
@@ -934,6 +1206,7 @@ export function AdminBookingsClient({
                   const customerPhone = getSafeCustomerPhone(b.customer)
                   const overdue = getOverdueStatus(b.return_datetime)
                   const thumbnail = getVehicleThumbnail(car)
+                  const waUrl = getWhatsAppUrl(customerPhone, customerName, b.booking_number)
 
                   return (
                     <tr key={b.id} className="hover:bg-muted/20 transition-colors">
@@ -950,11 +1223,13 @@ export function AdminBookingsClient({
                             <span className="font-bold text-sm text-foreground block leading-tight">
                               {car ? `${car.brand} ${car.model}` : 'Vehicle'}
                             </span>
-                            <span className="font-mono text-[10px] text-muted-foreground block mt-0.5">
-                              {car?.registration_number || '—'}
-                            </span>
-                            <span className="font-mono text-[10px] text-primary block">
-                              ID: {b.booking_number}
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] tracking-wide border border-amber-500 shadow-2xs mt-1">
+                              <span className="text-[7px] font-extrabold text-slate-800">IND</span>
+                              <span className="w-0.5 h-0.5 rounded-full bg-slate-950/60" />
+                              <span>{car?.registration_number || 'RJ-SELFDRIVE'}</span>
+                            </div>
+                            <span className="font-mono text-[10px] text-primary block mt-0.5 font-semibold">
+                              ID: #{b.booking_number}
                             </span>
                           </div>
                         </div>
@@ -968,13 +1243,31 @@ export function AdminBookingsClient({
                           </div>
                           <div className="min-w-0">
                             <span className="font-semibold text-foreground block truncate max-w-[140px] text-[11px]">{customerName}</span>
-                            <a
-                              href={`tel:${customerPhone}`}
-                              className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 mt-0.5"
-                            >
-                              <Phone className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
-                              {customerPhone || '—'}
-                            </a>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              {customerPhone ? (
+                                <a
+                                  href={`tel:${customerPhone}`}
+                                  className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                >
+                                  <Phone className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
+                                  {customerPhone}
+                                </a>
+                              ) : (
+                                <span className="text-[10px] text-muted-foreground">—</span>
+                              )}
+                              {waUrl && (
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold inline-flex items-center gap-0.5"
+                                  title="Chat on WhatsApp"
+                                >
+                                  <MessageSquare className="w-2.5 h-2.5 fill-current" aria-hidden="true" />
+                                  WA
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
