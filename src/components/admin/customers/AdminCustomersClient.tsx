@@ -40,8 +40,10 @@ import {
   Sparkles,
   TrendingUp,
   CreditCard,
-  UserCheck
+  UserCheck,
+  Terminal,
 } from 'lucide-react'
+import { TerminalCustomerList } from './TerminalCustomerList'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -140,7 +142,7 @@ export function AdminCustomersClient({
   const [kycFilter, setKycFilter] = useState<string>('all')
   const [cityFilter, setCityFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'newest' | 'name' | 'rentals' | 'spend'>('newest')
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'terminal'>('table')
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -845,6 +847,19 @@ export function AdminCustomersClient({
               >
                 <LayoutGrid className="w-3.5 h-3.5" /> Cards
               </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('terminal')}
+                className={cn(
+                  'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer font-mono',
+                  viewMode === 'terminal'
+                    ? 'bg-black text-[#00ff66] shadow-xs font-bold border border-[#00ff66]/40'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Terminal Log View"
+              >
+                <Terminal className="w-3.5 h-3.5 text-[#00ff66]" /> [LOGS]
+              </button>
             </div>
           </div>
         </div>
@@ -965,9 +980,40 @@ export function AdminCustomersClient({
             Clear All Filters
           </Button>
         </div>
-      ) : viewMode === 'table' ? (
-        /* TABLE VIEW */
-        <div className="bg-card border border-border/80 rounded-3xl overflow-hidden shadow-xs">
+      ) : (
+        <>
+          {/* MOBILE VIEW: Dedicated Terminal Log Viewer */}
+          <div className="block md:hidden border border-zinc-800">
+            <TerminalCustomerList
+              customers={filtered}
+              onSelectCustomer={(cust) => {
+                setSelectedCust(cust)
+                setReviewNotes(cust.kyc_notes || '')
+                setViewDetailsOpen(true)
+              }}
+              onEditCustomer={(cust) => openEditDialog(cust)}
+              onDeleteCustomer={(cust) => openDeleteModal(cust)}
+            />
+          </div>
+
+          {/* DESKTOP VIEW: Table / Cards Grid / Terminal Log Viewer */}
+          <div className="hidden md:block">
+            {viewMode === 'terminal' ? (
+              <div className="border border-zinc-800">
+                <TerminalCustomerList
+                  customers={filtered}
+                  onSelectCustomer={(cust) => {
+                    setSelectedCust(cust)
+                    setReviewNotes(cust.kyc_notes || '')
+                    setViewDetailsOpen(true)
+                  }}
+                  onEditCustomer={(cust) => openEditDialog(cust)}
+                  onDeleteCustomer={(cust) => openDeleteModal(cust)}
+                />
+              </div>
+            ) : viewMode === 'table' ? (
+              /* TABLE VIEW */
+              <div className="bg-card border border-border/80 rounded-3xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead className="bg-muted/40 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
@@ -1301,6 +1347,9 @@ export function AdminCustomersClient({
           })}
         </div>
       )}
+    </div>
+  </>
+)}
 
       {/* ──────────────────────────────────────────────────────────── */}
       {/* 6. REGISTER NEW CUSTOMER MODAL */}
