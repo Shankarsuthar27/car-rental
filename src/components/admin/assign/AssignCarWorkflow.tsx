@@ -24,6 +24,7 @@ import {
   Square
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -980,20 +981,16 @@ export function AssignCarWorkflow({
               </div>
 
               {/* Confirm & assign car Button */}
-              <Button
+              <AssignCarButton
                 type="button"
+                size="lg"
+                fullWidth
+                prefixText="Confirm &"
+                loading={submitting}
                 disabled={submitting || !selectedVehicle || !selectedCustomer}
                 onClick={handleConfirmAssignment}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-2xl shadow-md shadow-blue-500/20 gap-2 transition-all cursor-pointer"
-              >
-                {submitting ? (
-                  'Confirming...'
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 fill-current" /> Confirm & assign car
-                  </>
-                )}
-              </Button>
+                className="w-full h-12 shadow-md shadow-blue-500/25"
+              />
 
               <span className="text-[10px] text-slate-400 text-center block">
                 The vehicle will move to &apos;Running&apos; and rental tracking will begin.

@@ -19,6 +19,7 @@ import {
   Gauge
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format, differenceInMinutes, differenceInHours, isPast } from 'date-fns'
@@ -334,11 +335,7 @@ export function DashboardTables({
                         </td>
 
                         <td className="p-4 text-right">
-                          <Link href={`/admin/assign?vehicle_id=${car.id}`}>
-                            <Button size="sm" className="gradient-brand text-white border-0 hover:opacity-90 font-bold text-xs h-8 gap-1.5 shadow-sm">
-                              <Zap className="w-3.5 h-3.5 fill-current" /> Assign Now
-                            </Button>
-                          </Link>
+                          <AssignCarButton href={`/admin/assign?vehicle_id=${car.id}`} size="xs" />
                         </td>
                       </tr>
                     )

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Fuel, Users, Zap, ArrowRight, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { AssignCarButton } from '@/components/ui/AssignCarButton'
 
 interface VehicleImage {
   url: string
@@ -146,15 +147,7 @@ function VehicleCard({ vehicle, index }: { vehicle: Vehicle; index: number }) {
               </p>
             )}
           </div>
-          <Button
-            size="sm"
-            asChild
-            className="gradient-brand text-white border-0 hover:opacity-90 gap-1"
-          >
-            <Link href={`/admin/assign?vehicle_id=${vehicle.id}`}>
-              Assign Car <ArrowRight className="w-3 h-3" />
-            </Link>
-          </Button>
+          <AssignCarButton href={`/admin/assign?vehicle_id=${vehicle.id}`} size="sm" />
         </div>
       </div>
     </motion.div>

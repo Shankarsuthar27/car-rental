@@ -28,6 +28,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -250,11 +251,7 @@ export function RentalHistoryClient({
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/admin/assign">
-            <Button size="sm" className="gradient-brand text-white border-0 text-xs font-bold h-9 px-4 rounded-xl shadow-xs">
-              + New Rental Assignment
-            </Button>
-          </Link>
+          <AssignCarButton href="/admin/assign" size="sm" />
         </div>
       </div>
 
@@ -675,11 +672,7 @@ export function RentalHistoryClient({
                       </p>
                     </div>
 
-                    <Link href={`/admin/assign?vehicle_id=${selectedVehicle.id}`}>
-                      <Button size="sm" className="gradient-brand text-white border-0 text-xs font-bold h-8.5 rounded-xl shadow-xs">
-                        Assign This Car
-                      </Button>
-                    </Link>
+                    <AssignCarButton href={`/admin/assign?vehicle_id=${selectedVehicle.id}`} size="sm" />
                   </div>
 
                   {/* Vehicle Lifetime Metrics */}
@@ -860,11 +853,7 @@ export function RentalHistoryClient({
                       </p>
                     </div>
 
-                    <Link href={`/admin/assign?customer_id=${selectedCustomer.id}`}>
-                      <Button size="sm" className="gradient-brand text-white border-0 text-xs font-bold h-8.5 rounded-xl shadow-xs">
-                        Assign New Car
-                      </Button>
-                    </Link>
+                    <AssignCarButton href={`/admin/assign?customer_id=${selectedCustomer.id}`} size="sm" />
                   </div>
 
                   {/* Customer Lifetime Metrics */}

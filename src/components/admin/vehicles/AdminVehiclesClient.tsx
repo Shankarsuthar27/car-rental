@@ -39,6 +39,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -864,16 +865,7 @@ export function AdminVehiclesClient({
                         </Button>
 
                         {v.status === 'available' ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            asChild
-                            className="min-h-[40px] text-xs gradient-brand text-white border-0 hover:opacity-90 font-bold rounded-xl shadow-xs gap-1 cursor-pointer"
-                          >
-                            <Link href={`/admin/assign?vehicle_id=${v.id}`}>
-                              <Zap className="w-3.5 h-3.5 fill-current" /> Assign Car
-                            </Link>
-                          </Button>
+                          <AssignCarButton href={`/admin/assign?vehicle_id=${v.id}`} size="sm" />
                         ) : v.status === 'rented' ? (
                           <Button
                             type="button"
@@ -1081,16 +1073,7 @@ export function AdminVehiclesClient({
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {v.status === 'available' ? (
-                              <Button
-                                size="sm"
-                                asChild
-                                className="h-8 px-3 text-xs gradient-brand text-white border-0 hover:opacity-90 font-bold rounded-xl shadow-xs gap-1 cursor-pointer shrink-0"
-                                title="Assign car to customer"
-                              >
-                                <Link href={`/admin/assign?vehicle_id=${v.id}`}>
-                                  <Zap className="w-3.5 h-3.5 fill-current" /> Assign Car
-                                </Link>
-                              </Button>
+                              <AssignCarButton href={`/admin/assign?vehicle_id=${v.id}`} size="xs" />
                             ) : v.status === 'rented' ? (
                               <Button
                                 size="sm"

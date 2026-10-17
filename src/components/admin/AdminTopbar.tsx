@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -195,11 +196,9 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
       <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
         {/* Quick Action: Assign Car (only when not on /admin/assign) */}
         {pathname !== '/admin/assign' && (
-          <Link href="/admin/assign" className="hidden sm:inline-flex">
-            <Button size="sm" className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs min-h-[36px] px-3.5 rounded-xl gap-1.5 shadow-sm shadow-primary/20">
-              <Zap className="w-3.5 h-3.5 fill-current" aria-hidden="true" /> Assign Car
-            </Button>
-          </Link>
+          <div className="hidden sm:inline-flex">
+            <AssignCarButton href="/admin/assign" size="sm" />
+          </div>
         )}
 
         {/* Notifications Popover */}

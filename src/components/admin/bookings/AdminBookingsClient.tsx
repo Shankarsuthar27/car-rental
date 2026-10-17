@@ -35,6 +35,7 @@ import {
   MessageSquare
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -626,14 +627,7 @@ export function AdminBookingsClient({
           </p>
         </div>
 
-        <Link
-          href="/admin/assign"
-          prefetch={true}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-xl gradient-brand text-white shadow-sm shadow-primary/20 hover:opacity-95 active:scale-[0.98] transition-all min-h-[44px] shrink-0"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
-          <span>Assign New Car</span>
-        </Link>
+        <AssignCarButton href="/admin/assign" size="md" />
       </div>
 
       {/* Mobile Fleet Quick KPI Summary (Under 1024px) */}
@@ -904,11 +898,7 @@ export function AdminBookingsClient({
                   Clear Search
                 </Button>
               )}
-              <Link href="/admin/assign">
-                <Button size="sm" className="gradient-brand text-white border-0 min-h-[44px] px-5 font-bold text-xs rounded-xl shadow-xs">
-                  <Zap className="w-4 h-4 mr-1.5 fill-current" aria-hidden="true" /> Assign Car Now
-                </Button>
-              </Link>
+              <AssignCarButton href="/admin/assign" size="md" />
             </div>
           </div>
         ) : (

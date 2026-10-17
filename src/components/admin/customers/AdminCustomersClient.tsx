@@ -41,10 +41,13 @@ import {
   TrendingUp,
   CreditCard,
   UserCheck,
-  Terminal,
+  ChevronRight,
+  Check,
+  ChevronDown,
+  ChevronLeft,
 } from 'lucide-react'
-import { TerminalCustomerList } from './TerminalCustomerList'
 import { Button } from '@/components/ui/button'
+import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -84,6 +87,37 @@ function getAvatarGradient(name: string): string {
   ]
   const charCode = (name || 'C').charCodeAt(0) || 0
   return gradients[charCode % gradients.length]
+}
+
+// Pastel avatar colors matching reference mobile design
+const PASTEL_PALETTES = [
+  { bg: 'bg-[#ede9fe]', text: 'text-[#6d28d9]' }, // Lavender / Purple
+  { bg: 'bg-[#fed7aa]', text: 'text-[#c2410c]' }, // Peach / Orange
+  { bg: 'bg-[#bae6fd]', text: 'text-[#0284c7]' }, // Sky Blue
+  { bg: 'bg-[#bbf7d0]', text: 'text-[#16a34a]' }, // Mint Green
+  { bg: 'bg-[#fce7f3]', text: 'text-[#db2777]' }, // Pink
+  { bg: 'bg-[#fef3c7]', text: 'text-[#d97706]' }, // Amber
+]
+
+function getPastelAvatar(name: string, index?: number) {
+  if (typeof index === 'number') {
+    return PASTEL_PALETTES[index % PASTEL_PALETTES.length]
+  }
+  const charCode = (name || 'C').charCodeAt(0) || 0
+  return PASTEL_PALETTES[charCode % PASTEL_PALETTES.length]
+}
+
+function getAvatarInitials(name: string): string {
+  if (!name) return 'CU'
+  const trimmed = name.trim()
+  const parts = trimmed.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  if (trimmed.length === 1) {
+    return trimmed.toUpperCase()
+  }
+  return trimmed.slice(0, 2).toUpperCase()
 }
 
 // Generate direct WhatsApp link
@@ -142,7 +176,7 @@ export function AdminCustomersClient({
   const [kycFilter, setKycFilter] = useState<string>('all')
   const [cityFilter, setCityFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'newest' | 'name' | 'rentals' | 'spend'>('newest')
-  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'terminal'>('table')
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -597,54 +631,9 @@ export function AdminCustomersClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* 1. TOP HEADER & PRIMARY ACTIONS */}
-      {/* ──────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl gradient-brand flex items-center justify-center shadow-md shadow-primary/20 text-white shrink-0">
-              <Users className="w-5 h-5 fill-current" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl md:text-3xl font-black tracking-tight text-foreground">
-                  Customer Directory
-                </h1>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
-                  {filtered.length} of {customers.length}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Manage customer identities, verify driving licenses, view active car assignments, and lifetime spend.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          <Button
-            onClick={exportCustomersCsv}
-            variant="outline"
-            size="sm"
-            className="text-xs font-semibold h-9 rounded-xl gap-1.5 shadow-xs bg-card hover:bg-muted cursor-pointer"
-            title="Export filtered customers to CSV"
-          >
-            <Download className="w-3.5 h-3.5 text-muted-foreground" /> Export CSV
-          </Button>
-
-          <Button
-            onClick={() => setAddModalOpen(true)}
-            className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs h-9 shadow-md shadow-primary/20 gap-1.5 rounded-xl cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Add New Customer
-          </Button>
-        </div>
-      </div>
-
-      {/* ──────────────────────────────────────────────────────────── */}
-      {/* 2. GLOBAL FEEDBACK NOTIFICATION */}
+      {/* GLOBAL FEEDBACK NOTIFICATION (Mobile & Desktop) */}
       {/* ──────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {feedback && (
@@ -679,11 +668,332 @@ export function AdminCustomersClient({
       </AnimatePresence>
 
       {/* ──────────────────────────────────────────────────────────── */}
+      {/* MOBILE CUSTOMER SECTION (STRICTLY MATCHING REFERENCE IMAGE) */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      <div className="block md:hidden space-y-4">
+        {/* Mobile Header: "Customers" + "4 total" */}
+        <div className="flex items-baseline gap-2 pt-0.5">
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Customers
+          </h1>
+          <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            {customers.length} total
+          </span>
+        </div>
+
+        {/* Mobile Action Buttons: "+ Add customer" & "Export" */}
+        <div className="flex items-center gap-2.5">
+          <Button
+            type="button"
+            onClick={() => setAddModalOpen(true)}
+            className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold rounded-2xl h-12 shadow-xs text-sm gap-2"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            Add customer
+          </Button>
+          <Button
+            type="button"
+            onClick={exportCustomersCsv}
+            variant="outline"
+            className="bg-white dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-semibold rounded-2xl h-12 px-5 shadow-xs text-sm gap-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+          >
+            <Download className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+            Export
+          </Button>
+        </div>
+
+        {/* Mobile 3-Column Unified Metric Card */}
+        <div className="bg-white dark:bg-card rounded-2xl border border-slate-200/90 dark:border-slate-800 p-4 shadow-xs grid grid-cols-3 divide-x divide-slate-100 dark:divide-slate-800">
+          {/* Customers */}
+          <div className="pr-3">
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Customers</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{metrics.total}</div>
+            <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
+              {metrics.activeRenters} repeat
+            </div>
+          </div>
+
+          {/* Verified DL */}
+          <div className="px-3">
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Verified DL</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{metrics.verified}</div>
+            <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
+              {metrics.verificationRate}%
+            </div>
+          </div>
+
+          {/* VIP */}
+          <div className="pl-3">
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">VIP</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{metrics.vip}</div>
+            <div className="text-xs font-semibold text-[#b45309] dark:text-amber-400 mt-0.5 truncate">
+              ₹10K+, 3+ trips
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Search Bar */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search name, phone, license, city"
+            className="w-full h-12 pl-11 pr-10 text-sm bg-white dark:bg-card text-slate-900 dark:text-white rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Mobile Filter Pills */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            <button
+              type="button"
+              onClick={() => setKycFilter('all')}
+              className={cn(
+                'text-xs px-4 py-1.5 rounded-full transition-all whitespace-nowrap cursor-pointer',
+                kycFilter === 'all'
+                  ? 'bg-[#0f172a] text-white font-bold shadow-xs'
+                  : 'bg-white dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium'
+              )}
+            >
+              All {metrics.total}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setKycFilter('verified')}
+              className={cn(
+                'text-xs px-3.5 py-1.5 rounded-full transition-all whitespace-nowrap cursor-pointer',
+                kycFilter === 'verified'
+                  ? 'bg-[#0f172a] text-white font-bold shadow-xs'
+                  : 'bg-white dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium'
+              )}
+            >
+              Verified {metrics.verified}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setKycFilter('pending')}
+              className={cn(
+                'text-xs px-3.5 py-1.5 rounded-full transition-all whitespace-nowrap cursor-pointer',
+                kycFilter === 'pending'
+                  ? 'bg-[#0f172a] text-white font-bold shadow-xs'
+                  : 'bg-white dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium'
+              )}
+            >
+              Pending {metrics.pending}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setKycFilter('rejected')}
+              className={cn(
+                'text-xs px-3.5 py-1.5 rounded-full transition-all whitespace-nowrap cursor-pointer',
+                kycFilter === 'rejected'
+                  ? 'bg-[#0f172a] text-white font-bold shadow-xs'
+                  : 'bg-white dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium'
+              )}
+            >
+              Rejected {metrics.rejected}
+            </button>
+          </div>
+
+          {/* Horizontal scroll indicator bar with ◀ and ▶ */}
+          <div className="flex items-center gap-1 px-0.5 text-slate-400">
+            <span className="text-[10px] leading-none select-none">◀</span>
+            <div className="flex-1 h-1.5 bg-slate-500/70 rounded-full mx-0.5" />
+            <span className="text-[10px] leading-none select-none">▶</span>
+          </div>
+        </div>
+
+        {/* Mobile Sub-bar */}
+        <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 pt-0.5">
+          <span className="font-medium text-slate-600 dark:text-slate-400 text-sm">
+            {filtered.length} customers
+          </span>
+
+          <div className="flex items-center gap-3">
+            {/* All cities dropdown */}
+            <div className="relative inline-flex items-center">
+              <select
+                value={cityFilter}
+                onChange={e => setCityFilter(e.target.value)}
+                className="appearance-none bg-transparent pr-4 text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer focus:outline-none"
+              >
+                <option value="all">All cities</option>
+                {availableCities.map(c => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300 absolute right-0 pointer-events-none" />
+            </div>
+
+            {/* Newest dropdown */}
+            <div className="relative inline-flex items-center">
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as any)}
+                className="appearance-none bg-transparent pr-4 text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer focus:outline-none"
+              >
+                <option value="newest">Newest</option>
+                <option value="name">Name</option>
+                <option value="spend">Spend</option>
+                <option value="rentals">Rentals</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300 absolute right-0 pointer-events-none" />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Customer Cards List Container */}
+        <div className="bg-white dark:bg-card rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800/80 overflow-hidden">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 text-xs">
+              No customers found matching your criteria.
+            </div>
+          ) : (
+            filtered.map((cust, idx) => {
+              const name = cust.profile?.full_name || cust.emergency_contact_name || 'Customer'
+              const rawPhone = cust.profile?.phone || cust.emergency_contact_phone || ''
+              const displayPhone = rawPhone && rawPhone !== '—' && rawPhone.trim() ? rawPhone.trim() : 'No phone'
+              const city = cust.city || 'Jalore'
+              const isVip = Number(cust.total_spent || 0) >= 10000 || (cust.total_rentals || 0) >= 3
+              const isVerified = cust.kyc_status === 'verified'
+              const initials = getAvatarInitials(name)
+              const pastel = getPastelAvatar(name, idx)
+
+              return (
+                <div
+                  key={cust.id}
+                  onClick={() => {
+                    setSelectedCust(cust)
+                    setViewDetailsOpen(true)
+                  }}
+                  className="p-3.5 sm:p-4 flex items-center justify-between gap-3 active:bg-slate-50/80 dark:active:bg-slate-800/40 transition-colors cursor-pointer"
+                >
+                  {/* Left: Avatar + Details */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative shrink-0">
+                      <div
+                        className={cn(
+                          'w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm select-none',
+                          pastel.bg,
+                          pastel.text
+                        )}
+                      >
+                        {initials}
+                      </div>
+                      {isVerified && (
+                        <div className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center absolute -bottom-0.5 -right-0.5 ring-2 ring-white dark:ring-card shadow-xs">
+                          <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                          {name}
+                        </span>
+                        {isVip && (
+                          <span className="bg-[#fef3c7] text-[#92400e] dark:bg-amber-500/20 dark:text-amber-300 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md uppercase">
+                            VIP
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5">
+                        {displayPhone} · {city}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right: Assign car button */}
+                  <Link
+                    href={`/admin/assign?customer_id=${cust.id}`}
+                    onClick={e => e.stopPropagation()}
+                    className="bg-[#edf4fe] hover:bg-[#dbeafe] active:scale-95 text-[#2563eb] font-semibold text-xs rounded-xl px-3.5 py-2 shrink-0 transition-all text-center inline-block"
+                  >
+                    Assign car
+                  </Link>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* Mobile Bottom Legend */}
+        <div className="flex items-center gap-2 px-1 pt-0.5 text-xs text-slate-500 dark:text-slate-400 font-normal">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#16a34a] shrink-0" />
+          <span>Green check on the avatar means driving license verified</span>
+        </div>
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────── */}
+      {/* DESKTOP VIEW */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      <div className="hidden md:block space-y-6">
+        {/* 1. TOP HEADER & PRIMARY ACTIONS */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl gradient-brand flex items-center justify-center shadow-md shadow-primary/20 text-white shrink-0">
+                <Users className="w-5 h-5 fill-current" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl md:text-3xl font-black tracking-tight text-foreground">
+                    Customer Directory
+                  </h1>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
+                    {filtered.length} of {customers.length}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Manage customer identities, verify driving licenses, view active car assignments, and lifetime spend.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <Button
+              onClick={exportCustomersCsv}
+              variant="outline"
+              size="sm"
+              className="text-xs font-semibold h-9 rounded-xl gap-1.5 shadow-xs bg-card hover:bg-muted cursor-pointer"
+              title="Export filtered customers to CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-muted-foreground" /> Export CSV
+            </Button>
+
+            <Button
+              onClick={() => setAddModalOpen(true)}
+              className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs h-9 shadow-md shadow-primary/20 gap-1.5 rounded-xl cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Add New Customer
+            </Button>
+          </div>
+        </div>
+
+      {/* ──────────────────────────────────────────────────────────── */}
       {/* 3. EXECUTIVE KPI METRIC CARDS */}
       {/* ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Card 1: Total Customers */}
-        <div className="p-4 rounded-2xl bg-card border border-border/80 shadow-xs space-y-2 hover:border-primary/40 transition-colors">
+        <div className="p-4 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 shadow-xs space-y-2 hover:border-primary/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Total Customers
@@ -708,7 +1018,7 @@ export function AdminCustomersClient({
         </div>
 
         {/* Card 2: KYC Verified Drivers */}
-        <div className="p-4 rounded-2xl bg-card border border-border/80 shadow-xs space-y-2 hover:border-emerald-500/40 transition-colors">
+        <div className="p-4 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 shadow-xs space-y-2 hover:border-emerald-500/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Verified Drivers
@@ -739,7 +1049,7 @@ export function AdminCustomersClient({
         </div>
 
         {/* Card 3: VIP Clients */}
-        <div className="p-4 rounded-2xl bg-card border border-border/80 shadow-xs space-y-2 hover:border-amber-500/40 transition-colors">
+        <div className="p-4 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 shadow-xs space-y-2 hover:border-amber-500/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               VIP Clients
@@ -765,7 +1075,7 @@ export function AdminCustomersClient({
       {/* ──────────────────────────────────────────────────────────── */}
       {/* 4. SEARCH, FILTERS & VIEW MODE CONTROLS */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <div className="p-4 bg-card border border-border/80 rounded-2xl sm:rounded-3xl shadow-xs space-y-3.5">
+      <div className="p-4 bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 rounded-2xl sm:rounded-3xl shadow-xs space-y-3.5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Search Input with quick clear */}
           <div className="relative flex-1 max-w-lg">
@@ -820,17 +1130,17 @@ export function AdminCustomersClient({
             </Select>
 
             {/* View Mode Toggle Switcher */}
-            <div className="flex items-center border border-border/80 rounded-xl p-0.5 bg-muted/40">
+            <div className="flex items-center border border-slate-200 dark:border-border rounded-xl p-0.5 bg-slate-100 dark:bg-muted/40">
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
                 className={cn(
                   'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer',
                   viewMode === 'table'
-                    ? 'bg-card text-foreground shadow-xs font-bold'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-white dark:bg-card text-blue-600 dark:text-foreground shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-muted-foreground hover:text-slate-900'
                 )}
-                title="Table View"
+                title="Table / List View"
               >
                 <List className="w-3.5 h-3.5" /> Table
               </button>
@@ -840,25 +1150,12 @@ export function AdminCustomersClient({
                 className={cn(
                   'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer',
                   viewMode === 'grid'
-                    ? 'bg-card text-foreground shadow-xs font-bold'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-white dark:bg-card text-blue-600 dark:text-foreground shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-muted-foreground hover:text-slate-900'
                 )}
-                title="Cards Grid View"
+                title="Cards View"
               >
                 <LayoutGrid className="w-3.5 h-3.5" /> Cards
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('terminal')}
-                className={cn(
-                  'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer font-mono',
-                  viewMode === 'terminal'
-                    ? 'bg-black text-[#00ff66] shadow-xs font-bold border border-[#00ff66]/40'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-                title="Terminal Log View"
-              >
-                <Terminal className="w-3.5 h-3.5 text-[#00ff66]" /> [LOGS]
               </button>
             </div>
           </div>
@@ -982,41 +1279,240 @@ export function AdminCustomersClient({
         </div>
       ) : (
         <>
-          {/* MOBILE VIEW: Dedicated Terminal Log Viewer */}
-          <div className="block md:hidden border border-zinc-800">
-            <TerminalCustomerList
-              customers={filtered}
-              onSelectCustomer={(cust) => {
-                setSelectedCust(cust)
-                setReviewNotes(cust.kyc_notes || '')
-                setViewDetailsOpen(true)
-              }}
-              onEditCustomer={(cust) => openEditDialog(cust)}
-              onDeleteCustomer={(cust) => openDeleteModal(cust)}
-            />
+          {/* MOBILE VIEW: Simple, Clean Light-Theme Customer List */}
+          <div className="block md:hidden space-y-3">
+            {/* Quick Count & View Indicator */}
+            <div className="flex items-center justify-between px-1 text-xs text-slate-500 font-medium">
+              <span>Showing {filtered.length} customers</span>
+              <span className="text-[11px] bg-slate-100 dark:bg-muted/60 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full font-semibold">
+                {viewMode === 'table' ? 'Compact List' : 'Detailed Cards'}
+              </span>
+            </div>
+
+            {viewMode === 'table' ? (
+              /* COMPACT MOBILE LIST */
+              <div className="bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 rounded-2xl divide-y divide-slate-100 dark:divide-border/60 shadow-xs overflow-hidden">
+                {filtered.map((cust) => {
+                  const name = cust.profile?.full_name || cust.emergency_contact_name || 'Anonymous User'
+                  const phone = cust.profile?.phone || cust.emergency_contact_phone || '—'
+                  const isVip = Number(cust.total_spent || 0) >= 10000 || (cust.total_rentals || 0) >= 3
+                  const gradient = getAvatarGradient(name)
+
+                  return (
+                    <div
+                      key={cust.id}
+                      className="p-3.5 hover:bg-slate-50/70 dark:hover:bg-muted/30 transition-colors flex items-center justify-between gap-3"
+                    >
+                      {/* Left: Avatar + Details */}
+                      <div
+                        onClick={() => {
+                          setSelectedCust(cust)
+                          setReviewNotes(cust.kyc_notes || '')
+                          setViewDetailsOpen(true)
+                        }}
+                        className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                      >
+                        <div
+                          className={cn(
+                            'w-10 h-10 rounded-xl bg-gradient-to-br text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs',
+                            gradient
+                          )}
+                        >
+                          {name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                              {name}
+                            </span>
+                            {isVip && (
+                              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border-0 text-[8.5px] font-bold px-1 py-0 shrink-0">
+                                VIP
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                            <span>{phone}</span>
+                            <span>•</span>
+                            <span>{cust.city || 'Jalore'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Status badge & Action */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {renderKycBadge(cust.kyc_status)}
+                        <AssignCarButton
+                          href={`/admin/assign?customer_id=${cust.id}`}
+                          size="xs"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              /* DETAILED MOBILE CARDS */
+              <div className="space-y-3">
+                {filtered.map((cust) => {
+                  const name = cust.profile?.full_name || cust.emergency_contact_name || 'Anonymous User'
+                  const phone = cust.profile?.phone || cust.emergency_contact_phone || '—'
+                  const email = cust.profile?.email || '—'
+                  const isVip = Number(cust.total_spent || 0) >= 10000 || (cust.total_rentals || 0) >= 3
+                  const gradient = getAvatarGradient(name)
+                  const waUrl = phone !== '—' ? getWhatsAppUrl(phone, name) : null
+
+                  return (
+                    <div
+                      key={cust.id}
+                      className="bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 rounded-2xl p-4 shadow-xs hover:border-blue-400/50 transition-all space-y-3"
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={cn(
+                              'w-11 h-11 rounded-2xl bg-gradient-to-br text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs',
+                              gradient
+                            )}
+                          >
+                            {name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate block">
+                                {name}
+                              </span>
+                              {isVip && (
+                                <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border-0 text-[9px] font-bold px-1.5 py-0 flex items-center gap-0.5">
+                                  <Sparkles className="w-2.5 h-2.5" /> VIP
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-mono">
+                              <span>{cust.customer_code || `#${cust.id.slice(0, 8)}`}</span>
+                              <span>•</span>
+                              <span className="font-sans text-slate-600 dark:text-slate-400 flex items-center gap-0.5">
+                                <MapPin className="w-3 h-3 text-blue-600" />
+                                {cust.city || 'Jalore'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {renderKycBadge(cust.kyc_status)}
+                      </div>
+
+                      {/* Contact & Verification Strip */}
+                      <div className="bg-slate-50 dark:bg-muted/40 rounded-xl p-2.5 border border-slate-100 dark:border-border/60 space-y-2 text-xs">
+                        {/* Phone + WhatsApp */}
+                        <div className="flex items-center justify-between gap-2">
+                          <a
+                            href={phone !== '—' ? `tel:${phone}` : undefined}
+                            className="font-semibold text-slate-800 dark:text-slate-200 hover:text-blue-600 flex items-center gap-1.5 text-xs truncate"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span>{phone}</span>
+                          </a>
+
+                          {waUrl && (
+                            <a
+                              href={waUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] border border-emerald-200/80 dark:border-emerald-500/30 flex items-center gap-1 shrink-0 transition-colors"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" /> WhatsApp
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Email & DL */}
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-border/60">
+                          <div className="flex items-center gap-1 truncate max-w-[170px]">
+                            <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate">{email}</span>
+                          </div>
+                          <div className="flex items-center gap-1 font-mono text-[10.5px] text-slate-600 dark:text-slate-300 shrink-0">
+                            <FileCheck2 className="w-3 h-3 text-slate-400" />
+                            <span>{cust.driving_license_number || 'DL Verified'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Metrics Quick Strip */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-white dark:bg-card border border-slate-100 dark:border-border/60 rounded-xl p-2 flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-500">Rentals</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {cust.total_rentals || 0} Trips
+                          </span>
+                        </div>
+                        <div className="bg-white dark:bg-card border border-slate-100 dark:border-border/60 rounded-xl p-2 flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-500">Total Spend</span>
+                          <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                            ₹{Number(cust.total_spent || 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action Footer */}
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <AssignCarButton
+                          href={`/admin/assign?customer_id=${cust.id}`}
+                          size="sm"
+                          className="flex-1"
+                        />
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedCust(cust)
+                            setReviewNotes(cust.kyc_notes || '')
+                            setViewDetailsOpen(true)
+                          }}
+                          className="h-8 px-2.5 text-xs rounded-xl bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer"
+                          title="View Details"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditDialog(cust)}
+                          className="h-8 px-2.5 text-xs rounded-xl bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer"
+                          title="Edit Profile"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openDeleteModal(cust)}
+                          className="h-8 px-2.5 text-xs rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                          title="Delete Customer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
-          {/* DESKTOP VIEW: Table / Cards Grid / Terminal Log Viewer */}
+          {/* DESKTOP VIEW: Table / Cards Grid */}
           <div className="hidden md:block">
-            {viewMode === 'terminal' ? (
-              <div className="border border-zinc-800">
-                <TerminalCustomerList
-                  customers={filtered}
-                  onSelectCustomer={(cust) => {
-                    setSelectedCust(cust)
-                    setReviewNotes(cust.kyc_notes || '')
-                    setViewDetailsOpen(true)
-                  }}
-                  onEditCustomer={(cust) => openEditDialog(cust)}
-                  onDeleteCustomer={(cust) => openDeleteModal(cust)}
-                />
-              </div>
-            ) : viewMode === 'table' ? (
+            {viewMode === 'table' ? (
               /* TABLE VIEW */
-              <div className="bg-card border border-border/80 rounded-3xl overflow-hidden shadow-xs">
+              <div className="bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-muted/40 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
+              <thead className="bg-slate-50/80 dark:bg-muted/40 border-b border-slate-200/80 dark:border-border text-slate-500 dark:text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
                 <tr>
                   <th className="p-4">Customer Profile</th>
                   <th className="p-4">Contact & Chat</th>
@@ -1026,7 +1522,7 @@ export function AdminCustomersClient({
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-slate-100 dark:divide-border/60">
                 {filtered.map(cust => {
                   const name = cust.profile?.full_name || cust.emergency_contact_name || 'Anonymous User'
                   const phone = cust.profile?.phone || cust.emergency_contact_phone || '—'
@@ -1036,7 +1532,7 @@ export function AdminCustomersClient({
                   const waUrl = phone !== '—' ? getWhatsAppUrl(phone, name) : null
 
                   return (
-                    <tr key={cust.id} className="hover:bg-muted/20 transition-colors group">
+                    <tr key={cust.id} className="hover:bg-slate-50/70 dark:hover:bg-muted/20 transition-colors group">
                       {/* Customer Profile */}
                       <td className="p-4">
                         <div className="flex items-center gap-3">
@@ -1143,14 +1639,7 @@ export function AdminCustomersClient({
                       {/* Actions */}
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <Link href={`/admin/assign?customer_id=${cust.id}`}>
-                            <Button
-                              size="sm"
-                              className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs h-8 px-2.5 gap-1 rounded-xl shadow-xs cursor-pointer"
-                            >
-                              <Zap className="w-3 h-3 fill-current" /> Assign
-                            </Button>
-                          </Link>
+                          <AssignCarButton href={`/admin/assign?customer_id=${cust.id}`} size="xs" />
 
                           <Button
                             size="sm"
@@ -1208,7 +1697,7 @@ export function AdminCustomersClient({
             return (
               <div
                 key={cust.id}
-                className="bg-card border border-border/80 hover:border-primary/40 rounded-3xl p-5 shadow-xs transition-all flex flex-col justify-between space-y-4 group"
+                className="bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 hover:border-blue-400/50 hover:shadow-sm rounded-2xl sm:rounded-3xl p-5 shadow-xs transition-all flex flex-col justify-between space-y-4 group"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
@@ -1299,14 +1788,7 @@ export function AdminCustomersClient({
 
                 {/* Actions Footer */}
                 <div className="flex items-center justify-between pt-2 border-t border-border/60 gap-1.5">
-                  <Link href={`/admin/assign?customer_id=${cust.id}`} className="flex-1">
-                    <Button
-                      size="sm"
-                      className="w-full gradient-brand text-white border-0 font-bold text-xs h-8 rounded-xl gap-1 shadow-xs cursor-pointer"
-                    >
-                      <Zap className="w-3 h-3 fill-current" /> Assign Car
-                    </Button>
-                  </Link>
+                  <AssignCarButton href={`/admin/assign?customer_id=${cust.id}`} size="sm" className="flex-1" />
 
                   <Button
                     size="sm"
@@ -1350,6 +1832,7 @@ export function AdminCustomersClient({
     </div>
   </>
 )}
+      </div>
 
       {/* ──────────────────────────────────────────────────────────── */}
       {/* 6. REGISTER NEW CUSTOMER MODAL */}
@@ -1877,14 +2360,7 @@ export function AdminCustomersClient({
                     <Trash2 className="w-3.5 h-3.5" /> Delete
                   </Button>
 
-                  <Link href={`/admin/assign?customer_id=${selectedCust.id}`}>
-                    <Button
-                      size="sm"
-                      className="gradient-brand text-white border-0 text-xs font-bold h-8 rounded-xl gap-1 cursor-pointer"
-                    >
-                      <Zap className="w-3.5 h-3.5 fill-current" /> Assign Car
-                    </Button>
-                  </Link>
+                  <AssignCarButton href={`/admin/assign?customer_id=${selectedCust.id}`} size="sm" />
                 </div>
               </div>
             </div>

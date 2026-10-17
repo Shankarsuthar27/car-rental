@@ -20,6 +20,7 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Slider } from '@/components/ui/slider'
@@ -612,15 +613,11 @@ export function VehicleListingClient({
                         >
                           <Link href={`/cars/${v.id}`}>View Details</Link>
                         </Button>
-                        <Button
+                        <AssignCarButton
+                          href={`/admin/assign?vehicle_id=${v.id}`}
                           size="sm"
-                          asChild
-                          className="w-full gradient-brand text-white border-0 hover:opacity-90 text-xs h-9 font-semibold gap-1"
-                        >
-                          <Link href={`/admin/assign?vehicle_id=${v.id}`}>
-                            <Zap className="w-3 h-3 fill-current" /> Assign Car
-                          </Link>
-                        </Button>
+                          fullWidth
+                        />
                       </div>
                     </div>
                   </motion.div>

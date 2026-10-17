@@ -31,7 +31,7 @@ export default async function AdminCustomersPage() {
   const customers = await getCustomersData()
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <div className="p-3.5 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
       <AdminCustomersClient initialCustomers={customers} />
     </div>
   )
