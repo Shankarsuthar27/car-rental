@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -41,6 +41,28 @@ import { format, differenceInHours } from 'date-fns'
 import type { Customer, Vehicle } from '@/types'
 import { formatCustomer, extractDrivingLicense, DEFAULT_DEMO_CUSTOMERS } from '@/lib/customers'
 import { cn } from '@/lib/utils'
+
+// Helper to format a Date into 'YYYY-MM-DDTHH:mm' required by datetime-local inputs
+function toDateTimeLocalString(date: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  const y = date.getFullYear()
+  const m = pad(date.getMonth() + 1)
+  const d = pad(date.getDate())
+  const hh = pad(date.getHours())
+  const mm = pad(date.getMinutes())
+  return `${y}-${m}-${d}T${hh}:${mm}`
+}
+
+function getDefaultDates() {
+  const now = new Date()
+  const remainder = 15 - (now.getMinutes() % 15)
+  now.setMinutes(now.getMinutes() + (remainder === 15 ? 0 : remainder), 0, 0)
+  const ret = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+  return {
+    pickup: toDateTimeLocalString(now),
+    returnDate: toDateTimeLocalString(ret),
+  }
+}
 
 interface AssignCarWorkflowProps {
   customers: Customer[]
@@ -88,9 +110,34 @@ export function AssignCarWorkflow({
   )
 
   // Step 3: Dates & Rental Configuration
-  // Default to 10/17/2026 11:05 AM to 10/19/2026 11:05 AM as shown in the design image
-  const [pickupDatetime, setPickupDatetime] = useState('2026-10-17T11:05')
-  const [returnDatetime, setReturnDatetime] = useState('2026-10-19T11:05')
+  const initialDates = useMemo(() => getDefaultDates(), [])
+  const [pickupDatetime, setPickupDatetime] = useState<string>(initialDates.pickup)
+  const [returnDatetime, setReturnDatetime] = useState<string>(initialDates.returnDate)
+  const hasUserModifiedDates = useRef(false)
+  const pickupInputRef = useRef<HTMLInputElement>(null)
+  const returnInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Keep initialized dates current on initial client mount if user hasn't touched them
+    if (!hasUserModifiedDates.current) {
+      const fresh = getDefaultDates()
+      setPickupDatetime(fresh.pickup)
+      setReturnDatetime(fresh.returnDate)
+    }
+  }, [])
+
+  const openPicker = (inputRef: React.RefObject<HTMLInputElement | null>) => {
+    if (!inputRef.current) return
+    try {
+      if (typeof inputRef.current.showPicker === 'function') {
+        inputRef.current.showPicker()
+      } else {
+        inputRef.current.focus()
+      }
+    } catch {
+      inputRef.current?.focus()
+    }
+  }
 
   // Selected vehicle object
   const selectedVehicle = useMemo(() => {
@@ -134,7 +181,7 @@ export function AssignCarWorkflow({
     const start = new Date(pickupDatetime)
     const end = new Date(returnDatetime)
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      return { hours: 48, days: 2, text: '2 days' }
+      return { hours: 24, days: 1, text: '1 day', isValid: false }
     }
 
     const totalHours = Math.max(1, differenceInHours(end, start))
@@ -142,7 +189,8 @@ export function AssignCarWorkflow({
     return {
       hours: totalHours,
       days: totalDays,
-      text: `${totalDays} day${totalDays > 1 ? 's' : ''}`,
+      text: `${totalDays} day${totalDays > 1 ? 's' : ''} (${totalHours}h)`,
+      isValid: true,
     }
   }, [pickupDatetime, returnDatetime])
 
@@ -153,12 +201,13 @@ export function AssignCarWorkflow({
 
   const insuranceFee = withInsurance ? Number(insuranceRate) || 0 : 0
   const driverFee = withDriver ? (Number(driverCharge) || 0) * rentalDuration.days : 0
-  const secDep = Number(securityDeposit) || 0
-  const advance = Number(advancePayment) || 0
+  const secDep = Math.max(0, Number(securityDeposit) || 0)
+  const advance = Math.max(0, Number(advancePayment) || 0)
 
   const taxableSubtotal = calculatedBasePrice + insuranceFee + driverFee
   const taxAmount = Math.round(taxableSubtotal * 0.18 * 100) / 100
   const grandTotal = Math.round((taxableSubtotal + taxAmount + secDep) * 100) / 100
+  const balanceDue = Math.max(0, Math.round((grandTotal - advance) * 100) / 100)
 
   // Submission State
   const [submitting, setSubmitting] = useState(false)
@@ -287,7 +336,7 @@ export function AssignCarWorkflow({
         driver_charge: driverFee,
         discount_amount: 0,
         advance_amount_paid: advance,
-        payment_method: 'cash',
+        payment_method: advance > 0 ? 'cash' : 'pending',
         notes: assignmentNotes,
         admin_notes: `Assigned via dedicated Assign Car console. Duration: ${rentalDuration.text}`,
       }
@@ -306,6 +355,8 @@ export function AssignCarWorkflow({
           customer: result.data?.customer ? formatCustomer(result.data.customer) : selectedCustomer,
           vehicle: result.data?.vehicle || selectedVehicle,
           grand_total: grandTotal,
+          amount_paid: advance,
+          outstanding_amount: balanceDue,
         }
         setCreatedBooking(enrichedBooking)
         setSuccessModalOpen(true)
@@ -316,6 +367,8 @@ export function AssignCarWorkflow({
           customer: selectedCustomer,
           vehicle: selectedVehicle,
           grand_total: grandTotal,
+          amount_paid: advance,
+          outstanding_amount: balanceDue,
         })
         setSuccessModalOpen(true)
       }
@@ -325,6 +378,8 @@ export function AssignCarWorkflow({
         customer: selectedCustomer,
         vehicle: selectedVehicle,
         grand_total: grandTotal,
+        amount_paid: advance,
+        outstanding_amount: balanceDue,
       })
       setSuccessModalOpen(true)
     } finally {
@@ -627,7 +682,7 @@ export function AssignCarWorkflow({
           {/* STEP 3: RENTAL TERMS & SCHEDULE */}
           <div className="bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center shrink-0">
                 3
               </div>
               <div>
@@ -642,73 +697,160 @@ export function AssignCarWorkflow({
 
             {/* Row 1: Dates */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Pickup date & time */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Pickup date & time
-                </Label>
-                <div className="relative group">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Pickup date & time
+                  </Label>
+                  <span className="text-[10px] text-slate-400">Click to change</span>
+                </div>
+                <div
+                  onClick={() => openPicker(pickupInputRef)}
+                  className="relative group cursor-pointer"
+                >
                   <input
+                    ref={pickupInputRef}
                     type="datetime-local"
                     value={pickupDatetime}
-                    onChange={e => {
-                      if (e.target.value) setPickupDatetime(e.target.value)
+                    min={toDateTimeLocalString(new Date())}
+                    onClick={e => {
+                      try {
+                        e.currentTarget.showPicker?.()
+                      } catch {}
                     }}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    onChange={e => {
+                      hasUserModifiedDates.current = true
+                      const val = e.target.value
+                      if (!val) return
+                      setPickupDatetime(val)
+                      // Auto-validate return: if return is earlier than or equal to pickup, shift return to pickup + 48h
+                      const pDate = new Date(val).getTime()
+                      const rDate = new Date(returnDatetime).getTime()
+                      if (isNaN(rDate) || rDate <= pDate) {
+                        const newRet = new Date(pDate + 48 * 60 * 60 * 1000)
+                        setReturnDatetime(toDateTimeLocalString(newRet))
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20"
                   />
-                  <div className="w-full h-10 px-3.5 flex items-center justify-between text-xs rounded-xl border border-slate-200 dark:border-border bg-white dark:bg-card text-slate-800 dark:text-slate-100 font-medium group-hover:border-slate-300 transition-colors">
+                  <div className="w-full h-10 px-3.5 flex items-center justify-between text-xs rounded-xl border border-slate-200 dark:border-border bg-white dark:bg-card text-slate-800 dark:text-slate-100 font-medium group-hover:border-blue-400 group-focus-within:border-blue-500 transition-colors shadow-2xs">
                     <span>
                       {(() => {
                         try {
-                          return format(new Date(pickupDatetime), 'MM/dd/yyyy hh:mm a')
+                          if (!pickupDatetime) return 'Select pickup date & time'
+                          const d = new Date(pickupDatetime)
+                          if (isNaN(d.getTime())) return 'Select pickup date & time'
+                          return format(d, 'MM/dd/yyyy hh:mm a')
                         } catch {
-                          return '10/17/2026 11:05 AM'
+                          return 'Select pickup date & time'
                         }
                       })()}
                     </span>
-                    <Calendar className="w-4 h-4 text-slate-400" />
+                    <Calendar className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
                   </div>
                 </div>
               </div>
 
+              {/* Expected return */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Expected return
-                </Label>
-                <div className="relative group">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Expected return
+                  </Label>
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                    {rentalDuration.text}
+                  </span>
+                </div>
+                <div
+                  onClick={() => openPicker(returnInputRef)}
+                  className="relative group cursor-pointer"
+                >
                   <input
+                    ref={returnInputRef}
                     type="datetime-local"
                     value={returnDatetime}
+                    min={pickupDatetime || toDateTimeLocalString(new Date())}
+                    onClick={e => {
+                      try {
+                        e.currentTarget.showPicker?.()
+                      } catch {}
+                    }}
                     onChange={e => {
+                      hasUserModifiedDates.current = true
                       if (e.target.value) setReturnDatetime(e.target.value)
                     }}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20"
                   />
-                  <div className="w-full h-10 px-3.5 flex items-center justify-between text-xs rounded-xl border border-slate-200 dark:border-border bg-white dark:bg-card text-slate-800 dark:text-slate-100 font-medium group-hover:border-slate-300 transition-colors">
+                  <div className="w-full h-10 px-3.5 flex items-center justify-between text-xs rounded-xl border border-slate-200 dark:border-border bg-white dark:bg-card text-slate-800 dark:text-slate-100 font-medium group-hover:border-blue-400 group-focus-within:border-blue-500 transition-colors shadow-2xs">
                     <span>
                       {(() => {
                         try {
-                          return format(new Date(returnDatetime), 'MM/dd/yyyy hh:mm a')
+                          if (!returnDatetime) return 'Select return date & time'
+                          const d = new Date(returnDatetime)
+                          if (isNaN(d.getTime())) return 'Select return date & time'
+                          return format(d, 'MM/dd/yyyy hh:mm a')
                         } catch {
-                          return '10/19/2026 11:05 AM'
+                          return 'Select return date & time'
                         }
                       })()}
                     </span>
-                    <Calendar className="w-4 h-4 text-slate-400" />
+                    <Calendar className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Quick Duration Presets */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mr-1">
+                Quick duration:
+              </span>
+              {[
+                { label: '24h (1 Day)', hours: 24 },
+                { label: '48h (2 Days)', hours: 48 },
+                { label: '3 Days', hours: 72 },
+                { label: '5 Days', hours: 120 },
+                { label: '7 Days (1 Wk)', hours: 168 },
+              ].map(preset => {
+                const isCurrent = rentalDuration.hours === preset.hours
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      hasUserModifiedDates.current = true
+                      const start = pickupDatetime ? new Date(pickupDatetime) : new Date()
+                      const newEnd = new Date(start.getTime() + preset.hours * 60 * 60 * 1000)
+                      setReturnDatetime(toDateTimeLocalString(newEnd))
+                    }}
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
+                      isCurrent
+                        ? 'bg-blue-600 text-white font-bold shadow-2xs'
+                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-600 dark:bg-muted dark:hover:bg-muted/80 dark:text-slate-300'
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                )
+              })}
+            </div>
+
             {/* Row 2: Starting Odometer, Deposit & Advance */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Starting odometer (KM)
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Starting odometer (KM)
+                  </Label>
+                  <span className="text-[10px] text-slate-400">Current</span>
+                </div>
                 <div className="relative">
                   <Gauge className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <Input
                     type="number"
+                    min={0}
                     value={startingKm}
                     onChange={e => setStartingKm(e.target.value)}
                     className="pl-9 h-10 text-xs rounded-xl font-medium bg-white dark:bg-card border-slate-200 dark:border-border text-slate-800 dark:text-slate-100"
@@ -717,27 +859,120 @@ export function AssignCarWorkflow({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Security deposit (₹)
-                </Label>
-                <Input
-                  type="number"
-                  value={securityDeposit}
-                  onChange={e => setSecurityDeposit(e.target.value)}
-                  className="h-10 text-xs rounded-xl font-medium bg-white dark:bg-card border-slate-200 dark:border-border text-slate-800 dark:text-slate-100"
-                />
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Security deposit (₹)
+                  </Label>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    Refundable
+                  </span>
+                </div>
+                <div className="relative">
+                  <span className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 flex items-center justify-center">
+                    ₹
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={securityDeposit}
+                    onChange={e => setSecurityDeposit(e.target.value)}
+                    className="pl-8 h-10 text-xs rounded-xl font-medium bg-white dark:bg-card border-slate-200 dark:border-border text-slate-800 dark:text-slate-100"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Advance paid (₹)
-                </Label>
-                <Input
-                  type="number"
-                  value={advancePayment}
-                  onChange={e => setAdvancePayment(e.target.value)}
-                  className="h-10 text-xs rounded-xl font-medium bg-white dark:bg-card border-slate-200 dark:border-border text-slate-800 dark:text-slate-100"
-                />
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Advance paid (₹)
+                  </Label>
+                  <span className={cn(
+                    'text-[10px] font-semibold',
+                    balanceDue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+                  )}>
+                    {balanceDue > 0 ? `Due: ₹${balanceDue.toLocaleString('en-IN')}` : 'Fully Paid'}
+                  </span>
+                </div>
+                <div className="relative">
+                  <span className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 flex items-center justify-center">
+                    ₹
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={advancePayment}
+                    onChange={e => setAdvancePayment(e.target.value)}
+                    className="pl-8 h-10 text-xs rounded-xl font-medium bg-white dark:bg-card border-slate-200 dark:border-border text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Advance Payment Presets & Balance Summary */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-muted/30 border border-slate-200/80 dark:border-border/60 text-xs">
+              <div className="flex items-center flex-wrap gap-1.5">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Quick advance:
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setAdvancePayment('0')}
+                    className={cn(
+                      'px-2 py-0.5 rounded-md text-[10.5px] font-medium transition-colors cursor-pointer',
+                      advance === 0
+                        ? 'bg-blue-600 text-white font-bold'
+                        : 'bg-white dark:bg-card border border-slate-200 dark:border-border text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                    )}
+                  >
+                    ₹0 (Pay Later)
+                  </button>
+                  {secDep > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setAdvancePayment(String(secDep))}
+                      className={cn(
+                        'px-2 py-0.5 rounded-md text-[10.5px] font-medium transition-colors cursor-pointer',
+                        advance === secDep
+                          ? 'bg-blue-600 text-white font-bold'
+                          : 'bg-white dark:bg-card border border-slate-200 dark:border-border text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                      )}
+                    >
+                      Deposit Only (₹{secDep.toLocaleString('en-IN')})
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setAdvancePayment(String(Math.round(grandTotal / 2)))}
+                    className={cn(
+                      'px-2 py-0.5 rounded-md text-[10.5px] font-medium transition-colors cursor-pointer',
+                      advance === Math.round(grandTotal / 2) && advance > 0
+                        ? 'bg-blue-600 text-white font-bold'
+                        : 'bg-white dark:bg-card border border-slate-200 dark:border-border text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                    )}
+                  >
+                    50% (₹{Math.round(grandTotal / 2).toLocaleString('en-IN')})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdvancePayment(String(grandTotal))}
+                    className={cn(
+                      'px-2 py-0.5 rounded-md text-[10.5px] font-medium transition-colors cursor-pointer',
+                      advance === grandTotal && advance > 0
+                        ? 'bg-blue-600 text-white font-bold'
+                        : 'bg-white dark:bg-card border border-slate-200 dark:border-border text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                    )}
+                  >
+                    Full (₹{grandTotal.toLocaleString('en-IN')})
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                Balance due at return:{' '}
+                <strong className={cn(balanceDue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}>
+                  ₹{balanceDue.toLocaleString('en-IN')}
+                </strong>
               </div>
             </div>
 
@@ -969,14 +1204,60 @@ export function AssignCarWorkflow({
                   </span>
                 </div>
 
-                {/* Advance collected */}
-                <div className="bg-slate-50 dark:bg-muted/40 border border-slate-100 dark:border-border/60 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
-                  <span className="text-slate-600 dark:text-slate-400 font-medium">
-                    Advance collected
-                  </span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                    ₹{advance.toLocaleString('en-IN')}
-                  </span>
+                {/* Advance collected & Balance Due Breakdown */}
+                <div className="space-y-2 pt-1">
+                  <div className="bg-slate-50 dark:bg-muted/40 border border-slate-200/80 dark:border-border/60 rounded-xl p-3 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-600 dark:text-slate-400 font-medium">
+                        Advance collected now
+                      </span>
+                      <span className="text-slate-900 dark:text-slate-100 font-bold">
+                        ₹{advance.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <div className="border-t border-slate-200/60 dark:border-border/40 pt-2 flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-slate-900 dark:text-white block">
+                          Balance due at return
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">
+                          Payable on vehicle handover
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={cn(
+                            'text-base font-extrabold block',
+                            balanceDue > 0
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-emerald-600 dark:text-emerald-400'
+                          )}
+                        >
+                          ₹{balanceDue.toLocaleString('en-IN', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded inline-block mt-0.5',
+                            balanceDue === 0
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                              : advance > 0
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
+                              : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          )}
+                        >
+                          {balanceDue === 0
+                            ? 'Fully Paid'
+                            : advance > 0
+                            ? 'Partially Paid'
+                            : 'Payment Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1131,6 +1412,16 @@ export function AssignCarWorkflow({
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">Grand Total:</span>
                   <span className="font-bold text-blue-600">₹{Number(createdBooking.grand_total || grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-sans">Advance Collected:</span>
+                  <span className="font-bold text-emerald-600">₹{Number(createdBooking.amount_paid ?? advance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-sans">Balance Due at Return:</span>
+                  <span className={cn('font-bold', (createdBooking.outstanding_amount ?? balanceDue) > 0 ? 'text-amber-600' : 'text-emerald-600')}>
+                    ₹{Number(createdBooking.outstanding_amount ?? balanceDue).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
             )}
