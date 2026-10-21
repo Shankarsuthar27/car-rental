@@ -87,9 +87,9 @@ export class PasswordResetService {
       return currentMemoryPassword === password
     }
 
-    // 3. Fallback: Only if NO password was EVER reset in DB or memory, accept initial default admin123
-    if (email === 'admin@driveease.in' || email === 'admin') {
-      return password === 'admin123'
+    // 3. Fallback: Default administrator credentials
+    if (email === 'jalorecarrentel@gmail.com' || email === 'jalorecarrentel') {
+      return password === 'Admin@1212'
     }
 
     return false
@@ -101,8 +101,8 @@ export class PasswordResetService {
   static setPassword(rawEmail: string, newPassword: string): void {
     const email = rawEmail.trim().toLowerCase()
     adminCredentialsStore.set(email, newPassword.trim())
-    if (email === 'admin@driveease.in') {
-      adminCredentialsStore.set('admin', newPassword.trim())
+    if (email === 'jalorecarrentel@gmail.com') {
+      adminCredentialsStore.set('jalorecarrentel', newPassword.trim())
     }
   }
 

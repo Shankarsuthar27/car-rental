@@ -6,9 +6,9 @@ export async function POST(req: Request) {
     const { role } = await req.json()
     const isSuperAdmin = role === 'admin'
     const userRole = isSuperAdmin ? 'super_admin' : 'customer'
-    const email = isSuperAdmin ? 'admin@driveease.in' : 'rahul@example.com'
-    const password = isSuperAdmin ? 'admin123' : 'Password@123'
-    const fullName = isSuperAdmin ? 'Admin DriveEase' : 'Rahul Sharma'
+    const email = isSuperAdmin ? 'jalorecarrentel@gmail.com' : 'rahul@example.com'
+    const password = isSuperAdmin ? 'Admin@1212' : 'Password@123'
+    const fullName = isSuperAdmin ? 'Administrator' : 'Rahul Sharma'
 
     try {
       const supabase = createAdminClient()

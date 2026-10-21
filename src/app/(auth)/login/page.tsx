@@ -106,11 +106,11 @@ function LoginForm() {
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
-                type="email"
+                type="text"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="admin@driveease.in"
+                placeholder="jalorecarrentel@gmail.com"
                 className="pl-10 h-11 rounded-xl bg-muted/30 text-xs focus-visible:ring-primary"
               />
             </div>

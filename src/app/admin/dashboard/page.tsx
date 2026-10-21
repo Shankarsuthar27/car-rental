@@ -121,7 +121,7 @@ async function getDashboardData() {
       unavailableCars: inactiveCount,
       carsAssignedToday,
       activeRentals: activeRentals.length,
-      todayRevenue: todayRevenue > 0 ? todayRevenue : 28400,
+      todayRevenue,
       upcomingReturns,
     },
     statusCounts: {

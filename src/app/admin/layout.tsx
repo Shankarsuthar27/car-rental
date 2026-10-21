@@ -34,7 +34,7 @@ export default async function AdminLayout({
   if (demoRole && STAFF_ROLES.includes(demoRole)) {
     const mockAdminProfile: Profile = {
       id: '00000000-0000-0000-0000-000000000001',
-      email: 'admin@driveease.in',
+      email: 'jalorecarrentel@gmail.com',
       full_name: 'Admin DriveEase 👑',
       role: demoRole as any,
       is_active: true,
