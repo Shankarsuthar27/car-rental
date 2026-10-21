@@ -73,36 +73,8 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
   const [isDark, setIsDark] = useState(false)
   const [globalSearch, setGlobalSearch] = useState('')
 
-  // Notifications State
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'n1',
-      type: 'overdue',
-      title: 'Overdue Rental Return',
-      description: 'Hyundai Creta (RJ14-CR-2024) is overdue by 3 hours',
-      time: '15m ago',
-      unread: true,
-      href: '/admin/bookings?status=active',
-    },
-    {
-      id: 'n2',
-      type: 'pickup',
-      title: 'Vehicle Active on Duty',
-      description: 'Rahul Sharma dispatched on Toyota Fortuner',
-      time: '1h ago',
-      unread: true,
-      href: '/admin/bookings?status=active',
-    },
-    {
-      id: 'n3',
-      type: 'pickup',
-      title: 'Vehicle Ready for Assignment',
-      description: 'Mahindra Scorpio N inspected and ready for active duty',
-      time: '4h ago',
-      unread: false,
-      href: '/admin/vehicles?status=available',
-    },
-  ])
+  const [notifications, setNotifications] = useState<any[]>([])
+
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'))
@@ -232,32 +204,38 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
               )}
             </div>
             <div className="divide-y divide-border max-h-72 overflow-y-auto">
-              {notifications.map(n => (
-                <Link
-                  key={n.id}
-                  href={n.href}
-                  className={cn(
-                    'flex items-start gap-3 p-3 text-xs transition-colors hover:bg-muted/40',
-                    n.unread && 'bg-primary/5'
-                  )}
-                >
-                  <div className={cn(
-                    'p-1.5 rounded-lg shrink-0 mt-0.5',
-                    n.type === 'overdue' && 'bg-rose-500/10 text-rose-600',
-                    n.type === 'pickup' && 'bg-purple-500/10 text-purple-600',
-                    n.type === 'maintenance' && 'bg-amber-500/10 text-amber-600'
-                  )}>
-                    {n.type === 'overdue' && <AlertTriangle className="w-3.5 h-3.5" />}
-                    {n.type === 'pickup' && <Clock className="w-3.5 h-3.5" />}
-                    {n.type === 'maintenance' && <Car className="w-3.5 h-3.5" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-foreground truncate">{n.title}</p>
-                    <p className="text-muted-foreground text-[11px] line-clamp-2 mt-0.5">{n.description}</p>
-                    <span className="text-[10px] text-muted-foreground/70 font-mono mt-1 block">{n.time}</span>
-                  </div>
-                </Link>
-              ))}
+              {notifications.length === 0 ? (
+                <div className="p-6 text-center text-xs text-muted-foreground">
+                  No new notifications
+                </div>
+              ) : (
+                notifications.map(n => (
+                  <Link
+                    key={n.id}
+                    href={n.href}
+                    className={cn(
+                      'flex items-start gap-3 p-3 text-xs transition-colors hover:bg-muted/40',
+                      n.unread && 'bg-primary/5'
+                    )}
+                  >
+                    <div className={cn(
+                      'p-1.5 rounded-lg shrink-0 mt-0.5',
+                      n.type === 'overdue' && 'bg-rose-500/10 text-rose-600',
+                      n.type === 'pickup' && 'bg-purple-500/10 text-purple-600',
+                      n.type === 'maintenance' && 'bg-amber-500/10 text-amber-600'
+                    )}>
+                      {n.type === 'overdue' && <AlertTriangle className="w-3.5 h-3.5" />}
+                      {n.type === 'pickup' && <Clock className="w-3.5 h-3.5" />}
+                      {n.type === 'maintenance' && <Car className="w-3.5 h-3.5" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-foreground truncate">{n.title}</p>
+                      <p className="text-muted-foreground text-[11px] line-clamp-2 mt-0.5">{n.description}</p>
+                      <span className="text-[10px] text-muted-foreground/70 font-mono mt-1 block">{n.time}</span>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
             <div className="p-2 border-t border-border text-center bg-muted/20">
               <Link

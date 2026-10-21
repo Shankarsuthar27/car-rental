@@ -22,58 +22,8 @@ import { cn } from '@/lib/utils'
 export default function AdminNotificationsPage() {
   const [filter, setFilter] = useState<'all' | 'overdue' | 'pickup' | 'payment' | 'maintenance'>('all')
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'n-1',
-      title: '🔴 Critical: Overdue Rental Return',
-      body: 'Hyundai Creta (RJ14-CR-2024) is overdue by 3 hours. Expected return was 8:00 AM today.',
-      category: 'overdue',
-      time: '15 minutes ago',
-      unread: true,
-      href: '/admin/bookings?status=active',
-      actionLabel: 'Inspect & Return',
-    },
-    {
-      id: 'n-2',
-      title: 'Upcoming Scheduled Pickup Today',
-      body: 'Customer Rahul Sharma scheduled to pick up Toyota Fortuner (GJ01-TF-2024) at 2:00 PM at Jalore Main Branch.',
-      category: 'pickup',
-      time: '45 minutes ago',
-      unread: true,
-      href: '/admin/bookings?status=confirmed',
-      actionLabel: 'View Booking',
-    },
-    {
-      id: 'n-3',
-      title: 'Advance Rental Payment Received',
-      body: 'Payment of ₹5,000 recorded for Booking #RNT-2026-891024 via UPI Counter payment.',
-      category: 'payment',
-      time: '2 hours ago',
-      unread: false,
-      href: '/admin/payments',
-      actionLabel: 'View Ledger',
-    },
-    {
-      id: 'n-4',
-      title: 'Fleet Maintenance Alert',
-      body: 'Mahindra Scorpio N (RJ20-SN-2023) has reached 22,000 KM. Brake pad inspection and oil service due.',
-      category: 'maintenance',
-      time: '5 hours ago',
-      unread: false,
-      href: '/admin/maintenance',
-      actionLabel: 'Schedule Service',
-    },
-    {
-      id: 'n-5',
-      title: 'Insurance Policy Expiry Reminder',
-      body: 'Comprehensive insurance for Maruti Swift (RJ14-SW-2024) expires in 14 days.',
-      category: 'maintenance',
-      time: '1 day ago',
-      unread: false,
-      href: '/admin/vehicles',
-      actionLabel: 'Check Vehicle',
-    },
-  ])
+  const [notifications, setNotifications] = useState<any[]>([])
+
 
   const filtered = notifications.filter(n => filter === 'all' || n.category === filter)
   const unreadCount = notifications.filter(n => n.unread).length
@@ -159,7 +109,16 @@ export default function AdminNotificationsPage() {
 
       {/* Notification List */}
       <div className="space-y-3">
-        {filtered.map(n => (
+        {filtered.length === 0 ? (
+          <div className="p-12 text-center bg-card border border-border rounded-3xl shadow-xs">
+            <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+            <h3 className="font-bold text-foreground">No notifications found</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              All clear! No overdue returns, urgent alerts, or pending notices.
+            </p>
+          </div>
+        ) : (
+          filtered.map(n => (
           <div
             key={n.id}
             className={cn(
@@ -205,7 +164,7 @@ export default function AdminNotificationsPage() {
               </Link>
             </div>
           </div>
-        ))}
+        )))}
       </div>
     </div>
   )

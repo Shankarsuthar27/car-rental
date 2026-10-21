@@ -620,9 +620,14 @@ export function RentalHistoryClient({
               </div>
 
               <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
-                {vehicles
-                  .filter(v => `${v.brand} ${v.model} ${v.registration_number}`.toLowerCase().includes(carSearch.toLowerCase()))
-                  .map(car => {
+                {vehicles.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-muted-foreground">
+                    No vehicles registered yet.
+                  </div>
+                ) : (
+                  vehicles
+                    .filter(v => `${v.brand} ${v.model} ${v.registration_number}`.toLowerCase().includes(carSearch.toLowerCase()))
+                    .map(car => {
                     const isSelected = car.id === selectedVehicleId
                     return (
                       <div
@@ -648,7 +653,7 @@ export function RentalHistoryClient({
                         </span>
                       </div>
                     )
-                  })}
+                  }))}
               </div>
             </div>
 
@@ -766,7 +771,7 @@ export function RentalHistoryClient({
                 </>
               ) : (
                 <div className="p-12 text-center text-muted-foreground bg-card border rounded-2xl">
-                  Select a vehicle from the left panel to inspect its rental history.
+                  {vehicles.length === 0 ? 'No vehicles registered yet.' : 'Select a vehicle from the left panel to inspect its rental history.'}
                 </div>
               )}
             </div>
@@ -800,9 +805,14 @@ export function RentalHistoryClient({
               </div>
 
               <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
-                {customers
-                  .filter(c => `${c.profile?.full_name} ${c.profile?.phone} ${c.customer_code}`.toLowerCase().includes(custSearch.toLowerCase()))
-                  .map(cust => {
+                {customers.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-muted-foreground">
+                    No customers registered yet.
+                  </div>
+                ) : (
+                  customers
+                    .filter(c => `${c.profile?.full_name} ${c.profile?.phone} ${c.customer_code}`.toLowerCase().includes(custSearch.toLowerCase()))
+                    .map(cust => {
                     const isSelected = cust.id === selectedCustomerId
                     const name = cust.profile?.full_name || 'Customer'
                     return (
@@ -829,7 +839,7 @@ export function RentalHistoryClient({
                         </span>
                       </div>
                     )
-                  })}
+                  }))}
               </div>
             </div>
 
@@ -940,7 +950,7 @@ export function RentalHistoryClient({
                 </>
               ) : (
                 <div className="p-12 text-center text-muted-foreground bg-card border rounded-2xl">
-                  Select a customer from the left panel to inspect their rental history.
+                  {customers.length === 0 ? 'No customers registered yet.' : 'Select a customer from the left panel to inspect their rental history.'}
                 </div>
               )}
             </div>

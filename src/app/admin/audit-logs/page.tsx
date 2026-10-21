@@ -19,34 +19,7 @@ async function getAuditLogs() {
 
 export default async function AdminAuditLogsPage() {
   const logs = await getAuditLogs()
-
-  // Demo fallback
-  const displayLogs = logs.length > 0 ? logs : [
-    {
-      id: 'log-1',
-      action: 'vehicle_status_changed',
-      module: 'vehicles',
-      user_email: 'admin@driveease.in',
-      created_at: '2026-08-20T12:15:00Z',
-      new_value: { status: 'rented', vehicle: 'Hyundai Creta (RJ14-CR-2024)' }
-    },
-    {
-      id: 'log-2',
-      action: 'payment_verified',
-      module: 'payments',
-      user_email: 'system_webhook',
-      created_at: '2026-08-20T11:24:00Z',
-      new_value: { amount: 1767, order_id: 'order_mock_1724141040' }
-    },
-    {
-      id: 'log-3',
-      action: 'kyc_verified',
-      module: 'customers',
-      user_email: 'admin@driveease.in',
-      created_at: '2026-08-20T10:05:00Z',
-      new_value: { customer: 'Rahul Sharma', status: 'verified' }
-    }
-  ]
+  const displayLogs = logs
 
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-5xl">
@@ -72,7 +45,14 @@ export default async function AdminAuditLogsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {displayLogs.map((log: any) => (
+              {displayLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                    No system audit logs recorded yet.
+                  </td>
+                </tr>
+              ) : (
+                displayLogs.map((log: any) => (
                 <tr key={log.id} className="hover:bg-muted/20 transition-colors">
                   <td className="p-4 font-mono font-bold text-foreground">
                     {log.action}
@@ -101,7 +81,7 @@ export default async function AdminAuditLogsPage() {
                     })}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

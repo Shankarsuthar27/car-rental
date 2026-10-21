@@ -29,31 +29,7 @@ async function getMaintenanceData() {
 
 export default async function AdminMaintenancePage() {
   const { logs, vehicles } = await getMaintenanceData()
-
-  // Demo logs fallback
-  const displayLogs = logs.length > 0 ? logs : [
-    {
-      id: 'm-1',
-      maintenance_type: 'service',
-      description: '15,000 km periodic service + synthetic oil change',
-      scheduled_date: '2026-08-10',
-      completed_date: '2026-08-10',
-      cost: 4200,
-      is_completed: true,
-      vendor_name: 'Hyundai Authorized Service Centre, Jalore',
-      vehicle: { brand: 'Hyundai', model: 'Creta', registration_number: 'RJ14-CR-2024' }
-    },
-    {
-      id: 'm-2',
-      maintenance_type: 'brake_service',
-      description: 'Front brake pad replacement & rotor skimming',
-      scheduled_date: '2026-08-28',
-      cost: 3100,
-      is_completed: false,
-      vendor_name: 'Toyota Service Hub, Jalore',
-      vehicle: { brand: 'Toyota', model: 'Innova Crysta', registration_number: 'RJ20-IC-2023' }
-    }
-  ]
+  const displayLogs = logs
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -74,23 +50,19 @@ export default async function AdminMaintenancePage() {
           <h3 className="font-bold text-sm">Upcoming Document Renewal Reminders (Next 60 Days)</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="p-3 bg-background rounded-2xl border border-border text-xs space-y-0.5">
-            <span className="font-bold block">Hyundai Creta (RJ14-CR-2024)</span>
-            <span className="text-muted-foreground block">Pollution Certificate (PUC)</span>
-            <span className="text-rose-600 font-bold block">Due in 8 days (28 Feb 2025)</span>
-          </div>
-
-          <div className="p-3 bg-background rounded-2xl border border-border text-xs space-y-0.5">
-            <span className="font-bold block">Toyota Innova (RJ20-IC-2023)</span>
-            <span className="text-muted-foreground block">Comprehensive Insurance</span>
-            <span className="text-amber-600 font-bold block">Due: 30 Sep 2025</span>
-          </div>
-
-          <div className="p-3 bg-background rounded-2xl border border-border text-xs space-y-0.5">
-            <span className="font-bold block">Mahindra Scorpio (RJ20-SN-2023)</span>
-            <span className="text-muted-foreground block">Fitness & Registration</span>
-            <span className="text-amber-600 font-bold block">Due: 30 Sep 2025</span>
-          </div>
+          {vehicles.length === 0 ? (
+            <div className="col-span-full p-4 bg-background rounded-2xl border border-border text-xs text-muted-foreground text-center">
+              No vehicles registered in fleet. Add vehicles to track document expiries.
+            </div>
+          ) : (
+            vehicles.map((v: any) => (
+              <div key={v.id} className="p-3 bg-background rounded-2xl border border-border text-xs space-y-0.5">
+                <span className="font-bold block">{v.brand} {v.model} ({v.registration_number})</span>
+                <span className="text-muted-foreground block">Insurance Expiry</span>
+                <span className="text-amber-600 font-bold block">{v.insurance_expiry || 'Not configured'}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -114,52 +86,60 @@ export default async function AdminMaintenancePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {displayLogs.map((log: any) => (
-                <tr key={log.id} className="hover:bg-muted/20 transition-colors">
-                  <td className="p-4">
-                    <Badge className="text-[10px] uppercase font-bold capitalize bg-primary/10 text-primary border-primary/20">
-                      {log.maintenance_type.replace(/_/g, ' ')}
-                    </Badge>
-                  </td>
-
-                  <td className="p-4">
-                    <span className="font-bold text-foreground block">
-                      {log.vehicle?.brand} {log.vehicle?.model}
-                    </span>
-                    <span className="text-[10px] font-mono text-muted-foreground">
-                      {log.vehicle?.registration_number}
-                    </span>
-                  </td>
-
-                  <td className="p-4 text-muted-foreground font-medium max-w-xs truncate">
-                    {log.description}
-                  </td>
-
-                  <td className="p-4 text-muted-foreground">
-                    {log.scheduled_date}
-                  </td>
-
-                  <td className="p-4 text-muted-foreground">
-                    {log.vendor_name || 'Authorized Service'}
-                  </td>
-
-                  <td className="p-4 font-bold text-foreground">
-                    ₹{Number(log.cost || 0).toLocaleString('en-IN')}
-                  </td>
-
-                  <td className="p-4">
-                    <Badge
-                      className={`text-[10px] uppercase font-bold ${
-                        log.is_completed
-                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                      }`}
-                    >
-                      {log.is_completed ? 'Completed' : 'Scheduled'}
-                    </Badge>
+              {displayLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    No service or repair logs recorded yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                displayLogs.map((log: any) => (
+                  <tr key={log.id} className="hover:bg-muted/20 transition-colors">
+                    <td className="p-4">
+                      <Badge className="text-[10px] uppercase font-bold capitalize bg-primary/10 text-primary border-primary/20">
+                        {log.maintenance_type.replace(/_/g, ' ')}
+                      </Badge>
+                    </td>
+
+                    <td className="p-4">
+                      <span className="font-bold text-foreground block">
+                        {log.vehicle?.brand} {log.vehicle?.model}
+                      </span>
+                      <span className="text-[10px] font-mono text-muted-foreground">
+                        {log.vehicle?.registration_number}
+                      </span>
+                    </td>
+
+                    <td className="p-4 text-muted-foreground font-medium max-w-xs truncate">
+                      {log.description}
+                    </td>
+
+                    <td className="p-4 text-muted-foreground">
+                      {log.scheduled_date}
+                    </td>
+
+                    <td className="p-4 text-muted-foreground">
+                      {log.vendor_name || 'Authorized Service'}
+                    </td>
+
+                    <td className="p-4 font-bold text-foreground">
+                      ₹{Number(log.cost || 0).toLocaleString('en-IN')}
+                    </td>
+
+                    <td className="p-4">
+                      <Badge
+                        className={`text-[10px] uppercase font-bold ${
+                          log.is_completed
+                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                            : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                        }`}
+                      >
+                        {log.is_completed ? 'Completed' : 'Scheduled'}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

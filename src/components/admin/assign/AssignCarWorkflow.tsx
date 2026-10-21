@@ -83,7 +83,7 @@ export function AssignCarWorkflow({
   const formattedInitCustomers = useMemo(() => {
     return (initialCustomers && initialCustomers.length > 0)
       ? initialCustomers.map(formatCustomer)
-      : DEFAULT_DEMO_CUSTOMERS
+      : []
   }, [initialCustomers])
 
   const [customers, setCustomers] = useState<Customer[]>(formattedInitCustomers)
@@ -91,7 +91,7 @@ export function AssignCarWorkflow({
 
   // Step 1: Customer Selection
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
-    preselectedCustomerId || searchParams.get('customer_id') || formattedInitCustomers[0]?.id || 'cust-shankar'
+    preselectedCustomerId || searchParams.get('customer_id') || formattedInitCustomers[0]?.id || ''
   )
   const [customerSearch, setCustomerSearch] = useState('')
 
@@ -106,7 +106,7 @@ export function AssignCarWorkflow({
 
   // Step 2: Vehicle Selection
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
-    preselectedVehicleId || searchParams.get('vehicle_id') || vehicles[0]?.id || 'veh-demo-swift-1'
+    preselectedVehicleId || searchParams.get('vehicle_id') || initialVehicles[0]?.id || ''
   )
 
   // Step 3: Dates & Rental Configuration
@@ -141,36 +141,42 @@ export function AssignCarWorkflow({
 
   // Selected vehicle object
   const selectedVehicle = useMemo(() => {
-    return vehicles.find(v => v.id === selectedVehicleId) || vehicles[0] || null
+    if (!selectedVehicleId) return null
+    return vehicles.find(v => v.id === selectedVehicleId) || null
   }, [vehicles, selectedVehicleId])
 
   // Selected customer object
   const selectedCustomer = useMemo(() => {
+    if (!selectedCustomerId) return null
     const found = customers.find(c => c.id === selectedCustomerId)
-    return found ? formatCustomer(found) : customers[0] || null
+    return found ? formatCustomer(found) : null
   }, [customers, selectedCustomerId])
 
   // Starting KM (auto-populated from car's current odometer)
-  const [startingKm, setStartingKm] = useState<string>('34570')
+  const [startingKm, setStartingKm] = useState<string>('')
 
   useEffect(() => {
     if (selectedVehicle) {
-      setStartingKm(String(selectedVehicle.current_odometer ?? 34570))
+      setStartingKm(String(selectedVehicle.current_odometer ?? ''))
+    } else {
+      setStartingKm('')
     }
   }, [selectedVehicle])
 
   // Deposit and Payment fields
-  const [securityDeposit, setSecurityDeposit] = useState<string>('1500')
+  const [securityDeposit, setSecurityDeposit] = useState<string>('0')
   const [advancePayment, setAdvancePayment] = useState<string>('0')
 
   useEffect(() => {
     if (selectedVehicle?.security_deposit) {
       setSecurityDeposit(String(selectedVehicle.security_deposit))
+    } else {
+      setSecurityDeposit('0')
     }
   }, [selectedVehicle])
 
   // Addons
-  const [withInsurance, setWithInsurance] = useState(true)
+  const [withInsurance, setWithInsurance] = useState(false)
   const [insuranceRate] = useState('499')
   const [withDriver, setWithDriver] = useState(false)
   const [driverCharge] = useState('1000')
@@ -195,19 +201,19 @@ export function AssignCarWorkflow({
   }, [pickupDatetime, returnDatetime])
 
   // Pricing calculations
-  const dailyRate = selectedVehicle?.daily_rate || 1300
-  const calculatedBasePrice = dailyRate * rentalDuration.days
-  const distanceAllowance = rentalDuration.days * (selectedVehicle?.included_km_per_day || 300)
+  const dailyRate = selectedVehicle?.daily_rate || 0
+  const calculatedBasePrice = selectedVehicle ? dailyRate * rentalDuration.days : 0
+  const distanceAllowance = selectedVehicle ? rentalDuration.days * (selectedVehicle.included_km_per_day || 0) : 0
 
-  const insuranceFee = withInsurance ? Number(insuranceRate) || 0 : 0
-  const driverFee = withDriver ? (Number(driverCharge) || 0) * rentalDuration.days : 0
-  const secDep = Math.max(0, Number(securityDeposit) || 0)
+  const insuranceFee = (selectedVehicle && withInsurance) ? Number(insuranceRate) || 0 : 0
+  const driverFee = (selectedVehicle && withDriver) ? (Number(driverCharge) || 0) * rentalDuration.days : 0
+  const secDep = selectedVehicle ? Math.max(0, Number(securityDeposit) || 0) : 0
   const advance = Math.max(0, Number(advancePayment) || 0)
 
   const taxableSubtotal = calculatedBasePrice + insuranceFee + driverFee
-  const taxAmount = Math.round(taxableSubtotal * 0.18 * 100) / 100
+  const taxAmount = taxableSubtotal > 0 ? Math.round(taxableSubtotal * 0.18 * 100) / 100 : 0
   const grandTotal = Math.round((taxableSubtotal + taxAmount + secDep) * 100) / 100
-  const balanceDue = Math.max(0, Math.round((grandTotal - advance) * 100) / 100)
+  const balanceDue = grandTotal > 0 ? Math.max(0, Math.round((grandTotal - advance) * 100) / 100) : 0
 
   // Submission State
   const [submitting, setSubmitting] = useState(false)
@@ -217,7 +223,7 @@ export function AssignCarWorkflow({
 
   // Filtered customer list for search
   const filteredCustomers = useMemo(() => {
-    const list = customers.length > 0 ? customers : DEFAULT_DEMO_CUSTOMERS
+    const list = customers
     if (!customerSearch.trim()) return list
     const q = customerSearch.toLowerCase()
     return list.filter(c => {
@@ -496,14 +502,16 @@ export function AssignCarWorkflow({
             <div className="flex flex-col gap-2.5 max-h-72 overflow-y-auto pr-0.5 scrollbar-thin">
               {filteredCustomers.length === 0 ? (
                 <div className="py-6 text-center text-xs text-slate-500">
-                  No customers found matching &quot;{customerSearch}&quot;
+                  {customers.length === 0
+                    ? 'No registered customers found. Click "+ Quick add" above to register a customer.'
+                    : `No customers found matching "${customerSearch}"`}
                 </div>
               ) : (
                 filteredCustomers.map(cust => {
                   const isSelected = cust.id === selectedCustomerId
                   const name = cust.profile?.full_name || cust.emergency_contact_name || 'Customer'
                   const phone = cust.profile?.phone || cust.emergency_contact_phone || '—'
-                  const email = cust.profile?.email || 'customer@driveease.in'
+                  const email = cust.profile?.email || ''
                   const initials = (name.charAt(0) || 'C').toUpperCase()
 
                   return (
@@ -535,9 +543,11 @@ export function AssignCarWorkflow({
                             <span className="font-bold text-slate-900 dark:text-white text-sm">
                               {name}
                             </span>
-                            <span className="font-mono text-[11px] text-slate-400">
-                              {cust.customer_code || 'CUST-2026-0000'}
-                            </span>
+                            {cust.customer_code && (
+                              <span className="font-mono text-[11px] text-slate-400">
+                                {cust.customer_code}
+                              </span>
+                            )}
                             {cust.city && (
                               <span className="text-slate-400 text-xs">
                                 • {cust.city}
@@ -588,9 +598,11 @@ export function AssignCarWorkflow({
                     <span className="font-bold text-slate-800 dark:text-slate-100">
                       Selected: {selectedCustomer.profile?.full_name || selectedCustomer.emergency_contact_name}
                     </span>
-                    <span className="font-mono text-[11px] text-slate-500 ml-1">
-                      {selectedCustomer.customer_code || 'CUST-2026-6975'}
-                    </span>
+                    {selectedCustomer.customer_code && (
+                      <span className="font-mono text-[11px] text-slate-500 ml-1">
+                        {selectedCustomer.customer_code}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -606,75 +618,135 @@ export function AssignCarWorkflow({
 
           {/* STEP 2: SELECT AVAILABLE VEHICLE */}
           <div className="bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center shrink-0">
-                2
+            <div className="flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center shrink-0">
+                  2
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
+                    Select available vehicle
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {vehicles.length > 0
+                      ? `${vehicles.length} vehicle${vehicles.length > 1 ? 's' : ''} available in fleet`
+                      : 'No vehicles currently available in fleet'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
-                  Select available vehicle
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  1 best match based on your rental terms
-                </p>
-              </div>
+
+              {vehicles.length === 0 && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8 px-3 rounded-lg font-semibold border-blue-200 text-blue-600 bg-white hover:bg-blue-50 shadow-2xs gap-1"
+                >
+                  <Link href="/admin/cars/new">
+                    <Plus className="w-3.5 h-3.5" /> Add car
+                  </Link>
+                </Button>
+              )}
             </div>
 
-            {/* Vehicle Card (Selected) */}
-            {selectedVehicle && (
-              <div
-                onClick={() => setSelectedVehicleId(selectedVehicle.id)}
-                className="border-2 border-blue-600 bg-white dark:bg-card rounded-2xl p-3.5 flex items-center justify-between gap-4 shadow-xs select-none cursor-pointer transition-all"
-              >
-                {/* Left: Thumbnail & Details */}
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  <div className="w-28 h-20 sm:w-32 sm:h-20 rounded-xl overflow-hidden relative border border-slate-100 dark:border-border/60 bg-slate-50 shrink-0">
-                    <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-md absolute top-0 left-0 uppercase tracking-wider z-10">
-                      AVAILABLE
-                    </span>
-                    <img
-                      src={
-                        (selectedVehicle as any).images?.find((img: any) => img.is_primary)?.url ||
-                        (selectedVehicle as any).images?.[0]?.url ||
-                        'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80'
-                      }
-                      alt={`${selectedVehicle.brand} ${selectedVehicle.model}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center flex-wrap gap-2 leading-tight">
-                      <span className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base">
-                        {selectedVehicle.brand} {selectedVehicle.model}
-                      </span>
-                      <span className="bg-blue-100 text-blue-700 font-bold text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wide">
-                        {selectedVehicle.vehicle_type?.toUpperCase() || 'HATCHBACK'}
-                      </span>
-                    </div>
-
-                    <span className="font-mono font-bold text-xs text-blue-600 mt-1 block">
-                      {selectedVehicle.registration_number || 'RJ19CB1640'}
-                    </span>
-
-                    <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="capitalize">{selectedVehicle.fuel_type || 'Petrol'}</span>
-                      <span className="capitalize">{selectedVehicle.transmission || 'Manual'}</span>
-                      <span className="flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
-                        <Gauge className="w-3.5 h-3.5 text-slate-400" />
-                        {Number(startingKm).toLocaleString('en-IN')} KM
-                      </span>
-                      <span className="text-blue-600 font-semibold">
-                        {selectedVehicle.included_km_per_day || 300} km / 24h
-                      </span>
-                    </div>
-                  </div>
+            {/* Vehicle List or Empty State */}
+            {vehicles.length === 0 ? (
+              <div className="border border-dashed border-slate-200 dark:border-border rounded-2xl p-8 text-center text-slate-400 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                  <Car className="w-6 h-6" />
                 </div>
-
-                {/* Right: Selected Radio Check */}
-                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <Check className="w-3 h-3 stroke-[3]" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    No available vehicles in fleet
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                    Add a vehicle to your fleet first before assigning to a customer.
+                  </p>
                 </div>
+                <Button asChild size="sm" className="mt-2 text-xs">
+                  <Link href="/admin/cars/new">
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add vehicle now
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {vehicles.map(v => {
+                  const isSelected = v.id === selectedVehicleId
+                  const primaryImg = (v as any).images?.find((img: any) => img.is_primary)?.url || (v as any).images?.[0]?.url
+
+                  return (
+                    <div
+                      key={v.id}
+                      onClick={() => setSelectedVehicleId(v.id)}
+                      className={cn(
+                        'border-2 rounded-2xl p-3.5 flex items-center justify-between gap-4 shadow-xs select-none cursor-pointer transition-all',
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50/20 dark:bg-blue-950/20'
+                          : 'border-slate-200 dark:border-border bg-white dark:bg-card hover:border-slate-300'
+                      )}
+                    >
+                      {/* Left: Thumbnail & Details */}
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className="w-28 h-20 sm:w-32 sm:h-20 rounded-xl overflow-hidden relative border border-slate-100 dark:border-border/60 bg-slate-50 shrink-0">
+                          <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-md absolute top-0 left-0 uppercase tracking-wider z-10">
+                            AVAILABLE
+                          </span>
+                          {primaryImg ? (
+                            <img
+                              src={primaryImg}
+                              alt={`${v.brand} ${v.model}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400">
+                              <Car className="w-8 h-8" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center flex-wrap gap-2 leading-tight">
+                            <span className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base">
+                              {v.brand} {v.model}
+                            </span>
+                            <span className="bg-blue-100 text-blue-700 font-bold text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wide">
+                              {v.vehicle_type?.toUpperCase() || 'SEDAN'}
+                            </span>
+                          </div>
+
+                          <span className="font-mono font-bold text-xs text-blue-600 mt-1 block">
+                            {v.registration_number || '—'}
+                          </span>
+
+                          <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            <span className="capitalize">{v.fuel_type || 'Petrol'}</span>
+                            <span className="capitalize">{v.transmission || 'Manual'}</span>
+                            <span className="flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
+                              <Gauge className="w-3.5 h-3.5 text-slate-400" />
+                              {(v.current_odometer ?? 0).toLocaleString('en-IN')} KM
+                            </span>
+                            <span className="text-blue-600 font-semibold">
+                              ₹{v.daily_rate}/day
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Selected Radio Check */}
+                      <div
+                        className={cn(
+                          'w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow-2xs transition-colors',
+                          isSelected
+                            ? 'bg-blue-600 text-white'
+                            : 'border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-card'
+                        )}
+                      >
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -888,9 +960,17 @@ export function AssignCarWorkflow({
                   </Label>
                   <span className={cn(
                     'text-[10px] font-semibold',
-                    balanceDue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+                    grandTotal === 0
+                      ? 'text-slate-400'
+                      : balanceDue > 0
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-emerald-600 dark:text-emerald-400'
                   )}>
-                    {balanceDue > 0 ? `Due: ₹${balanceDue.toLocaleString('en-IN')}` : 'Fully Paid'}
+                    {grandTotal === 0
+                      ? '—'
+                      : balanceDue > 0
+                      ? `Due: ₹${balanceDue.toLocaleString('en-IN')}`
+                      : 'Fully Paid'}
                   </span>
                 </div>
                 <div className="relative">
@@ -941,37 +1021,49 @@ export function AssignCarWorkflow({
                       Deposit Only (₹{secDep.toLocaleString('en-IN')})
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setAdvancePayment(String(Math.round(grandTotal / 2)))}
-                    className={cn(
-                      'px-2 py-0.5 rounded-md text-[10.5px] font-medium transition-colors cursor-pointer',
-                      advance === Math.round(grandTotal / 2) && advance > 0
-                        ? 'bg-blue-600 text-white font-bold'
-                        : 'bg-white dark:bg-card border border-slate-200 dark:border-border text-slate-600 dark:text-slate-300 hover:bg-slate-100'
-                    )}
-                  >
-                    50% (₹{Math.round(grandTotal / 2).toLocaleString('en-IN')})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAdvancePayment(String(grandTotal))}
-                    className={cn(
-                      'px-2 py-0.5 rounded-md text-[10.5px] font-medium transition-colors cursor-pointer',
-                      advance === grandTotal && advance > 0
-                        ? 'bg-blue-600 text-white font-bold'
-                        : 'bg-white dark:bg-card border border-slate-200 dark:border-border text-slate-600 dark:text-slate-300 hover:bg-slate-100'
-                    )}
-                  >
-                    Full (₹{grandTotal.toLocaleString('en-IN')})
-                  </button>
+                  {grandTotal > 0 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setAdvancePayment(String(Math.round(grandTotal / 2)))}
+                        className={cn(
+                          'px-2 py-0.5 rounded-md text-[10.5px] font-medium transition-colors cursor-pointer',
+                          advance === Math.round(grandTotal / 2) && advance > 0
+                            ? 'bg-blue-600 text-white font-bold'
+                            : 'bg-white dark:bg-card border border-slate-200 dark:border-border text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                        )}
+                      >
+                        50% (₹{Math.round(grandTotal / 2).toLocaleString('en-IN')})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAdvancePayment(String(grandTotal))}
+                        className={cn(
+                          'px-2 py-0.5 rounded-md text-[10.5px] font-medium transition-colors cursor-pointer',
+                          advance === grandTotal && advance > 0
+                            ? 'bg-blue-600 text-white font-bold'
+                            : 'bg-white dark:bg-card border border-slate-200 dark:border-border text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                        )}
+                      >
+                        Full (₹{grandTotal.toLocaleString('en-IN')})
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
               <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
                 Balance due at return:{' '}
-                <strong className={cn(balanceDue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}>
-                  ₹{balanceDue.toLocaleString('en-IN')}
+                <strong
+                  className={cn(
+                    grandTotal === 0
+                      ? 'text-slate-500'
+                      : balanceDue > 0
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-emerald-600 dark:text-emerald-400'
+                  )}
+                >
+                  {grandTotal === 0 ? '₹0' : `₹${balanceDue.toLocaleString('en-IN')}`}
                 </strong>
               </div>
             </div>
@@ -1057,209 +1149,247 @@ export function AssignCarWorkflow({
         {/* Right Column: Sticky Summary Card ("Ready to dispatch") */}
         <div className="lg:col-span-4 sticky top-6">
           <div className="rounded-3xl overflow-hidden border border-slate-200/90 dark:border-border/80 shadow-sm bg-white dark:bg-card">
-            {/* Header: Royal Blue */}
-            <div className="bg-blue-600 p-6 text-white">
+            {/* Header */}
+            <div
+              className={cn(
+                'p-6 text-white transition-colors',
+                selectedVehicle && selectedCustomer ? 'bg-blue-600' : 'bg-slate-800 dark:bg-slate-900'
+              )}
+            >
               <div className="flex items-center justify-between">
-                <span className="bg-blue-900/60 text-white text-[9px] font-bold tracking-wider px-2 py-0.5 rounded uppercase">
+                <span className="bg-black/30 text-white text-[9px] font-bold tracking-wider px-2 py-0.5 rounded uppercase">
                   SUMMARY PREVIEW
                 </span>
                 <span className="text-white/90 text-xs font-medium flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
-                  {rentalDuration.text}
+                  {selectedVehicle ? rentalDuration.text : '—'}
                 </span>
               </div>
 
               <h3 className="text-xl font-extrabold text-white mt-3 tracking-tight">
-                Ready to dispatch
+                {selectedVehicle && selectedCustomer ? 'Ready to dispatch' : 'Summary Preview'}
               </h3>
-              <p className="text-blue-100 text-xs mt-0.5">
-                Review all details before confirming.
+              <p className="text-white/80 text-xs mt-0.5">
+                {selectedVehicle && selectedCustomer
+                  ? 'Review all details before confirming.'
+                  : 'Select an available vehicle and customer to preview dispatch summary.'}
               </p>
             </div>
 
-            {/* Body: White Container */}
+            {/* Body */}
             <div className="p-5 space-y-4">
-              {/* Vehicle preview box */}
-              {selectedVehicle && (
-                <div className="border border-slate-200 dark:border-border/80 rounded-2xl p-3 flex items-center gap-3.5 bg-white dark:bg-card">
-                  <img
-                    src={
-                      (selectedVehicle as any).images?.find((img: any) => img.is_primary)?.url ||
-                      (selectedVehicle as any).images?.[0]?.url ||
-                      'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80'
-                    }
-                    alt={`${selectedVehicle.brand} ${selectedVehicle.model}`}
-                    className="w-14 h-10 rounded-lg object-cover bg-slate-50 shrink-0 border border-slate-100 dark:border-border/60"
-                  />
-                  <div>
-                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">
-                      VEHICLE
-                    </span>
-                    <span className="font-bold text-slate-900 dark:text-white text-sm block leading-tight">
-                      {selectedVehicle.brand} {selectedVehicle.model}
-                    </span>
-                    <span className="font-mono font-bold text-xs text-blue-600 block mt-0.5">
-                      {selectedVehicle.registration_number || 'RJ19CB1640'}
-                    </span>
+              {!selectedVehicle && !selectedCustomer ? (
+                <div className="py-10 px-4 text-center border border-dashed border-slate-200 dark:border-border rounded-2xl bg-slate-50/50 dark:bg-muted/20 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                    <Car className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      No Active Selection
+                    </p>
+                    <p className="text-[11px] text-slate-400 max-w-[210px] mx-auto leading-relaxed">
+                      Select an available vehicle and customer from the left to calculate rental charges, deposit, and dispatch preview.
+                    </p>
                   </div>
                 </div>
-              )}
-
-              {/* Customer preview box */}
-              {selectedCustomer && (
-                <div className="border border-slate-200 dark:border-border/80 rounded-2xl p-3.5 space-y-2 bg-white dark:bg-card">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                        {(selectedCustomer.profile?.full_name || 'S').charAt(0).toUpperCase()}
-                      </div>
+              ) : (
+                <>
+                  {/* Vehicle preview box */}
+                  {selectedVehicle && (
+                    <div className="border border-slate-200 dark:border-border/80 rounded-2xl p-3 flex items-center gap-3.5 bg-white dark:bg-card">
+                      <img
+                        src={
+                          (selectedVehicle as any).images?.find((img: any) => img.is_primary)?.url ||
+                          (selectedVehicle as any).images?.[0]?.url ||
+                          'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80'
+                        }
+                        alt={`${selectedVehicle.brand} ${selectedVehicle.model}`}
+                        className="w-14 h-10 rounded-lg object-cover bg-slate-50 shrink-0 border border-slate-100 dark:border-border/60"
+                      />
                       <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">
+                          VEHICLE
+                        </span>
                         <span className="font-bold text-slate-900 dark:text-white text-sm block leading-tight">
-                          {selectedCustomer.profile?.full_name || selectedCustomer.emergency_contact_name}
+                          {selectedVehicle.brand} {selectedVehicle.model}
                         </span>
-                        <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-slate-400" />
-                          {selectedCustomer.city || 'Jalore'}, {selectedCustomer.state || 'Rajasthan'}
+                        <span className="font-mono font-bold text-xs text-blue-600 block mt-0.5">
+                          {selectedVehicle.registration_number || '—'}
                         </span>
                       </div>
                     </div>
+                  )}
 
-                    <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                  </div>
+                  {/* Customer preview box */}
+                  {selectedCustomer && (
+                    <div className="border border-slate-200 dark:border-border/80 rounded-2xl p-3.5 space-y-2 bg-white dark:bg-card">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                            {(selectedCustomer.profile?.full_name || 'C').charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 dark:text-white text-sm block leading-tight">
+                              {selectedCustomer.profile?.full_name || selectedCustomer.emergency_contact_name}
+                            </span>
+                            <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                              <MapPin className="w-3 h-3 text-slate-400" />
+                              {selectedCustomer.city || 'Jalore'}, {selectedCustomer.state || 'Rajasthan'}
+                            </span>
+                          </div>
+                        </div>
 
-                  <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 pt-1">
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="w-3 h-3 text-slate-400" />
-                      <span>{selectedCustomer.profile?.phone || selectedCustomer.emergency_contact_phone}</span>
-                    </div>
-                    {selectedCustomer.profile?.email && (
-                      <div className="flex items-center gap-1.5 truncate">
-                        <Mail className="w-3 h-3 text-slate-400" />
-                        <span className="truncate">{selectedCustomer.profile.email}</span>
+                        <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                       </div>
-                    )}
-                  </div>
-                </div>
+
+                      <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 pt-1">
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3 h-3 text-slate-400" />
+                          <span>{selectedCustomer.profile?.phone || selectedCustomer.emergency_contact_phone}</span>
+                        </div>
+                        {selectedCustomer.profile?.email && (
+                          <div className="flex items-center gap-1.5 truncate">
+                            <Mail className="w-3 h-3 text-slate-400" />
+                            <span className="truncate">{selectedCustomer.profile.email}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Financial Breakdown Table */}
+                  {selectedVehicle ? (
+                    <div className="space-y-2 text-xs pt-1">
+                      <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                        <span>Base rental · {rentalDuration.text}</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200">
+                          ₹{calculatedBasePrice.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                        <span>Distance allowance</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200">
+                          {distanceAllowance > 0 ? `${distanceAllowance} km` : 'Unlimited'}
+                        </span>
+                      </div>
+
+                      {withInsurance && (
+                        <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                          <span>Zero-dep insurance</span>
+                          <span className="font-medium text-slate-800 dark:text-slate-200">
+                            ₹{insuranceFee.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+
+                      {withDriver && (
+                        <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                          <span>Professional driver</span>
+                          <span className="font-medium text-slate-800 dark:text-slate-200">
+                            ₹{driverFee.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                        <span>GST (18%)</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200">
+                          ₹{taxAmount.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                        <span>Refundable deposit</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200">
+                          ₹{secDep.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      <div className="border-t border-slate-100 dark:border-border/60 my-2 pt-2 flex justify-between items-baseline">
+                        <div>
+                          <span className="font-bold text-slate-800 dark:text-slate-100 text-sm block">
+                            Grand total
+                          </span>
+                          <span className="text-[10px] text-slate-400 block">
+                            Includes taxes & deposit
+                          </span>
+                        </div>
+                        <span className="text-2xl font-black text-blue-600 tracking-tight">
+                          ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+
+                      {/* Advance collected & Balance Due Breakdown */}
+                      <div className="space-y-2 pt-1">
+                        <div className="bg-slate-50 dark:bg-muted/40 border border-slate-200/80 dark:border-border/60 rounded-xl p-3 space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-600 dark:text-slate-400 font-medium">
+                              Advance collected now
+                            </span>
+                            <span className="text-slate-900 dark:text-slate-100 font-bold">
+                              ₹{advance.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+
+                          <div className="border-t border-slate-200/60 dark:border-border/40 pt-2 flex items-center justify-between">
+                            <div>
+                              <span className="font-bold text-slate-900 dark:text-white block">
+                                Balance due at return
+                              </span>
+                              <span className="text-[10px] text-slate-400 block">
+                                Payable on vehicle handover
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span
+                                className={cn(
+                                  'text-base font-extrabold block',
+                                  balanceDue > 0
+                                    ? 'text-amber-600 dark:text-amber-400'
+                                    : 'text-emerald-600 dark:text-emerald-400'
+                                )}
+                              >
+                                ₹{balanceDue.toLocaleString('en-IN', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
+                              {grandTotal > 0 && (
+                                <span
+                                  className={cn(
+                                    'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded inline-block mt-0.5',
+                                    balanceDue === 0
+                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                                      : advance > 0
+                                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
+                                      : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                  )}
+                                >
+                                  {balanceDue === 0
+                                    ? 'Fully Paid'
+                                    : advance > 0
+                                    ? 'Partially Paid'
+                                    : 'Payment Pending'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-6 px-4 text-center border border-dashed border-slate-200 dark:border-border rounded-2xl bg-slate-50/50 dark:bg-muted/20 space-y-1.5">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Choose a vehicle to preview fees
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        Vehicle pricing and security deposit will appear here.
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
-
-              {/* Financial Breakdown Table */}
-              <div className="space-y-2 text-xs pt-1">
-                <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                  <span>Base rental · {rentalDuration.text}</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">
-                    ₹{calculatedBasePrice.toLocaleString('en-IN')}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                  <span>Distance allowance</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">
-                    {distanceAllowance} km
-                  </span>
-                </div>
-
-                {withInsurance && (
-                  <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                    <span>Zero-dep insurance</span>
-                    <span className="font-medium text-slate-800 dark:text-slate-200">
-                      ₹{insuranceFee.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                )}
-
-                {withDriver && (
-                  <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                    <span>Professional driver</span>
-                    <span className="font-medium text-slate-800 dark:text-slate-200">
-                      ₹{driverFee.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                  <span>GST (18%)</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">
-                    ₹{taxAmount.toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                  <span>Refundable deposit</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">
-                    ₹{secDep.toLocaleString('en-IN')}
-                  </span>
-                </div>
-
-                <div className="border-t border-slate-100 dark:border-border/60 my-2 pt-2 flex justify-between items-baseline">
-                  <div>
-                    <span className="font-bold text-slate-800 dark:text-slate-100 text-sm block">
-                      Grand total
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">
-                      Includes taxes & deposit
-                    </span>
-                  </div>
-                  <span className="text-2xl font-black text-blue-600 tracking-tight">
-                    ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-
-                {/* Advance collected & Balance Due Breakdown */}
-                <div className="space-y-2 pt-1">
-                  <div className="bg-slate-50 dark:bg-muted/40 border border-slate-200/80 dark:border-border/60 rounded-xl p-3 space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600 dark:text-slate-400 font-medium">
-                        Advance collected now
-                      </span>
-                      <span className="text-slate-900 dark:text-slate-100 font-bold">
-                        ₹{advance.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-
-                    <div className="border-t border-slate-200/60 dark:border-border/40 pt-2 flex items-center justify-between">
-                      <div>
-                        <span className="font-bold text-slate-900 dark:text-white block">
-                          Balance due at return
-                        </span>
-                        <span className="text-[10px] text-slate-400 block">
-                          Payable on vehicle handover
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span
-                          className={cn(
-                            'text-base font-extrabold block',
-                            balanceDue > 0
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-emerald-600 dark:text-emerald-400'
-                          )}
-                        >
-                          ₹{balanceDue.toLocaleString('en-IN', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                        <span
-                          className={cn(
-                            'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded inline-block mt-0.5',
-                            balanceDue === 0
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-                              : advance > 0
-                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
-                              : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                          )}
-                        >
-                          {balanceDue === 0
-                            ? 'Fully Paid'
-                            : advance > 0
-                            ? 'Partially Paid'
-                            : 'Payment Pending'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* Confirm & assign car Button */}
               <AssignCarButton
@@ -1274,7 +1404,9 @@ export function AssignCarWorkflow({
               />
 
               <span className="text-[10px] text-slate-400 text-center block">
-                The vehicle will move to &apos;Running&apos; and rental tracking will begin.
+                {selectedVehicle && selectedCustomer
+                  ? "The vehicle will move to 'Running' and rental tracking will begin."
+                  : 'Select both vehicle and customer to enable car assignment.'}
               </span>
             </div>
           </div>

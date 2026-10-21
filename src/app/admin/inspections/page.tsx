@@ -25,32 +25,7 @@ async function getInspectionsData() {
 
 export default async function AdminInspectionsPage() {
   const inspections = await getInspectionsData()
-
-  // Demo fallback if database is new
-  const displayInspections = inspections.length > 0 ? inspections : [
-    {
-      id: 'insp-1',
-      inspection_type: 'pickup',
-      odometer: 15200,
-      fuel_level: 'full',
-      condition_rating: 5,
-      notes: 'No scratches, clean interior, spare tyre present.',
-      created_at: '2026-08-20T10:00:00Z',
-      vehicle: { brand: 'Hyundai', model: 'Creta', registration_number: 'RJ14-CR-2024' },
-      booking: { booking_number: 'BK-202608-1002' }
-    },
-    {
-      id: 'insp-2',
-      inspection_type: 'return',
-      odometer: 15680,
-      fuel_level: 'full',
-      condition_rating: 5,
-      notes: 'Vehicle returned in good condition. All accessories accounted for.',
-      created_at: '2026-08-18T16:30:00Z',
-      vehicle: { brand: 'Maruti Suzuki', model: 'Swift', registration_number: 'RJ14-SW-2024' },
-      booking: { booking_number: 'BK-202608-0994' }
-    }
-  ]
+  const displayInspections = inspections
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -78,7 +53,14 @@ export default async function AdminInspectionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {displayInspections.map((insp: any) => (
+              {displayInspections.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    No vehicle condition inspections recorded yet.
+                  </td>
+                </tr>
+              ) : (
+                displayInspections.map((insp: any) => (
                 <tr key={insp.id} className="hover:bg-muted/20 transition-colors">
                   <td className="p-4">
                     <Badge
@@ -123,7 +105,7 @@ export default async function AdminInspectionsPage() {
                     {insp.notes || '—'}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

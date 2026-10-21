@@ -88,46 +88,11 @@ export interface AdminInvoicesClientProps {
   initialInvoices: InvoiceRecord[]
 }
 
-const DEFAULT_DEMO_INVOICES: InvoiceRecord[] = [
-  {
-    id: 'inv-1',
-    invoice_number: 'INV-202608-1001',
-    invoice_date: '2026-08-20',
-    subtotal: 5400,
-    base_rental: 4350,
-    insurance_charge: 1050,
-    tax_rate: 18,
-    tax_amount: 972,
-    total: 6372,
-    amount_paid: 6372,
-    balance: 0,
-    is_paid: true,
-    customer: {
-      profile: {
-        full_name: 'Rahul Sharma',
-        email: 'rahul@example.com',
-        phone: '+91 98765 43210'
-      }
-    },
-    booking: {
-      booking_number: 'BK-202608-1002',
-      pickup_datetime: '2026-08-20T10:00:00Z',
-      return_datetime: '2026-08-23T16:00:00Z',
-      base_rental: 4350,
-      insurance_charge: 1050,
-      vehicle: {
-        brand: 'Hyundai',
-        model: 'Creta',
-        year: 2024,
-        registration_number: 'RJ14-CR-2024'
-      }
-    }
-  }
-]
+const DEFAULT_DEMO_INVOICES: InvoiceRecord[] = []
 
 export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProps) {
   const [invoices, setInvoices] = useState<InvoiceRecord[]>(
-    initialInvoices && initialInvoices.length > 0 ? initialInvoices : DEFAULT_DEMO_INVOICES
+    initialInvoices || []
   )
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null)
