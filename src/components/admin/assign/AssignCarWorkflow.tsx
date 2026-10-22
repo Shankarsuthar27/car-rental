@@ -1602,7 +1602,7 @@ export function AssignCarWorkflow({
 
       {/* QUICK ADD CUSTOMER MODAL */}
       <Dialog open={newCustModalOpen} onOpenChange={setNewCustModalOpen}>
-        <DialogContent className="max-w-md rounded-3xl">
+        <DialogContent hideCloseButton className="max-w-md rounded-3xl">
           <DialogHeader>
             <div className="flex items-center gap-2.5">
               <button
@@ -1708,14 +1708,14 @@ export function AssignCarWorkflow({
 
       {/* ASSIGNMENT SUCCESS MODAL */}
       <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
-        <DialogContent className="max-w-md rounded-3xl">
-          <div className="relative py-4 text-center space-y-4">
+        <DialogContent hideCloseButton className="max-w-md sm:max-w-lg rounded-3xl p-6">
+          <div className="relative pt-1 text-center space-y-4">
             <button
               type="button"
               onClick={() => {
                 setSuccessModalOpen(false)
               }}
-              className="absolute left-0 top-0 w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+              className="absolute left-0 top-0 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-muted dark:hover:bg-muted/80 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer shrink-0 shadow-xs"
               title="Back"
               aria-label="Back to assign page"
             >
@@ -1726,7 +1726,7 @@ export function AssignCarWorkflow({
             </div>
 
             <div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
                 Car Assigned Successfully!
               </h3>
               <p className="text-xs text-slate-500 mt-1">
@@ -1735,10 +1735,10 @@ export function AssignCarWorkflow({
             </div>
 
             {createdBooking && (
-              <div className="p-4 bg-slate-50 dark:bg-muted/40 border border-slate-200/80 dark:border-border/60 rounded-2xl text-xs text-left space-y-2 font-mono">
+              <div className="p-4 sm:p-5 bg-slate-50 dark:bg-muted/40 border border-slate-200/80 dark:border-border/60 rounded-2xl text-xs text-left space-y-2.5 font-mono">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">Rental ID:</span>
-                  <span className="font-bold text-blue-600">{createdBooking.booking_number}</span>
+                  <span className="font-bold text-blue-600 font-mono">{createdBooking.booking_number}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">Customer:</span>
@@ -1784,41 +1784,40 @@ export function AssignCarWorkflow({
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <div className="space-y-2.5 pt-3">
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSuccessModalOpen(false)
-                }}
-                className="w-full text-xs rounded-xl cursor-pointer"
-              >
-                + Assign Another Car
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSuccessModalOpen(false)
-                  router.push('/admin/dashboard')
-                }}
-                className="w-full text-xs rounded-xl cursor-pointer"
-              >
-                Return to Dashboard
-              </Button>
-              <Button
-                type="button"
-                size="sm"
                 onClick={() => {
                   setSuccessModalOpen(false)
                   router.push('/admin/bookings?status=active')
                 }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 text-xs font-bold rounded-xl cursor-pointer"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 text-sm font-bold h-10 rounded-xl cursor-pointer shadow-md shadow-blue-500/20 flex items-center justify-center gap-2"
               >
-                Track in Running Cars
+                <Car className="w-4 h-4" /> Track in Running Cars
               </Button>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setSuccessModalOpen(false)
+                  }}
+                  className="w-full h-9 text-xs font-semibold rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-muted"
+                >
+                  + Assign Another Car
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setSuccessModalOpen(false)
+                    router.push('/admin/dashboard')
+                  }}
+                  className="w-full h-9 text-xs font-semibold rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-muted"
+                >
+                  Return to Dashboard
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

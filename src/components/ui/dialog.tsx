@@ -43,7 +43,7 @@ const DialogContent = React.forwardRef<
     {
       className,
       children,
-      hideCloseButton,
+      hideCloseButton = true,
       closeOnOutsideClick = false,
       closeOnEscape = false,
       onPointerDownOutside,
