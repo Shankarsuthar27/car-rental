@@ -2413,9 +2413,9 @@ export function AdminBookingsClient({
                   type="button"
                   variant="outline"
                   onClick={() => setReturnModalOpen(false)}
-                  className="w-full sm:w-auto min-h-[42px] rounded-[6px] text-xs font-semibold border-[#E2E8F0] dark:border-border"
+                  className="w-full sm:w-auto min-h-[42px] rounded-[6px] text-xs font-semibold border-[#E2E8F0] dark:border-border gap-1.5 cursor-pointer"
                 >
-                  Cancel
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back
                 </Button>
                 <Button
                   type="submit"
@@ -2436,13 +2436,26 @@ export function AdminBookingsClient({
       <Dialog open={extendModalOpen} onOpenChange={setExtendModalOpen}>
         <DialogContent className="w-[95vw] max-w-md rounded-3xl p-5 sm:p-6 md:p-7">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2 text-foreground">
-              <Clock className="w-5 h-5 text-primary" aria-hidden="true" />
-              <span>Extend Rental Duration</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Extend return datetime for {selectedBooking?.vehicle?.brand} {selectedBooking?.vehicle?.model}.
-            </DialogDescription>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setExtendModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <div>
+                <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2 text-foreground">
+                  <Clock className="w-5 h-5 text-primary" aria-hidden="true" />
+                  <span>Extend Rental Duration</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Extend return datetime for {selectedBooking?.vehicle?.brand} {selectedBooking?.vehicle?.model}.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           {selectedBooking && (
@@ -2480,9 +2493,9 @@ export function AdminBookingsClient({
                   type="button"
                   variant="outline"
                   onClick={() => setExtendModalOpen(false)}
-                  className="w-full sm:w-auto min-h-[44px] rounded-xl text-xs font-semibold"
+                  className="w-full sm:w-auto min-h-[44px] rounded-xl text-xs font-semibold gap-1.5 cursor-pointer"
                 >
-                  Cancel
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back
                 </Button>
                 <Button
                   type="submit"
@@ -2503,13 +2516,26 @@ export function AdminBookingsClient({
       <Dialog open={viewDetailsOpen} onOpenChange={setViewDetailsOpen}>
         <DialogContent className="w-[96vw] max-w-lg max-h-[92dvh] overflow-y-auto rounded-3xl p-5 sm:p-6 md:p-7">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg font-black flex items-center gap-2 text-foreground">
-              <Receipt className="w-5 h-5 text-primary" aria-hidden="true" />
-              <span>Rental Record & Details</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs font-mono">
-              #{selectedBooking?.booking_number}
-            </DialogDescription>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setViewDetailsOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <div>
+                <DialogTitle className="text-base sm:text-lg font-black flex items-center gap-2 text-foreground">
+                  <Receipt className="w-5 h-5 text-primary" aria-hidden="true" />
+                  <span>Rental Record & Details</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs font-mono">
+                  #{selectedBooking?.booking_number}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           {selectedBooking && (
@@ -2556,9 +2582,9 @@ export function AdminBookingsClient({
                   type="button"
                   variant="outline"
                   onClick={() => setViewDetailsOpen(false)}
-                  className="w-full sm:w-auto min-h-[44px] text-xs rounded-xl cursor-pointer"
+                  className="w-full sm:w-auto min-h-[44px] text-xs rounded-xl cursor-pointer gap-1.5"
                 >
-                  Close
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back
                 </Button>
                 <Button
                   type="button"

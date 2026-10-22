@@ -23,7 +23,8 @@ import {
   CheckSquare,
   Square,
   Receipt,
-  RotateCcw
+  RotateCcw,
+  ArrowLeft
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AssignCarButton } from '@/components/ui/AssignCarButton'
@@ -177,14 +178,14 @@ export function AssignCarWorkflow({
   }, [selectedVehicle])
 
   // Deposit and Payment fields
-  const [securityDeposit, setSecurityDeposit] = useState<string>('0')
-  const [advancePayment, setAdvancePayment] = useState<string>('0')
+  const [securityDeposit, setSecurityDeposit] = useState<string>('')
+  const [advancePayment, setAdvancePayment] = useState<string>('')
 
   useEffect(() => {
-    if (selectedVehicle?.security_deposit) {
-      setSecurityDeposit(String(selectedVehicle.security_deposit))
+    if (selectedVehicle) {
+      setSecurityDeposit(selectedVehicle.security_deposit ? String(selectedVehicle.security_deposit) : '')
     } else {
-      setSecurityDeposit('0')
+      setSecurityDeposit('')
     }
   }, [selectedVehicle])
 
@@ -193,12 +194,31 @@ export function AssignCarWorkflow({
   const [gstRate, setGstRate] = useState('18')
   const [assignmentNotes, setAssignmentNotes] = useState('')
 
+  // Reset / Blank Rental terms & schedule
+  const resetRentalTermsAndSchedule = () => {
+    hasUserModifiedDates.current = true
+    setPickupDatetime('')
+    setReturnDatetime('')
+    setCustomDailyRate('')
+    setStartingKm('')
+    setSecurityDeposit('')
+    setAdvancePayment('')
+    setWithGst(false)
+    setGstRate('18')
+    setAssignmentNotes('')
+    setSelectedVehicleId('')
+    setSelectedCustomerId('')
+  }
+
   // Duration calculation
   const rentalDuration = useMemo(() => {
+    if (!pickupDatetime || !returnDatetime) {
+      return { hours: 0, days: 0, text: '—', isValid: false }
+    }
     const start = new Date(pickupDatetime)
     const end = new Date(returnDatetime)
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      return { hours: 24, days: 1, text: '1 day', isValid: false }
+      return { hours: 0, days: 0, text: '—', isValid: false }
     }
 
     const totalHours = Math.max(1, differenceInHours(end, start))
@@ -215,8 +235,8 @@ export function AssignCarWorkflow({
   const defaultDailyRate = selectedVehicle?.daily_rate || 0
   const dailyRate = customDailyRate !== '' ? Math.max(0, Number(customDailyRate) || 0) : defaultDailyRate
   const isRateModified = selectedVehicle ? dailyRate !== defaultDailyRate : false
-  const calculatedBasePrice = selectedVehicle ? dailyRate * rentalDuration.days : 0
-  const distanceAllowance = selectedVehicle ? rentalDuration.days * (selectedVehicle.included_km_per_day || 0) : 0
+  const calculatedBasePrice = (selectedVehicle && rentalDuration.isValid) ? dailyRate * rentalDuration.days : 0
+  const distanceAllowance = (selectedVehicle && rentalDuration.isValid) ? rentalDuration.days * (selectedVehicle.included_km_per_day || 0) : 0
 
   const secDep = selectedVehicle ? Math.max(0, Number(securityDeposit) || 0) : 0
   const advance = Math.max(0, Number(advancePayment) || 0)
@@ -339,8 +359,24 @@ export function AssignCarWorkflow({
       return
     }
 
+    if (!pickupDatetime || !returnDatetime) {
+      setErrorMessage('Please set both Pickup and Return dates & times in Rental terms & schedule.')
+      return
+    }
+
     setSubmitting(true)
     setErrorMessage(null)
+
+    // Capture values before reset
+    const snapshotDailyRate = dailyRate
+    const snapshotIsRateModified = isRateModified
+    const snapshotGrandTotal = grandTotal
+    const snapshotAdvance = advance
+    const snapshotBalanceDue = balanceDue
+    const snapshotTaxRate = withGst ? effectiveGstRate : 0
+    const snapshotTaxAmount = taxAmount
+    const snapshotCustomer = selectedCustomer
+    const snapshotVehicle = selectedVehicle
 
     try {
       const payload = {
@@ -374,42 +410,51 @@ export function AssignCarWorkflow({
       if (res.ok && result.success) {
         const enrichedBooking = {
           ...result.data,
-          customer: result.data?.customer ? formatCustomer(result.data.customer) : selectedCustomer,
-          vehicle: result.data?.vehicle || selectedVehicle,
-          grand_total: grandTotal,
-          amount_paid: advance,
-          outstanding_amount: balanceDue,
-          tax_rate: withGst ? effectiveGstRate : 0,
-          tax_amount: taxAmount,
+          customer: result.data?.customer ? formatCustomer(result.data.customer) : snapshotCustomer,
+          vehicle: result.data?.vehicle || snapshotVehicle,
+          daily_rate: snapshotDailyRate,
+          is_rate_modified: snapshotIsRateModified,
+          grand_total: snapshotGrandTotal,
+          amount_paid: snapshotAdvance,
+          outstanding_amount: snapshotBalanceDue,
+          tax_rate: snapshotTaxRate,
+          tax_amount: snapshotTaxAmount,
         }
         setCreatedBooking(enrichedBooking)
         setSuccessModalOpen(true)
+        resetRentalTermsAndSchedule()
       } else {
         // Fallback simulation for live demonstration
         setCreatedBooking({
           booking_number: `BK-${Date.now().toString().slice(-6)}`,
-          customer: selectedCustomer,
-          vehicle: selectedVehicle,
-          grand_total: grandTotal,
-          amount_paid: advance,
-          outstanding_amount: balanceDue,
-          tax_rate: withGst ? effectiveGstRate : 0,
-          tax_amount: taxAmount,
+          customer: snapshotCustomer,
+          vehicle: snapshotVehicle,
+          daily_rate: snapshotDailyRate,
+          is_rate_modified: snapshotIsRateModified,
+          grand_total: snapshotGrandTotal,
+          amount_paid: snapshotAdvance,
+          outstanding_amount: snapshotBalanceDue,
+          tax_rate: snapshotTaxRate,
+          tax_amount: snapshotTaxAmount,
         })
         setSuccessModalOpen(true)
+        resetRentalTermsAndSchedule()
       }
     } catch {
       setCreatedBooking({
         booking_number: `BK-${Date.now().toString().slice(-6)}`,
-        customer: selectedCustomer,
-        vehicle: selectedVehicle,
-        grand_total: grandTotal,
-        amount_paid: advance,
-        outstanding_amount: balanceDue,
-        tax_rate: withGst ? effectiveGstRate : 0,
-        tax_amount: taxAmount,
+        customer: snapshotCustomer,
+        vehicle: snapshotVehicle,
+        daily_rate: snapshotDailyRate,
+        is_rate_modified: snapshotIsRateModified,
+        grand_total: snapshotGrandTotal,
+        amount_paid: snapshotAdvance,
+        outstanding_amount: snapshotBalanceDue,
+        tax_rate: snapshotTaxRate,
+        tax_amount: snapshotTaxAmount,
       })
       setSuccessModalOpen(true)
+      resetRentalTermsAndSchedule()
     } finally {
       setSubmitting(false)
     }
@@ -775,18 +820,28 @@ export function AssignCarWorkflow({
 
           {/* STEP 3: RENTAL TERMS & SCHEDULE */}
           <div className="bg-white dark:bg-card border border-slate-200/90 dark:border-border/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center shrink-0">
-                3
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center shrink-0">
+                  3
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
+                    Rental terms & schedule
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Set dates, charges and handover details.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
-                  Rental terms & schedule
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Set dates, charges and handover details.
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={resetRentalTermsAndSchedule}
+                className="text-[11px] font-semibold text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-muted shrink-0"
+                title="Make rental terms, schedule and charges blank"
+              >
+                <RotateCcw className="w-3 h-3" /> Clear blank
+              </button>
             </div>
 
             {/* Row 1: Dates */}
@@ -907,7 +962,7 @@ export function AssignCarWorkflow({
                 { label: '5 Days', hours: 120 },
                 { label: '7 Days (1 Wk)', hours: 168 },
               ].map(preset => {
-                const isCurrent = rentalDuration.hours === preset.hours
+                const isCurrent = rentalDuration.hours === preset.hours && rentalDuration.isValid
                 return (
                   <button
                     key={preset.label}
@@ -915,6 +970,9 @@ export function AssignCarWorkflow({
                     onClick={() => {
                       hasUserModifiedDates.current = true
                       const start = pickupDatetime ? new Date(pickupDatetime) : new Date()
+                      if (!pickupDatetime) {
+                        setPickupDatetime(toDateTimeLocalString(start))
+                      }
                       const newEnd = new Date(start.getTime() + preset.hours * 60 * 60 * 1000)
                       setReturnDatetime(toDateTimeLocalString(newEnd))
                     }}
@@ -1546,12 +1604,25 @@ export function AssignCarWorkflow({
       <Dialog open={newCustModalOpen} onOpenChange={setNewCustModalOpen}>
         <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" /> Register New Customer
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Quickly add customer profile details to proceed with car assignment.
-            </DialogDescription>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setNewCustModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <div>
+                <DialogTitle className="text-base font-bold flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" /> Register New Customer
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Quickly add customer profile details to proceed with car assignment.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <form onSubmit={handleQuickAddCustomer} className="space-y-3.5 pt-2">
@@ -1618,9 +1689,9 @@ export function AssignCarWorkflow({
                 variant="outline"
                 size="sm"
                 onClick={() => setNewCustModalOpen(false)}
-                className="text-xs rounded-xl"
+                className="text-xs rounded-xl gap-1.5 cursor-pointer"
               >
-                Cancel
+                <ArrowLeft className="w-3.5 h-3.5" /> Back
               </Button>
               <Button
                 type="submit"
@@ -1638,7 +1709,18 @@ export function AssignCarWorkflow({
       {/* ASSIGNMENT SUCCESS MODAL */}
       <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
         <DialogContent className="max-w-md rounded-3xl">
-          <div className="py-4 text-center space-y-4">
+          <div className="relative py-4 text-center space-y-4">
+            <button
+              type="button"
+              onClick={() => {
+                setSuccessModalOpen(false)
+              }}
+              className="absolute left-0 top-0 w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+              title="Back"
+              aria-label="Back to assign page"
+            >
+              <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+            </button>
             <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 className="w-10 h-10 animate-bounce" />
             </div>
@@ -1673,30 +1755,30 @@ export function AssignCarWorkflow({
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">Rental Rate:</span>
                   <span className="font-sans font-bold text-slate-800 dark:text-slate-100 text-right">
-                    ₹{dailyRate.toLocaleString('en-IN')}/day
-                    {isRateModified && <span className="text-[10px] text-blue-600 font-semibold ml-1">(Custom)</span>}
+                    ₹{Number(createdBooking.daily_rate ?? 0).toLocaleString('en-IN')}/day
+                    {createdBooking.is_rate_modified && <span className="text-[10px] text-blue-600 font-semibold ml-1">(Custom)</span>}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">Grand Total:</span>
-                  <span className="font-bold text-blue-600">₹{Number(createdBooking.grand_total || grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="font-bold text-blue-600">₹{Number(createdBooking.grand_total ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">GST Tax Status:</span>
                   <span className="font-sans font-bold text-slate-800 dark:text-slate-100 text-right">
-                    {(createdBooking.tax_rate ?? (withGst ? effectiveGstRate : 0)) > 0
-                      ? `₹${Number(createdBooking.tax_amount ?? taxAmount).toFixed(2)} (${createdBooking.tax_rate ?? effectiveGstRate}%)`
+                    {(createdBooking.tax_rate ?? 0) > 0
+                      ? `₹${Number(createdBooking.tax_amount ?? 0).toFixed(2)} (${createdBooking.tax_rate}%)`
                       : 'GST Removed / Exempt (₹0)'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">Advance Collected:</span>
-                  <span className="font-bold text-emerald-600">₹{Number(createdBooking.amount_paid ?? advance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="font-bold text-emerald-600">₹{Number(createdBooking.amount_paid ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">Balance Due at Return:</span>
-                  <span className={cn('font-bold', (createdBooking.outstanding_amount ?? balanceDue) > 0 ? 'text-amber-600' : 'text-emerald-600')}>
-                    ₹{Number(createdBooking.outstanding_amount ?? balanceDue).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span className={cn('font-bold', Number(createdBooking.outstanding_amount ?? 0) > 0 ? 'text-amber-600' : 'text-emerald-600')}>
+                    ₹{Number(createdBooking.outstanding_amount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -1709,9 +1791,20 @@ export function AssignCarWorkflow({
                 size="sm"
                 onClick={() => {
                   setSuccessModalOpen(false)
+                }}
+                className="w-full text-xs rounded-xl cursor-pointer"
+              >
+                + Assign Another Car
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSuccessModalOpen(false)
                   router.push('/admin/dashboard')
                 }}
-                className="w-full text-xs rounded-xl"
+                className="w-full text-xs rounded-xl cursor-pointer"
               >
                 Return to Dashboard
               </Button>
@@ -1722,9 +1815,9 @@ export function AssignCarWorkflow({
                   setSuccessModalOpen(false)
                   router.push('/admin/bookings?status=active')
                 }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 text-xs font-bold rounded-xl"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 text-xs font-bold rounded-xl cursor-pointer"
               >
-                Track in Running Cars 🚗
+                Track in Running Cars
               </Button>
             </div>
           </div>

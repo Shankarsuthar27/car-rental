@@ -35,7 +35,8 @@ import {
   ChevronRight,
   Layers,
   LayoutGrid,
-  List
+  List,
+  ArrowLeft
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -1125,8 +1126,19 @@ export function AdminVehiclesClient({
       <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl p-6">
           <DialogHeader>
-            <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
-              <Plus className="w-4 h-4" /> New Fleet Registration
+            <div className="flex items-center gap-2.5 mb-1">
+              <button
+                type="button"
+                onClick={() => setAddModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+                <Plus className="w-4 h-4" /> New Fleet Registration
+              </div>
             </div>
             <DialogTitle className="text-xl font-black">Register New Fleet Vehicle</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
@@ -1419,9 +1431,9 @@ export function AdminVehiclesClient({
                 variant="outline"
                 size="sm"
                 onClick={() => setAddModalOpen(false)}
-                className="rounded-xl text-xs"
+                className="rounded-xl text-xs gap-1.5 cursor-pointer"
               >
-                Cancel
+                <ArrowLeft className="w-3.5 h-3.5" /> Back
               </Button>
               <Button
                 type="submit"
@@ -1450,8 +1462,19 @@ export function AdminVehiclesClient({
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl p-6">
           <DialogHeader>
-            <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
-              <Edit className="w-4 h-4" /> Edit Fleet Specs
+            <div className="flex items-center gap-2.5 mb-1">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+                <Edit className="w-4 h-4" /> Edit Fleet Specs
+              </div>
             </div>
             <DialogTitle className="text-xl font-black">
               Edit Vehicle — {editBrand} {editModel}
@@ -1756,9 +1779,9 @@ export function AdminVehiclesClient({
                 variant="outline"
                 size="sm"
                 onClick={() => setEditModalOpen(false)}
-                className="rounded-xl text-xs"
+                className="rounded-xl text-xs gap-1.5 cursor-pointer"
               >
-                Cancel
+                <ArrowLeft className="w-3.5 h-3.5" /> Back
               </Button>
               <Button
                 type="submit"
@@ -1833,9 +1856,9 @@ export function AdminVehiclesClient({
               variant="outline"
               size="sm"
               onClick={() => setDeleteModalOpen(false)}
-              className="rounded-xl text-xs"
+              className="rounded-xl text-xs gap-1.5 cursor-pointer"
             >
-              Cancel
+              <ArrowLeft className="w-3.5 h-3.5" /> Back
             </Button>
             <Button
               type="button"

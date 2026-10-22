@@ -32,6 +32,7 @@ export function AdminLayoutClient({ children, profile }: AdminLayoutClientProps)
           <AdminSidebar
             collapsed={false}
             onToggle={() => setMobileOpen(false)}
+            
           />
         </SheetContent>
       </Sheet>

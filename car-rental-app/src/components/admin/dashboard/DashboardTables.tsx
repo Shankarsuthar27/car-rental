@@ -108,7 +108,7 @@ export function DashboardTables({
             </TabsTrigger>
           </TabsList>
         </div>
-
+        
         {/* 1. RECENT ASSIGNMENTS TABLE */}
         <TabsContent value="assignments" className="m-0">
           <div className="overflow-x-auto">

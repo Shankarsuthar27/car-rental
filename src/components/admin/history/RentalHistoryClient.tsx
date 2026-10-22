@@ -25,7 +25,8 @@ import {
   ChevronRight,
   TrendingUp,
   MapPin,
-  Sparkles
+  Sparkles,
+  ArrowLeft
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AssignCarButton } from '@/components/ui/AssignCarButton'
@@ -971,9 +972,20 @@ export function RentalHistoryClient({
               {/* Modal Header */}
               <DialogHeader className="space-y-2 text-left">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-black text-primary px-2.5 py-1 rounded-lg bg-primary/10">
-                    {selectedBookingDetails.booking_number}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBookingDetails(null)}
+                      className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                      title="Back"
+                      aria-label="Back"
+                    >
+                      <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+                    </button>
+                    <span className="text-xs font-mono font-black text-primary px-2.5 py-1 rounded-lg bg-primary/10">
+                      {selectedBookingDetails.booking_number}
+                    </span>
+                  </div>
                   {getStatusBadge(selectedBookingDetails.status)}
                 </div>
                 <DialogTitle className="text-xl font-black text-foreground">
@@ -1156,9 +1168,10 @@ export function RentalHistoryClient({
                 </Link>
                 <Button
                   onClick={() => setSelectedBookingDetails(null)}
-                  className="w-full sm:w-auto text-xs font-bold rounded-xl"
+                  variant="outline"
+                  className="w-full sm:w-auto text-xs font-bold rounded-xl gap-1.5 cursor-pointer"
                 >
-                  Close Details
+                  <ArrowLeft className="w-4 h-4" /> Back
                 </Button>
               </DialogFooter>
             </div>

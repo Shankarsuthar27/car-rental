@@ -4,7 +4,8 @@ import { useState } from 'react'
 import {
   CreditCard,
   Search,
-  Plus
+  Plus,
+  ArrowLeft
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -114,9 +115,20 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-primary" /> Record Cash / Manual Payment
-              </DialogTitle>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setManualModalOpen(false)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                  title="Back"
+                  aria-label="Back"
+                >
+                  <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+                </button>
+                <DialogTitle className="text-base font-bold flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-primary" /> Record Cash / Manual Payment
+                </DialogTitle>
+              </div>
             </DialogHeader>
 
             <form onSubmit={handleRecordPayment} className="space-y-3 pt-2">
@@ -172,8 +184,9 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
                   variant="outline"
                   size="sm"
                   onClick={() => setManualModalOpen(false)}
+                  className="gap-1.5 cursor-pointer"
                 >
-                  Cancel
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back
                 </Button>
                 <Button
                   type="submit"

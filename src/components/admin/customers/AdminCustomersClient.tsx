@@ -46,6 +46,7 @@ import {
   Copy,
   ChevronDown,
   ChevronLeft,
+  ArrowLeft,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AssignCarButton } from '@/components/ui/AssignCarButton'
@@ -1850,8 +1851,19 @@ export function AdminCustomersClient({
       <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
         <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
-            <div className="w-11 h-11 rounded-2xl gradient-brand text-white flex items-center justify-center mb-1">
-              <Users className="w-5 h-5" />
+            <div className="flex items-center gap-2.5 mb-1">
+              <button
+                type="button"
+                onClick={() => setAddModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <div className="w-10 h-10 rounded-2xl gradient-brand text-white flex items-center justify-center">
+                <Users className="w-5 h-5" />
+              </div>
             </div>
             <DialogTitle className="text-lg font-bold">Register New Customer</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
@@ -1982,9 +1994,9 @@ export function AdminCustomersClient({
                 variant="outline"
                 size="sm"
                 onClick={() => setAddModalOpen(false)}
-                className="text-xs rounded-xl"
+                className="text-xs rounded-xl gap-1.5 cursor-pointer"
               >
-                Cancel
+                <ArrowLeft className="w-3.5 h-3.5" /> Back
               </Button>
               <Button
                 type="submit"
@@ -2005,9 +2017,20 @@ export function AdminCustomersClient({
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-black flex items-center gap-2">
-              <Edit className="w-5 h-5 text-primary" /> Edit Customer Profile
-            </DialogTitle>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <DialogTitle className="text-base font-black flex items-center gap-2">
+                <Edit className="w-5 h-5 text-primary" /> Edit Customer Profile
+              </DialogTitle>
+            </div>
           </DialogHeader>
 
           <form onSubmit={handleEditCustomer} className="space-y-3.5 pt-2">
@@ -2140,9 +2163,9 @@ export function AdminCustomersClient({
                   variant="outline"
                   size="sm"
                   onClick={() => setEditModalOpen(false)}
-                  className="text-xs rounded-xl"
+                  className="text-xs rounded-xl gap-1.5 cursor-pointer"
                 >
-                  Cancel
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back
                 </Button>
                 <Button
                   type="submit"
@@ -2165,7 +2188,16 @@ export function AdminCustomersClient({
         <DialogContent className="max-w-2xl w-[96vw] max-h-[92dvh] overflow-y-auto rounded-3xl p-5 sm:p-7 md:p-8 bg-[#f8fafc] dark:bg-background border border-slate-200/80 dark:border-border/80 shadow-2xl">
           <DialogHeader className="pb-2 border-b border-slate-200/60 dark:border-border/60">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setViewDetailsOpen(false)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                  title="Back"
+                  aria-label="Back"
+                >
+                  <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+                </button>
                 <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/60">
                   <FileCheck2 className="w-5 h-5 stroke-[2]" />
                 </div>
@@ -2494,9 +2526,9 @@ export function AdminCustomersClient({
                     variant="outline"
                     size="sm"
                     onClick={() => setViewDetailsOpen(false)}
-                    className="text-xs h-9 px-3 rounded-xl cursor-pointer font-semibold"
+                    className="text-xs h-9 px-3 rounded-xl cursor-pointer font-semibold gap-1.5"
                   >
-                    Close
+                    <ArrowLeft className="w-3.5 h-3.5" /> Back
                   </Button>
 
                   <AssignCarButton href={`/admin/assign?customer_id=${selectedCust.id}`} size="sm" />
@@ -2570,9 +2602,9 @@ export function AdminCustomersClient({
               variant="outline"
               size="sm"
               onClick={() => setDeleteModalOpen(false)}
-              className="rounded-xl text-xs"
+              className="rounded-xl text-xs gap-1.5 cursor-pointer"
             >
-              Cancel
+              <ArrowLeft className="w-3.5 h-3.5" /> Back
             </Button>
             <Button
               type="button"

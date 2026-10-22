@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   CheckCircle2,
   X,
-  Building2
+  Building2,
+  ArrowLeft
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -527,13 +528,26 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="w-[95vw] max-w-md rounded-3xl p-5 sm:p-6 md:p-7">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg font-black flex items-center gap-2 text-foreground">
-              <DollarSign className="w-5 h-5 text-primary" aria-hidden="true" />
-              <span>Edit Invoice Breakdown</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Adjust Base Rental, Insurance, and GST rate for invoice #{selectedInvoice?.invoice_number}.
-            </DialogDescription>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setEditOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <div>
+                <DialogTitle className="text-base sm:text-lg font-black flex items-center gap-2 text-foreground">
+                  <DollarSign className="w-5 h-5 text-primary" aria-hidden="true" />
+                  <span>Edit Invoice Breakdown</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Adjust Base Rental, Insurance, and GST rate for invoice #{selectedInvoice?.invoice_number}.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <form onSubmit={handleSaveInvoice} className="space-y-4 pt-2">
@@ -603,9 +617,9 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                 type="button"
                 variant="outline"
                 onClick={() => setEditOpen(false)}
-                className="w-full sm:w-auto min-h-[44px] rounded-xl text-xs font-semibold"
+                className="w-full sm:w-auto min-h-[44px] rounded-xl text-xs font-semibold gap-1.5 cursor-pointer"
               >
-                Cancel
+                <ArrowLeft className="w-3.5 h-3.5" /> Back
               </Button>
               <Button
                 type="submit"
@@ -630,6 +644,15 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 sm:pb-6 border-b border-border">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewOpen(false)}
+                      className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-primary transition-colors cursor-pointer shrink-0 print:hidden"
+                      title="Back"
+                      aria-label="Back"
+                    >
+                      <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+                    </button>
                     <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 ring-2 ring-primary/25 bg-slate-950 shadow-sm flex items-center justify-center">
                       <Image
                         src="/logo.png"
@@ -753,19 +776,29 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
               </div>
 
               {/* Modal Footer with Minimum 44px Button */}
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2 print:hidden">
                 <span className="text-[11px] text-muted-foreground italic text-center sm:text-left">
                   This is a computer generated digital tax invoice.
                 </span>
-                <Button
-                  type="button"
-                  onClick={handlePrint}
-                  className="w-full sm:w-auto min-h-[44px] gradient-brand text-white border-0 font-bold gap-2 rounded-xl"
-                  aria-label="Print or download invoice PDF"
-                >
-                  <Printer className="w-4 h-4" aria-hidden="true" />
-                  <span>Print / Save PDF</span>
-                </Button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setPreviewOpen(false)}
+                    className="w-full sm:w-auto min-h-[44px] rounded-xl text-xs font-semibold gap-1.5 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Back
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handlePrint}
+                    className="w-full sm:w-auto min-h-[44px] gradient-brand text-white border-0 font-bold gap-2 rounded-xl cursor-pointer"
+                    aria-label="Print or download invoice PDF"
+                  >
+                    <Printer className="w-4 h-4" aria-hidden="true" />
+                    <span>Print / Save PDF</span>
+                  </Button>
+                </div>
               </div>
             </div>
           )}
