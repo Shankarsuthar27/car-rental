@@ -851,28 +851,16 @@ export function AdminVehiclesClient({
                       </div>
 
                       {/* Action Buttons Row */}
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          asChild
-                          className="min-h-[40px] text-xs font-semibold rounded-xl border-border hover:bg-muted"
-                        >
-                          <Link href={`/cars/${v.id}`} target="_blank">
-                            View Details
-                          </Link>
-                        </Button>
-
+                      <div className="pt-1">
                         {v.status === 'available' ? (
-                          <AssignCarButton href={`/admin/assign?vehicle_id=${v.id}`} size="sm" />
+                          <AssignCarButton href={`/admin/assign?vehicle_id=${v.id}`} size="sm" fullWidth />
                         ) : v.status === 'rented' ? (
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             asChild
-                            className="min-h-[40px] text-xs text-blue-600 border-blue-500/30 hover:bg-blue-500/10 rounded-xl font-semibold gap-1"
+                            className="w-full min-h-[40px] text-xs text-blue-600 border-blue-500/30 hover:bg-blue-500/10 rounded-xl font-semibold gap-1"
                           >
                             <Link href={`/admin/bookings?status=active`}>
                               <Key className="w-3.5 h-3.5" /> Running
@@ -884,7 +872,7 @@ export function AdminVehiclesClient({
                             variant="outline"
                             size="sm"
                             onClick={() => openEditModal(v)}
-                            className="min-h-[40px] text-xs text-muted-foreground border-border hover:bg-muted rounded-xl font-semibold capitalize"
+                            className="w-full min-h-[40px] text-xs text-muted-foreground border-border hover:bg-muted rounded-xl font-semibold capitalize"
                           >
                             {v.status === 'inactive' ? 'Unavailable' : v.status}
                           </Button>

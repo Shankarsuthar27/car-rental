@@ -43,6 +43,7 @@ import {
   UserCheck,
   ChevronRight,
   Check,
+  Copy,
   ChevronDown,
   ChevronLeft,
 } from 'lucide-react'
@@ -195,6 +196,15 @@ export function AdminCustomersClient({
   const [selectedCust, setSelectedCust] = useState<Customer | null>(null)
   const [reviewNotes, setReviewNotes] = useState('')
   const [processing, setProcessing] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+
+  const copyToClipboard = (text: string, field: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 2000)
+    }
+  }
 
   // Add Customer Form
   const [addName, setAddName] = useState('')
@@ -2152,159 +2162,278 @@ export function AdminCustomersClient({
       {/* 8. VIEW CUSTOMER DOSSIER & KYC REVIEW MODAL */}
       {/* ──────────────────────────────────────────────────────────── */}
       <Dialog open={viewDetailsOpen} onOpenChange={setViewDetailsOpen}>
-        <DialogContent className="max-w-lg rounded-3xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-base font-black flex items-center gap-2">
-              <FileCheck2 className="w-5 h-5 text-primary" /> Customer Dossier & KYC
-            </DialogTitle>
-            <DialogDescription className="text-xs font-mono">
-              {selectedCust?.customer_code || selectedCust?.id}
-            </DialogDescription>
+        <DialogContent className="max-w-2xl w-[96vw] max-h-[92dvh] overflow-y-auto rounded-3xl p-5 sm:p-7 md:p-8 bg-[#f8fafc] dark:bg-background border border-slate-200/80 dark:border-border/80 shadow-2xl">
+          <DialogHeader className="pb-2 border-b border-slate-200/60 dark:border-border/60">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/60">
+                  <FileCheck2 className="w-5 h-5 stroke-[2]" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                    <span>Customer Dossier & KYC</span>
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-500 dark:text-muted-foreground mt-0.5">
+                    Detailed identity verification profile, contact dossier & fleet history
+                  </DialogDescription>
+                </div>
+              </div>
+              <Badge variant="outline" className="font-mono text-xs font-bold px-2.5 py-1 bg-white dark:bg-card border-slate-300 dark:border-border text-slate-800 dark:text-slate-200 shrink-0">
+                {selectedCust?.customer_code || selectedCust?.id?.slice(0, 8)}
+              </Badge>
+            </div>
           </DialogHeader>
 
           {selectedCust && (
             <div className="space-y-4 pt-2 text-xs">
               {/* Profile Card with Quick WhatsApp */}
-              <div className="p-4 bg-muted/40 rounded-2xl border border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      'w-12 h-12 rounded-2xl bg-gradient-to-br text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm',
-                      getAvatarGradient(selectedCust.profile?.full_name || '')
-                    )}
-                  >
-                    {selectedCust.profile?.full_name?.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-black text-sm text-foreground">
-                        {selectedCust.profile?.full_name}
-                      </span>
-                      {(Number(selectedCust.total_spent || 0) >= 10000 ||
-                        (selectedCust.total_rentals || 0) >= 3) && (
-                        <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-0 text-[9px] font-bold px-1.5 py-0 flex items-center gap-0.5">
-                          <Sparkles className="w-2.5 h-2.5" /> VIP
-                        </Badge>
+              <div className="p-4 sm:p-5 bg-white dark:bg-card rounded-[8px] border border-[#E2E8F0] dark:border-border shadow-2xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3.5 min-w-0">
+                    <div
+                      className={cn(
+                        'w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br text-white flex items-center justify-center font-black text-base sm:text-lg shrink-0 shadow-sm shadow-blue-500/20 border-2 border-white dark:border-card',
+                        getAvatarGradient(selectedCust.profile?.full_name || '')
                       )}
-                    </div>
-                    <span className="text-muted-foreground text-[11px] block">
-                      📞 {selectedCust.profile?.phone || 'No phone'}
-                    </span>
-                    <span className="text-muted-foreground text-[10px] block">
-                      ✉️ {selectedCust.profile?.email}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex sm:flex-col items-end gap-1.5">
-                  {renderKycBadge(selectedCust.kyc_status)}
-
-                  {selectedCust.profile?.phone && (
-                    <a
-                      href={getWhatsAppUrl(
-                        selectedCust.profile.phone,
-                        selectedCust.profile.full_name || 'Customer'
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold text-[10px] hover:bg-emerald-500/25 transition-colors flex items-center gap-1"
                     >
-                      <MessageCircle className="w-3 h-3" /> WhatsApp
-                    </a>
-                  )}
+                      {getAvatarInitials(selectedCust.profile?.full_name || 'CU')}
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-black text-base sm:text-lg text-slate-900 dark:text-white tracking-tight truncate">
+                          {selectedCust.profile?.full_name || 'Valued Customer'}
+                        </h3>
+                        {(Number(selectedCust.total_spent || 0) >= 10000 ||
+                          (selectedCust.total_rentals || 0) >= 3) && (
+                          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-0 text-[10px] font-bold px-2 py-0.5 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500" /> VIP
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Contact details */}
+                      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-slate-600 dark:text-slate-300 font-medium">
+                        {selectedCust.profile?.phone ? (
+                          <a
+                            href={`tel:${selectedCust.profile.phone}`}
+                            className="inline-flex items-center gap-1.5 hover:text-blue-600 transition-colors"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-blue-600" />
+                            <span>{selectedCust.profile.phone}</span>
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                            <Phone className="w-3.5 h-3.5" /> No phone
+                          </span>
+                        )}
+
+                        {selectedCust.profile?.email && (
+                          <a
+                            href={`mailto:${selectedCust.profile.email}`}
+                            className="inline-flex items-center gap-1.5 hover:text-blue-600 transition-colors truncate max-w-[260px]"
+                          >
+                            <Mail className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="truncate">{selectedCust.profile.email}</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KYC Status & WhatsApp */}
+                  <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-border/60">
+                    <div>{renderKycBadge(selectedCust.kyc_status)}</div>
+
+                    {selectedCust.profile?.phone && (
+                      <a
+                        href={getWhatsAppUrl(
+                          selectedCust.profile.phone,
+                          selectedCust.profile.full_name || 'Customer'
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 fill-current" />
+                        <span>WhatsApp</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Stats Summary Grid */}
-              <div className="grid grid-cols-3 gap-2.5">
-                <div className="p-3 bg-muted/20 border border-border/60 rounded-2xl">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                    Rentals
-                  </span>
-                  <span className="text-base font-black text-foreground">
-                    {selectedCust.total_rentals || 0} Trips
-                  </span>
+              {/* Stats Summary Grid (3 Cards) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card shadow-2xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-muted-foreground">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Total Rentals</span>
+                    <Car className="w-4 h-4 text-blue-600 stroke-[1.8]" />
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                    {selectedCust.total_rentals || 0} <span className="text-xs font-semibold text-slate-500">Trips</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-muted-foreground">
+                    Completed bookings
+                  </div>
                 </div>
 
-                <div className="p-3 bg-muted/20 border border-border/60 rounded-2xl">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                    Lifetime Spend
-                  </span>
-                  <span className="text-base font-black font-mono text-primary">
+                <div className="p-3.5 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card shadow-2xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-muted-foreground">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Lifetime Spend</span>
+                    <TrendingUp className="w-4 h-4 text-emerald-600 stroke-[1.8]" />
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
                     ₹{Number(selectedCust.total_spent || 0).toLocaleString('en-IN')}
-                  </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-muted-foreground">
+                    Gross revenue contribution
+                  </div>
                 </div>
 
-                <div className="p-3 bg-muted/20 border border-border/60 rounded-2xl">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                    Balance Due
-                  </span>
-                  <span className="text-base font-black font-mono text-foreground">
+                <div className="p-3.5 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card shadow-2xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-muted-foreground">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Balance Due</span>
+                    <CreditCard className="w-4 h-4 text-slate-400 stroke-[1.8]" />
+                  </div>
+                  <div className={cn(
+                    'text-xl sm:text-2xl font-black font-mono',
+                    Number(selectedCust.outstanding_balance || 0) > 0 ? 'text-rose-600' : 'text-slate-900 dark:text-white'
+                  )}>
                     ₹{Number(selectedCust.outstanding_balance || 0).toLocaleString('en-IN')}
-                  </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-muted-foreground">
+                    {Number(selectedCust.outstanding_balance || 0) > 0 ? 'Payment pending' : 'Zero balance / Cleared'}
+                  </div>
                 </div>
               </div>
 
-              {/* Driving License & Docs */}
-              <div className="space-y-2">
-                <Label className="font-bold text-xs flex items-center gap-1.5">
-                  <FileCheck2 className="w-3.5 h-3.5 text-primary" /> Verified Driving License
-                </Label>
-                <div className="p-3 bg-muted/20 border border-border rounded-2xl flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <span className="font-mono font-bold text-xs text-foreground block">
-                      {selectedCust.driving_license_number || 'RJ14 2024001928'}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      Physical document verified by fleet admin
+              {/* Driving License & Identity Card */}
+              <div className="p-4 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileCheck2 className="w-4 h-4 text-blue-600 stroke-[2]" />
+                    <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider">
+                      Verified Driving License
                     </span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-mono">
-                    {selectedCust.kyc_notes?.includes('DL:')
-                      ? selectedCust.kyc_notes
-                      : 'Verified Original'}
+                  <Badge className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold">
+                    ✓ Verified Original
                   </Badge>
                 </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-muted/40 border border-slate-200/80 dark:border-border/60">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                      Driving License Number
+                    </span>
+                    <span className="font-mono font-bold text-sm sm:text-base text-slate-900 dark:text-white tracking-wide block">
+                      {selectedCust.driving_license_number || 'RJ4620220001944'}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyToClipboard(selectedCust.driving_license_number || 'RJ4620220001944', 'dl')}
+                    className="h-8 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg gap-1.5 font-medium cursor-pointer"
+                  >
+                    {copiedField === 'dl' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-600 font-bold">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy DL</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="flex items-start gap-2 text-xs text-slate-500 dark:text-muted-foreground pt-0.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span className="leading-snug">
+                    Physical document verified by fleet admin. Eligible for commercial self-drive rental.
+                  </span>
+                </div>
+
+                {/* Clean Verification Notes display */}
+                {selectedCust.kyc_notes && (
+                  <div className="text-[11px] p-2.5 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 text-blue-900 dark:text-blue-300 font-mono">
+                    <span className="font-bold font-sans uppercase text-[10px] text-blue-600 block mb-0.5">Fleet Admin Verification Record:</span>
+                    {selectedCust.kyc_notes}
+                  </div>
+                )}
               </div>
 
-              {/* Emergency Contact & Address */}
-              <div className="p-3 bg-muted/20 border border-border/60 rounded-2xl space-y-1">
-                <span className="text-[10px] font-bold uppercase text-muted-foreground block">
-                  Emergency Contact & Location
-                </span>
-                <span className="font-semibold text-foreground block">
-                  {selectedCust.emergency_contact_name || 'Family Contact'} (
-                  {selectedCust.emergency_contact_phone || 'On file'})
-                </span>
-                <span className="text-[11px] text-muted-foreground block">
-                  Address: {selectedCust.address || 'Main Market'}, {selectedCust.city || 'Jalore'},{' '}
-                  {selectedCust.state || 'Rajasthan'}
-                </span>
+              {/* Emergency Contact & Location (2-Column Grid) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Emergency Contact */}
+                <div className="p-3.5 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card shadow-2xs space-y-2">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-muted-foreground">
+                    <Phone className="w-3.5 h-3.5 text-blue-600 stroke-[2]" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Emergency Contact</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-sm text-slate-900 dark:text-white">
+                      {selectedCust.emergency_contact_name || selectedCust.profile?.full_name || 'Family Contact'}
+                    </div>
+                    {selectedCust.emergency_contact_phone ? (
+                      <a
+                        href={`tel:${selectedCust.emergency_contact_phone}`}
+                        className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+                      >
+                        <span>📞 {selectedCust.emergency_contact_phone}</span>
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-500">On file</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Registered Location */}
+                <div className="p-3.5 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card shadow-2xs space-y-2">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-muted-foreground">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500 stroke-[2]" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Registered Location</span>
+                  </div>
+                  <div className="space-y-0.5 text-xs">
+                    <div className="font-bold text-sm text-slate-900 dark:text-white">
+                      {selectedCust.address || 'Main Market'}
+                    </div>
+                    <div className="text-slate-500 dark:text-muted-foreground font-medium">
+                      {[selectedCust.city || 'Bhinmal', selectedCust.state || 'Rajasthan', selectedCust.pincode].filter(Boolean).join(', ')}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* KYC Decision Remarks */}
-              <div className="space-y-1.5 pt-1">
-                <Label className="text-xs font-semibold">Verification Remarks / Notes</Label>
+              <div className="p-3.5 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card shadow-2xs space-y-2">
+                <Label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Verification Remarks / Fleet Admin Notes
+                </Label>
                 <Input
                   value={reviewNotes}
                   onChange={e => setReviewNotes(e.target.value)}
-                  placeholder="e.g. Valid original physical DL inspected."
-                  className="h-8.5 text-xs rounded-xl"
+                  placeholder="e.g. Valid original physical DL inspected. Verified by Fleet Admin."
+                  className="h-10 text-xs sm:text-sm rounded-[6px] border-[#E2E8F0] dark:border-border bg-slate-50 dark:bg-muted/40 focus:bg-white"
                 />
               </div>
 
               {/* Footer Actions */}
-              <div className="flex flex-wrap items-center justify-between pt-2 border-t border-border gap-2">
-                <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center justify-between pt-3 border-t border-slate-200/80 dark:border-border/80 gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   {selectedCust.kyc_status !== 'verified' ? (
                     <Button
                       type="button"
                       size="sm"
                       disabled={processing}
                       onClick={() => handleReviewKYC('verified')}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 rounded-xl cursor-pointer gap-1"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-3.5 rounded-xl cursor-pointer gap-1.5 shadow-sm shadow-emerald-600/20"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Approve KYC
+                      <CheckCircle2 className="w-4 h-4" /> Approve KYC
                     </Button>
                   ) : (
                     <Button
@@ -2313,9 +2442,9 @@ export function AdminCustomersClient({
                       size="sm"
                       disabled={processing}
                       onClick={() => handleReviewKYC('pending')}
-                      className="text-xs h-8 rounded-xl border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 cursor-pointer gap-1"
+                      className="text-xs h-9 px-3 rounded-xl border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 cursor-pointer gap-1.5 font-bold"
                     >
-                      <Clock className="w-3.5 h-3.5" /> Mark Pending
+                      <Clock className="w-4 h-4" /> Mark Pending
                     </Button>
                   )}
 
@@ -2326,7 +2455,7 @@ export function AdminCustomersClient({
                       size="sm"
                       disabled={processing}
                       onClick={() => handleReviewKYC('re_upload_requested')}
-                      className="text-xs h-8 rounded-xl border-orange-500/40 text-orange-700 dark:text-orange-400 hover:bg-orange-500/10 cursor-pointer"
+                      className="text-xs h-9 px-3 rounded-xl border-orange-500/40 text-orange-700 dark:text-orange-400 hover:bg-orange-500/10 cursor-pointer font-bold gap-1"
                     >
                       Request Re-upload
                     </Button>
@@ -2339,14 +2468,14 @@ export function AdminCustomersClient({
                       size="sm"
                       disabled={processing}
                       onClick={() => handleReviewKYC('rejected')}
-                      className="text-xs h-8 rounded-xl cursor-pointer"
+                      className="text-xs h-9 px-3 rounded-xl cursor-pointer font-bold gap-1"
                     >
                       Reject KYC
                     </Button>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     variant="ghost"
@@ -2355,9 +2484,19 @@ export function AdminCustomersClient({
                       setViewDetailsOpen(false)
                       if (selectedCust) openDeleteModal(selectedCust)
                     }}
-                    className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl h-8 gap-1 cursor-pointer font-semibold"
+                    className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl h-9 px-2.5 gap-1.5 cursor-pointer font-semibold"
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewDetailsOpen(false)}
+                    className="text-xs h-9 px-3 rounded-xl cursor-pointer font-semibold"
+                  >
+                    Close
                   </Button>
 
                   <AssignCarButton href={`/admin/assign?customer_id=${selectedCust.id}`} size="sm" />

@@ -733,7 +733,9 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                       )}
                       <tr>
                         <td className="p-3 sm:p-3.5 text-muted-foreground font-medium">
-                          Output CGST ({((selectedInvoice.tax_rate || 18) / 2).toFixed(1)}%) + SGST ({((selectedInvoice.tax_rate || 18) / 2).toFixed(1)}%)
+                          {(selectedInvoice.tax_rate ?? 18) > 0
+                            ? `Output CGST (${(((selectedInvoice.tax_rate ?? 18)) / 2).toFixed(1)}%) + SGST (${(((selectedInvoice.tax_rate ?? 18)) / 2).toFixed(1)}%)`
+                            : 'GST (0% - Non-GST / Exempt)'}
                         </td>
                         <td className="p-3 sm:p-3.5 text-right font-medium">
                           ₹{Number(selectedInvoice.tax_amount || 0).toLocaleString('en-IN')}

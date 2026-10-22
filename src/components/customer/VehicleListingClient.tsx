@@ -604,15 +604,7 @@ export function VehicleListingClient({
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          asChild
-                          className="w-full text-xs h-9"
-                        >
-                          <Link href={`/cars/${v.id}`}>View Details</Link>
-                        </Button>
+                      <div>
                         <AssignCarButton
                           href={`/admin/assign?vehicle_id=${v.id}`}
                           size="sm"

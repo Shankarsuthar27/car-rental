@@ -21,7 +21,9 @@ import {
   MapPin,
   Check,
   CheckSquare,
-  Square
+  Square,
+  Receipt,
+  RotateCcw
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AssignCarButton } from '@/components/ui/AssignCarButton'
@@ -57,7 +59,7 @@ function getDefaultDates() {
   const now = new Date()
   const remainder = 15 - (now.getMinutes() % 15)
   now.setMinutes(now.getMinutes() + (remainder === 15 ? 0 : remainder), 0, 0)
-  const ret = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+  const ret = new Date(now.getTime() + 24 * 60 * 60 * 1000)
   return {
     pickup: toDateTimeLocalString(now),
     returnDate: toDateTimeLocalString(ret),
@@ -163,6 +165,17 @@ export function AssignCarWorkflow({
     }
   }, [selectedVehicle])
 
+  // Custom Daily Rate (auto-populated from car's default daily_rate, editable by admin)
+  const [customDailyRate, setCustomDailyRate] = useState<string>('')
+
+  useEffect(() => {
+    if (selectedVehicle) {
+      setCustomDailyRate(String(selectedVehicle.daily_rate ?? '0'))
+    } else {
+      setCustomDailyRate('')
+    }
+  }, [selectedVehicle])
+
   // Deposit and Payment fields
   const [securityDeposit, setSecurityDeposit] = useState<string>('0')
   const [advancePayment, setAdvancePayment] = useState<string>('0')
@@ -175,11 +188,9 @@ export function AssignCarWorkflow({
     }
   }, [selectedVehicle])
 
-  // Addons
-  const [withInsurance, setWithInsurance] = useState(false)
-  const [insuranceRate] = useState('499')
-  const [withDriver, setWithDriver] = useState(false)
-  const [driverCharge] = useState('1000')
+  // Optional GST
+  const [withGst, setWithGst] = useState(false) // GST is optional: can be added or removed
+  const [gstRate, setGstRate] = useState('18')
   const [assignmentNotes, setAssignmentNotes] = useState('')
 
   // Duration calculation
@@ -201,17 +212,20 @@ export function AssignCarWorkflow({
   }, [pickupDatetime, returnDatetime])
 
   // Pricing calculations
-  const dailyRate = selectedVehicle?.daily_rate || 0
+  const defaultDailyRate = selectedVehicle?.daily_rate || 0
+  const dailyRate = customDailyRate !== '' ? Math.max(0, Number(customDailyRate) || 0) : defaultDailyRate
+  const isRateModified = selectedVehicle ? dailyRate !== defaultDailyRate : false
   const calculatedBasePrice = selectedVehicle ? dailyRate * rentalDuration.days : 0
   const distanceAllowance = selectedVehicle ? rentalDuration.days * (selectedVehicle.included_km_per_day || 0) : 0
 
-  const insuranceFee = (selectedVehicle && withInsurance) ? Number(insuranceRate) || 0 : 0
-  const driverFee = (selectedVehicle && withDriver) ? (Number(driverCharge) || 0) * rentalDuration.days : 0
   const secDep = selectedVehicle ? Math.max(0, Number(securityDeposit) || 0) : 0
   const advance = Math.max(0, Number(advancePayment) || 0)
 
-  const taxableSubtotal = calculatedBasePrice + insuranceFee + driverFee
-  const taxAmount = taxableSubtotal > 0 ? Math.round(taxableSubtotal * 0.18 * 100) / 100 : 0
+  const taxableSubtotal = calculatedBasePrice
+  const effectiveGstRate = withGst ? (Math.max(0, Number(gstRate)) || 0) : 0
+  const taxAmount = (withGst && taxableSubtotal > 0 && effectiveGstRate > 0)
+    ? Math.round(taxableSubtotal * (effectiveGstRate / 100) * 100) / 100
+    : 0
   const grandTotal = Math.round((taxableSubtotal + taxAmount + secDep) * 100) / 100
   const balanceDue = grandTotal > 0 ? Math.max(0, Math.round((grandTotal - advance) * 100) / 100) : 0
 
@@ -338,13 +352,15 @@ export function AssignCarWorkflow({
         starting_km: Number(startingKm) || 0,
         rental_price: calculatedBasePrice,
         security_deposit: secDep,
-        insurance_charge: insuranceFee,
-        driver_charge: driverFee,
+        insurance_charge: 0,
+        driver_charge: 0,
         discount_amount: 0,
+        tax_rate: withGst ? effectiveGstRate : 0,
+        tax_amount: taxAmount,
         advance_amount_paid: advance,
         payment_method: advance > 0 ? 'cash' : 'pending',
         notes: assignmentNotes,
-        admin_notes: `Assigned via dedicated Assign Car console. Duration: ${rentalDuration.text}`,
+        admin_notes: `Assigned via dedicated Assign Car console. Duration: ${rentalDuration.text}${isRateModified ? ` • Custom Rate: ₹${dailyRate}/day (Default: ₹${defaultDailyRate})` : ''}${withGst ? ` • GST: ${effectiveGstRate}% (₹${taxAmount.toFixed(2)})` : ' • GST: Not Applied (₹0)'}`,
       }
 
       const res = await fetch('/api/admin/assign', {
@@ -363,6 +379,8 @@ export function AssignCarWorkflow({
           grand_total: grandTotal,
           amount_paid: advance,
           outstanding_amount: balanceDue,
+          tax_rate: withGst ? effectiveGstRate : 0,
+          tax_amount: taxAmount,
         }
         setCreatedBooking(enrichedBooking)
         setSuccessModalOpen(true)
@@ -375,6 +393,8 @@ export function AssignCarWorkflow({
           grand_total: grandTotal,
           amount_paid: advance,
           outstanding_amount: balanceDue,
+          tax_rate: withGst ? effectiveGstRate : 0,
+          tax_amount: taxAmount,
         })
         setSuccessModalOpen(true)
       }
@@ -386,6 +406,8 @@ export function AssignCarWorkflow({
         grand_total: grandTotal,
         amount_paid: advance,
         outstanding_amount: balanceDue,
+        tax_rate: withGst ? effectiveGstRate : 0,
+        tax_amount: taxAmount,
       })
       setSuccessModalOpen(true)
     } finally {
@@ -796,11 +818,11 @@ export function AssignCarWorkflow({
                       const val = e.target.value
                       if (!val) return
                       setPickupDatetime(val)
-                      // Auto-validate return: if return is earlier than or equal to pickup, shift return to pickup + 48h
+                      // Auto-validate return: if return is earlier than or equal to pickup, shift return to pickup + 24h (1 Day)
                       const pDate = new Date(val).getTime()
                       const rDate = new Date(returnDatetime).getTime()
                       if (isNaN(rDate) || rDate <= pDate) {
-                        const newRet = new Date(pDate + 48 * 60 * 60 * 1000)
+                        const newRet = new Date(pDate + 24 * 60 * 60 * 1000)
                         setReturnDatetime(toDateTimeLocalString(newRet))
                       }
                     }}
@@ -909,14 +931,68 @@ export function AssignCarWorkflow({
               })}
             </div>
 
-            {/* Row 2: Starting Odometer, Deposit & Advance */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+            {/* Row 2: Daily Rate, Starting Odometer, Deposit & Advance */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1 items-start">
+              {/* Daily Rental Rate (Editable) */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <div className="flex items-center justify-between h-5 gap-1.5">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    Daily rate (₹)
+                  </Label>
+                  {selectedVehicle && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isRateModified ? (
+                        <>
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                            Custom
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setCustomDailyRate(String(defaultDailyRate))}
+                            className="text-[10px] text-blue-600 hover:text-blue-700 dark:text-blue-400 underline font-medium cursor-pointer inline-flex items-center gap-0.5"
+                            title={`Reset to default rate: ₹${defaultDailyRate}/day`}
+                          >
+                            <RotateCcw className="w-2.5 h-2.5" /> Reset
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">Default</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 flex items-center justify-center">
+                    ₹
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={customDailyRate}
+                    onChange={e => setCustomDailyRate(e.target.value)}
+                    placeholder={selectedVehicle ? String(defaultDailyRate) : 'Select vehicle'}
+                    disabled={!selectedVehicle}
+                    className={cn(
+                      'pl-8 h-10 text-xs rounded-xl font-medium bg-white dark:bg-card border-slate-200 dark:border-border text-slate-800 dark:text-slate-100',
+                      isRateModified && 'border-blue-400 dark:border-blue-500 bg-blue-50/20'
+                    )}
+                  />
+                </div>
+                {selectedVehicle && (
+                  <p className="text-[10px] text-slate-400 truncate">
+                    ₹{dailyRate.toLocaleString('en-IN')}/day × {rentalDuration.days}d = ₹{calculatedBasePrice.toLocaleString('en-IN')}
+                  </p>
+                )}
+              </div>
+
+              {/* Starting Odometer (KM) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between h-5 gap-1.5">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                     Starting odometer (KM)
                   </Label>
-                  <span className="text-[10px] text-slate-400">Current</span>
+                  <span className="text-[10px] text-slate-400 shrink-0">Current</span>
                 </div>
                 <div className="relative">
                   <Gauge className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -930,12 +1006,13 @@ export function AssignCarWorkflow({
                 </div>
               </div>
 
+              {/* Security Deposit (₹) */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <div className="flex items-center justify-between h-5 gap-1.5">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                     Security deposit (₹)
                   </Label>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium shrink-0">
                     Refundable
                   </span>
                 </div>
@@ -953,13 +1030,14 @@ export function AssignCarWorkflow({
                 </div>
               </div>
 
+              {/* Advance Paid (₹) */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <div className="flex items-center justify-between h-5 gap-1.5">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                     Advance paid (₹)
                   </Label>
                   <span className={cn(
-                    'text-[10px] font-semibold',
+                    'text-[10px] font-semibold shrink-0',
                     grandTotal === 0
                       ? 'text-slate-400'
                       : balanceDue > 0
@@ -1068,65 +1146,110 @@ export function AssignCarWorkflow({
               </div>
             </div>
 
-            {/* Row 3: Addons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-              {/* Zero-dep Insurance Box */}
-              <div
-                onClick={() => setWithInsurance(!withInsurance)}
-                className={cn(
-                  'rounded-xl p-3.5 flex items-start gap-3 cursor-pointer select-none transition-all',
-                  withInsurance
-                    ? 'border border-blue-400 bg-blue-50/50 dark:bg-blue-950/20'
-                    : 'border border-slate-200 dark:border-border bg-white dark:bg-card hover:bg-slate-50'
-                )}
-              >
-                <div
-                  className={cn(
-                    'w-4 h-4 rounded flex items-center justify-center mt-0.5 shrink-0 transition-colors',
-                    withInsurance
-                      ? 'bg-blue-600 text-white'
-                      : 'border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-card'
-                  )}
-                >
-                  {withInsurance && <Check className="w-3 h-3 stroke-[3]" />}
-                </div>
-                <div>
-                  <span className="font-bold text-slate-900 dark:text-white text-xs block leading-tight">
-                    Zero-dep insurance
-                  </span>
-                  <span className="text-[11px] text-slate-500 block mt-0.5">
-                    ₹{insuranceRate} · full accidental cover
-                  </span>
-                </div>
+            {/* Row 3: Optional GST Tax */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Receipt className="w-3.5 h-3.5 text-blue-600" />
+                  Goods & Services Tax (GST)
+                </Label>
+                <span className="text-[10px] text-slate-400">
+                  Optional tax invoice for commercial billing
+                </span>
               </div>
 
-              {/* Professional Driver Box */}
+              {/* Goods & Services Tax (GST) Box - Optional: Added or Removed */}
               <div
-                onClick={() => setWithDriver(!withDriver)}
+                onClick={() => setWithGst(!withGst)}
                 className={cn(
-                  'rounded-xl p-3.5 flex items-start gap-3 cursor-pointer select-none transition-all',
-                  withDriver
-                    ? 'border border-blue-400 bg-blue-50/50 dark:bg-blue-950/20'
+                  'rounded-xl p-3.5 flex flex-col justify-between cursor-pointer select-none transition-all',
+                  withGst
+                    ? 'border border-blue-400 bg-blue-50/50 dark:bg-blue-950/20 shadow-xs'
                     : 'border border-slate-200 dark:border-border bg-white dark:bg-card hover:bg-slate-50'
                 )}
               >
-                <div
-                  className={cn(
-                    'w-4 h-4 rounded flex items-center justify-center mt-0.5 shrink-0 transition-colors',
-                    withDriver
-                      ? 'bg-blue-600 text-white'
-                      : 'border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-card'
-                  )}
-                >
-                  {withDriver && <Check className="w-3 h-3 stroke-[3]" />}
+                <div className="flex items-start gap-3">
+                  <div
+                    className={cn(
+                      'w-4 h-4 rounded flex items-center justify-center mt-0.5 shrink-0 transition-colors',
+                      withGst
+                        ? 'bg-blue-600 text-white'
+                        : 'border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-card'
+                    )}
+                  >
+                    {withGst && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-bold text-slate-900 dark:text-white text-xs block leading-tight">
+                        Apply GST Tax
+                      </span>
+                      <span
+                        className={cn(
+                          'text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded tracking-wide shrink-0',
+                          withGst
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 dark:bg-muted text-slate-500'
+                        )}
+                      >
+                        {withGst ? `${effectiveGstRate}% Added` : 'Optional · Off'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      {withGst
+                        ? `+₹${taxAmount.toFixed(2)} (${effectiveGstRate}%) · Tax Invoice`
+                        : 'No tax added (₹0)'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-bold text-slate-900 dark:text-white text-xs block leading-tight">
-                    Professional driver
-                  </span>
-                  <span className="text-[11px] text-slate-500 block mt-0.5">
-                    ₹1,000 / day · dedicated staff
-                  </span>
+
+                {/* Quick Toggle / Rate Selection Row when GST is active */}
+                <div
+                  onClick={e => e.stopPropagation()}
+                  className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-border/60 flex items-center justify-between gap-1 text-[10px]"
+                >
+                  {withGst ? (
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-1">
+                        <span className="text-slate-400 font-medium">Rate:</span>
+                        {['5', '12', '18', '28'].map(rate => (
+                          <button
+                            key={rate}
+                            type="button"
+                            onClick={() => setGstRate(rate)}
+                            className={cn(
+                              'px-1.5 py-0.5 rounded font-mono font-bold transition-colors cursor-pointer',
+                              gstRate === rate
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-muted dark:text-slate-300'
+                            )}
+                          >
+                            {rate}%
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setWithGst(false)}
+                        className="text-rose-600 dark:text-rose-400 font-bold hover:underline cursor-pointer ml-1"
+                        title="Remove GST from this assignment"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-slate-400 italic">GST excluded</span>
+                      <button
+                        type="button"
+                        onClick={() => setWithGst(true)}
+                        className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer flex items-center gap-0.5"
+                        title="Add GST to this assignment"
+                      >
+                        <Plus className="w-3 h-3 inline" /> Add GST (18%)
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1261,7 +1384,14 @@ export function AssignCarWorkflow({
                   {selectedVehicle ? (
                     <div className="space-y-2 text-xs pt-1">
                       <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                        <span>Base rental · {rentalDuration.text}</span>
+                        <div>
+                          <span>Base rental · {rentalDuration.text}</span>
+                          {isRateModified && (
+                            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold block">
+                              @ ₹{dailyRate.toLocaleString('en-IN')}/day (Custom rate)
+                            </span>
+                          )}
+                        </div>
                         <span className="font-medium text-slate-800 dark:text-slate-200">
                           ₹{calculatedBasePrice.toLocaleString('en-IN')}
                         </span>
@@ -1274,30 +1404,29 @@ export function AssignCarWorkflow({
                         </span>
                       </div>
 
-                      {withInsurance && (
+                      {withGst && (
                         <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                          <span>Zero-dep insurance</span>
-                          <span className="font-medium text-slate-800 dark:text-slate-200">
-                            ₹{insuranceFee.toLocaleString('en-IN')}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span>GST ({effectiveGstRate}%)</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                              Applied
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              ₹{taxAmount.toFixed(2)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setWithGst(false)}
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-md transition-all cursor-pointer bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400"
+                              title="Remove GST tax from this assignment"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
                       )}
-
-                      {withDriver && (
-                        <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                          <span>Professional driver</span>
-                          <span className="font-medium text-slate-800 dark:text-slate-200">
-                            ₹{driverFee.toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                        <span>GST (18%)</span>
-                        <span className="font-medium text-slate-800 dark:text-slate-200">
-                          ₹{taxAmount.toFixed(2)}
-                        </span>
-                      </div>
 
                       <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
                         <span>Refundable deposit</span>
@@ -1542,8 +1671,23 @@ export function AssignCarWorkflow({
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-sans">Rental Rate:</span>
+                  <span className="font-sans font-bold text-slate-800 dark:text-slate-100 text-right">
+                    ₹{dailyRate.toLocaleString('en-IN')}/day
+                    {isRateModified && <span className="text-[10px] text-blue-600 font-semibold ml-1">(Custom)</span>}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">Grand Total:</span>
                   <span className="font-bold text-blue-600">₹{Number(createdBooking.grand_total || grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-sans">GST Tax Status:</span>
+                  <span className="font-sans font-bold text-slate-800 dark:text-slate-100 text-right">
+                    {(createdBooking.tax_rate ?? (withGst ? effectiveGstRate : 0)) > 0
+                      ? `₹${Number(createdBooking.tax_amount ?? taxAmount).toFixed(2)} (${createdBooking.tax_rate ?? effectiveGstRate}%)`
+                      : 'GST Removed / Exempt (₹0)'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-sans">Advance Collected:</span>

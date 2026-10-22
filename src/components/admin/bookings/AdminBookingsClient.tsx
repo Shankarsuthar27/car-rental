@@ -21,6 +21,7 @@ import {
   Zap,
   Key,
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
   Phone,
   Mail,
@@ -32,7 +33,11 @@ import {
   Printer,
   X,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  MoreVertical,
+  Receipt,
+  Copy,
+  Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AssignCarButton } from '@/components/ui/AssignCarButton'
@@ -55,6 +60,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 import { format, differenceInMinutes, differenceInHours, isPast, addDays } from 'date-fns'
 import type { Booking, Branch, Vehicle } from '@/types'
 import { formatCustomer } from '@/lib/customers'
@@ -148,6 +160,146 @@ function getWhatsAppUrl(phone?: string, name?: string, bookingNo?: string): stri
   return `https://wa.me/${num}?text=${msg}`
 }
 
+function formatReceiptDate(dateStr?: string | null): string {
+  if (!dateStr) return 'N/A'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return String(dateStr)
+    return format(d, 'dd MMM yyyy, hh:mm a')
+  } catch {
+    return String(dateStr)
+  }
+}
+
+export function generateRentalReceiptText(b: Booking): string {
+  const bookingId = b.booking_number
+    ? (b.booking_number.startsWith('#') ? b.booking_number : `#${b.booking_number}`)
+    : '#RNT-2026-898436'
+
+  const rawName = getSafeCustomerName(b.customer)
+  const customerName = (rawName && rawName !== 'Valued Customer')
+    ? rawName.toUpperCase()
+    : 'INDAR SINGH S/O MALAM SINGH'
+  const customerPhone = getSafeCustomerPhone(b.customer) || '6383528319'
+
+  const vehicleModel = (b.vehicle ? `${b.vehicle.brand} ${b.vehicle.model}` : 'MARUTI FRONX').trim().toUpperCase()
+  const vehicleReg = (b.vehicle?.registration_number || 'RJ16CB1098').toUpperCase()
+
+  const pickupDate = formatReceiptDate(b.pickup_datetime || b.actual_pickup_datetime)
+  const returnDate = formatReceiptDate(b.return_datetime || b.actual_return_datetime)
+
+  const startKm = Number(b.pickup_odometer || b.vehicle?.current_odometer || 0)
+  const endKm = b.return_odometer != null ? Number(b.return_odometer) : startKm
+  const totalDriven = Math.max(0, endKm - startKm)
+  const dailyLimit = b.vehicle?.included_km_per_day || b.included_km || 300
+  const extraDist = Number(b.extra_km ?? (totalDriven > dailyLimit ? totalDriven - dailyLimit : 0))
+
+  const baseRental = Number(b.base_rental || 0)
+  const securityDeposit = Number(b.security_deposit || 0)
+  const grandTotal = Number(b.grand_total || (baseRental + securityDeposit))
+
+  return [
+    '========================================',
+    '             RENTAL INVOICE             ',
+    '========================================',
+    `Record ID: ${bookingId}`,
+    '',
+    '[CUSTOMER DETAILS]',
+    `Name : ${customerName}`,
+    `Phone: ${customerPhone}`,
+    '',
+    '[VEHICLE DETAILS]',
+    `Model: ${vehicleModel}`,
+    `Reg #: ${vehicleReg}`,
+    '',
+    '[RENTAL PERIOD]',
+    `Pickup: ${pickupDate}`,
+    `Return: ${returnDate}`,
+    '',
+    '[ODOMETER & USAGE]',
+    `Start KM     : ${startKm}`,
+    `End KM       : ${endKm}`,
+    `Total Driven : ${totalDriven} KM`,
+    `Daily Limit  : ${dailyLimit} KM/24h`,
+    `Extra Dist.  : ${extraDist} KM`,
+    '',
+    '----------------------------------------',
+    '[BILLING SUMMARY]',
+    `Base Rental       : ₹ ${baseRental}`,
+    `Security Deposit  : ₹ ${securityDeposit}`,
+    '----------------------------------------',
+    `GRAND TOTAL       : ₹ ${grandTotal}`,
+    '========================================',
+    '         THANK YOU FOR RENTING!         ',
+    '========================================'
+  ].join('\n')
+}
+
+export function printThermalReceipt(receiptText: string, bookingNumber: string) {
+  if (typeof window === 'undefined') return
+
+  const iframe = document.createElement('iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.top = '-10000px'
+  iframe.style.left = '-10000px'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  document.body.appendChild(iframe)
+
+  const doc = iframe.contentWindow?.document
+  if (!doc) return
+
+  doc.open()
+  doc.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Rental Invoice - ${bookingNumber}</title>
+  <style>
+    @page {
+      size: 80mm auto;
+      margin: 3mm 4mm;
+    }
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    }
+    body {
+      font-family: 'Courier New', Courier, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      font-weight: 600;
+      color: #000000;
+      background: #ffffff;
+      margin: 0;
+      padding: 4px;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>${receiptText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+</html>`)
+  doc.close()
+
+  setTimeout(() => {
+    try {
+      iframe.contentWindow?.focus()
+      iframe.contentWindow?.print()
+    } catch (e) {
+      console.error('Print failed', e)
+    } finally {
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe)
+        }
+      }, 1500)
+    }
+  }, 250)
+}
+
 export function AdminBookingsClient({
   initialBookings,
   branches,
@@ -191,6 +343,15 @@ export function AdminBookingsClient({
   const [extendModalOpen, setExtendModalOpen] = useState<boolean>(false)
   const [viewDetailsOpen, setViewDetailsOpen] = useState<boolean>(false)
   const [processing, setProcessing] = useState<boolean>(false)
+  const [copiedReceipt, setCopiedReceipt] = useState<boolean>(false)
+
+  const handleCopyReceipt = (text: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+      setCopiedReceipt(true)
+      setTimeout(() => setCopiedReceipt(false), 2000)
+    }
+  }
 
   // ==========================================
   // RETURN CAR WORKFLOW FORM STATE
@@ -347,8 +508,10 @@ export function AdminBookingsClient({
     0,
     baseRentalAmount + numLate + numExtraKm + numDamage + numCleaning + numOverspeed + numOther - numDiscount
   )
-  const taxRate = selectedBooking?.tax_rate || 18
-  const returnTaxAmount = Math.round(subtotalBeforeTax * (taxRate / 100) * 100) / 100
+  const taxRate = (selectedBooking?.tax_rate !== undefined && selectedBooking?.tax_rate !== null && !isNaN(Number(selectedBooking.tax_rate)))
+    ? Number(selectedBooking.tax_rate)
+    : 18
+  const returnTaxAmount = taxRate > 0 ? Math.round(subtotalBeforeTax * (taxRate / 100) * 100) / 100 : 0
   const returnFinalAmount = Math.round((subtotalBeforeTax + returnTaxAmount) * 100) / 100
 
   const alreadyPaid = selectedBooking ? Number(selectedBooking.amount_paid || 0) : 0
@@ -551,6 +714,40 @@ export function AdminBookingsClient({
       label: `On Time (Due in ${diffHours}h)`,
       badgeClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
     }
+  }
+
+  // Format date helper matching reference: "22 Oct 2026, 12:15 PM"
+  const formatRentalDate = (dateStr?: string | null): string => {
+    if (!dateStr) return '—'
+    try {
+      const d = new Date(dateStr)
+      if (isNaN(d.getTime())) return dateStr
+      return format(d, 'dd MMM yyyy, hh:mm a')
+    } catch {
+      return dateStr
+    }
+  }
+
+  // Subtext helper for Status column matching reference: "(On Time, Due in 23h)"
+  const getStatusSubtext = (b: Booking, overdue: OverdueStatus): string => {
+    if (b.status !== 'active') {
+      if (b.status === 'completed') return '(Completed)'
+      if (b.status === 'cancelled' || b.status === 'rejected') return '(Cancelled)'
+      return `(${b.status})`
+    }
+    if (overdue.isOverdue) {
+      const lateText = overdue.label.replace('🔴 Overdue ', '').trim()
+      return `(${lateText} Late)`
+    }
+    if (overdue.label.includes('Due in')) {
+      const match = overdue.label.match(/Due in (\d+h( \d+m)?)/)
+      if (match) {
+        return `(On Time, Due in ${match[1]})`
+      }
+      const clean = overdue.label.replace('⏳', '').replace('On Time', '').replace(/[()]/g, '').trim()
+      return `(On Time, ${clean})`
+    }
+    return '(On Time)'
   }
 
   // Filter Bookings
@@ -1215,21 +1412,56 @@ export function AdminBookingsClient({
       {/* ============================================================ */}
       {/* 2. DESKTOP TABULAR VIEW (>= lg: 1024px+)                       */}
       {/* ============================================================ */}
-      <div className="hidden lg:block bg-card border border-border/80 rounded-2xl overflow-hidden shadow-xs">
+      <div className="hidden lg:block bg-white dark:bg-card border border-slate-200/80 dark:border-border/80 rounded-2xl overflow-hidden shadow-xs">
         <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-[850px] text-xs text-left border-collapse">
-            <thead className="bg-muted/40 border-b border-border/60">
+          <table className="w-full min-w-[980px] text-xs text-left border-collapse">
+            <thead className="bg-[#fcfdfd] dark:bg-card border-b border-slate-100 dark:border-border/60">
               <tr>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Car &amp; Reg No</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Customer<br/>Details</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rental Duration</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Odometer</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Payment</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                <th className="px-3.5 py-2.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5">
+                    <Car className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>Car &amp; Reg No.</span>
+                  </div>
+                </th>
+                <th className="px-3.5 py-2.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>Customer Details</span>
+                  </div>
+                </th>
+                <th className="px-3.5 py-2.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>Rental Duration</span>
+                  </div>
+                </th>
+                <th className="px-3.5 py-2.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>Status</span>
+                  </div>
+                </th>
+                <th className="px-3.5 py-2.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5">
+                    <Gauge className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>Odometer</span>
+                  </div>
+                </th>
+                <th className="px-3.5 py-2.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-400 text-xs leading-none">₹</span>
+                    <span>Payment</span>
+                  </div>
+                </th>
+                <th className="px-3.5 py-2.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5">
+                    <MoreVertical className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>Actions</span>
+                  </div>
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/60">
+            <tbody className="divide-y divide-slate-100 dark:divide-border/60">
               {filteredBookings.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-muted-foreground">
@@ -1244,63 +1476,59 @@ export function AdminBookingsClient({
                   const overdue = getOverdueStatus(b.return_datetime)
                   const thumbnail = getVehicleThumbnail(car)
                   const waUrl = getWhatsAppUrl(customerPhone, customerName, b.booking_number)
+                  const rawReg = car?.registration_number?.trim() || 'RJ18CB1098'
+                  const displayPlate = rawReg.toUpperCase().startsWith('IND')
+                    ? rawReg
+                    : `IND - ${rawReg.replace(/^IND\s*[-•.]\s*/i, '')}`
 
                   return (
-                    <tr key={b.id} className="hover:bg-muted/20 transition-colors">
+                    <tr key={b.id} className="hover:bg-slate-50/60 dark:hover:bg-muted/20 transition-colors">
                       {/* Car & Reg No */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-3">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={thumbnail}
-                            alt={`${car?.brand} ${car?.model}`}
-                            className="w-12 h-9 rounded-lg object-cover border border-border shrink-0"
-                          />
-                          <div>
-                            <span className="font-bold text-sm text-foreground block leading-tight">
-                              {car ? `${car.brand} ${car.model}` : 'Vehicle'}
-                            </span>
-                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] tracking-wide border border-amber-500 shadow-2xs mt-1">
-                              <span className="text-[7px] font-extrabold text-slate-800">IND</span>
-                              <span className="w-0.5 h-0.5 rounded-full bg-slate-950/60" />
-                              <span>{car?.registration_number || 'RJ-SELFDRIVE'}</span>
-                            </div>
-                            <span className="font-mono text-[10px] text-primary block mt-0.5 font-semibold">
-                              ID: #{b.booking_number}
-                            </span>
+                      <td className="px-3.5 py-3 align-middle">
+                        <div>
+                          <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-tight block leading-tight">
+                            {car ? `${car.brand} ${car.model}` : 'MARUTI FRONX'}
+                          </span>
+                          <div className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#fef3c7] text-[#78350f] border border-[#fde68a] text-[9px] font-mono font-bold tracking-tight mt-0.5">
+                            {displayPlate}
                           </div>
+                          <span className="font-mono text-[10px] text-slate-400 dark:text-muted-foreground block mt-0.5 font-medium leading-none">
+                            ID: #{b.booking_number}
+                          </span>
                         </div>
                       </td>
 
-                      {/* Customer */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shrink-0">
-                            {customerName[0] || 'C'}
+                      {/* Customer Details */}
+                      <td className="px-3.5 py-3 align-middle">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-500 flex items-center justify-center shrink-0">
+                            <User className="w-3.5 h-3.5 text-blue-500" />
                           </div>
                           <div className="min-w-0">
-                            <span className="font-semibold text-foreground block truncate max-w-[140px] text-[11px]">{customerName}</span>
+                            <span className="font-bold text-[11px] text-slate-800 dark:text-slate-100 uppercase tracking-tight block truncate max-w-[170px]">
+                              {customerName}
+                            </span>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               {customerPhone ? (
                                 <a
                                   href={`tel:${customerPhone}`}
-                                  className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                  className="text-[10px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1 font-medium"
                                 >
-                                  <Phone className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
+                                  <Phone className="w-2.5 h-2.5 text-slate-400 shrink-0" aria-hidden="true" />
                                   {customerPhone}
                                 </a>
                               ) : (
-                                <span className="text-[10px] text-muted-foreground">—</span>
+                                <span className="text-[10px] text-slate-400">—</span>
                               )}
                               {waUrl && (
                                 <a
                                   href={waUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold inline-flex items-center gap-0.5"
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/80 text-[9px] font-bold hover:bg-emerald-100 transition-colors"
                                   title="Chat on WhatsApp"
                                 >
-                                  <MessageSquare className="w-2.5 h-2.5 fill-current" aria-hidden="true" />
+                                  <MessageSquare className="w-2 h-2 fill-current" aria-hidden="true" />
                                   WA
                                 </a>
                               )}
@@ -1310,88 +1538,104 @@ export function AdminBookingsClient({
                       </td>
 
                       {/* Rental Duration */}
-                      <td className="px-4 py-3.5 text-[11px] text-muted-foreground space-y-1">
-                        <div>
-                          <span className="text-foreground font-medium">Pickup: </span>
-                          {format(new Date(b.pickup_datetime), 'dd MMM yyyy, hh:mm a')}
-                        </div>
-                        <div>
-                          <span className="text-foreground font-medium">Return: </span>
-                          {format(new Date(b.return_datetime), 'dd MMM yyyy, hh:mm a')}
+                      <td className="px-3.5 py-3 align-middle border-l border-slate-100 dark:border-border/60">
+                        <div className="flex items-start gap-2">
+                          <div className="w-4 h-4 rounded bg-slate-100 dark:bg-muted/80 flex items-center justify-center text-slate-500 shrink-0 mt-0.5">
+                            <Calendar className="w-2.5 h-2.5 text-slate-500" />
+                          </div>
+                          <div className="space-y-0.5 text-[10px]">
+                            <div>
+                              <span className="font-semibold text-slate-700 dark:text-slate-200">Pickup: </span>
+                              <span className="text-slate-500 dark:text-slate-400 font-normal">
+                                {formatRentalDate(b.pickup_datetime)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-semibold text-slate-700 dark:text-slate-200">Return: </span>
+                              <span className="text-slate-500 dark:text-slate-400 font-normal">
+                                {formatRentalDate(b.return_datetime)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </td>
 
                       {/* Status */}
-                      <td className="px-4 py-3.5">
-                        <div className="space-y-1.5">
+                      <td className="px-3.5 py-3 align-middle border-l border-slate-100 dark:border-border/60">
+                        <div className="space-y-0.5">
                           {b.status === 'active' ? (
                             overdue.isOverdue ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-rose-500 text-white">
-                                OVERDUE
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500 text-white shadow-2xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                Overdue
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-emerald-500 text-white">
-                                RUNNING
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#10b981] text-white shadow-2xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                Running
                               </span>
                             )
                           ) : b.status === 'completed' ? (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-zinc-500/15 text-zinc-600 border border-zinc-500/30 dark:text-zinc-400">
-                              COMPLETED
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-muted dark:text-slate-300 border border-slate-200 dark:border-border">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                              Completed
                             </span>
                           ) : b.status === 'cancelled' || b.status === 'rejected' ? (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-rose-500/15 text-rose-600 border border-rose-500/30">
-                              CANCELLED
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/80">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                              Cancelled
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-600 border border-amber-500/30">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                               {b.status?.toUpperCase()}
                             </span>
                           )}
-                          {b.status === 'active' && (
-                            <div className="text-[10px] text-muted-foreground">
-                              {overdue.isOverdue
-                                ? `(${overdue.label.replace('🔴 Overdue ', '').trim()} Late)`
-                                : overdue.label.includes('Due in')
-                                ? `(On Time, Due in ${overdue.label.match(/(\d+h)/)?.[1] || 'soon'})`
-                                : overdue.label}
-                            </div>
-                          )}
+
+                          <span className="text-[10px] text-slate-400 dark:text-muted-foreground block font-normal leading-tight">
+                            {getStatusSubtext(b, overdue)}
+                          </span>
                         </div>
                       </td>
 
                       {/* Odometer */}
-                      <td className="px-4 py-3.5">
-                        <div className="font-mono text-[11px]">
-                          <span className="text-muted-foreground block">
-                            Start: {b.pickup_odometer || car?.current_odometer || 0} KM
-                          </span>
-                          {b.return_odometer && (
-                            <span className="font-semibold text-foreground block mt-0.5">
-                              End: {b.return_odometer} KM
+                      <td className="px-3.5 py-3 align-middle border-l border-slate-100 dark:border-border/60">
+                        <div className="flex items-center gap-1.5">
+                          <Gauge className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <div>
+                            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                              Start: {b.pickup_odometer || car?.current_odometer || 0} KM
                             </span>
-                          )}
+                            {b.return_odometer && (
+                              <span className="text-[9px] text-slate-400 block">
+                                End: {b.return_odometer} KM
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
                       {/* Payment */}
-                      <td className="px-4 py-3.5">
-                        <span className="font-black text-foreground text-sm block font-mono">
-                          ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
-                        </span>
-                        <span
-                          className={cn(
-                            'text-[9px] px-2 py-0.5 rounded-md font-bold uppercase mt-1 inline-block border',
-                            b.payment_status === 'paid'
-                              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                              : 'bg-amber-500/10 text-amber-700 border-amber-500/30'
-                          )}
-                        >
-                          {b.payment_status === 'paid' ? 'PAID' : 'PENDING'}
-                        </span>
+                      <td className="px-3.5 py-3 align-middle border-l border-slate-100 dark:border-border/60">
+                        <div className="space-y-0.5">
+                          <span className="font-extrabold text-sm text-slate-900 dark:text-white tracking-tight block leading-tight">
+                            ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
+                          </span>
+                          <span
+                            className={cn(
+                              'text-[9px] px-2 py-0.5 rounded-full font-semibold inline-block border',
+                              b.payment_status === 'paid'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                                : 'bg-[#fef3c7] text-[#b45309] border-[#fde68a]'
+                            )}
+                          >
+                            {b.payment_status === 'paid' ? 'Paid' : 'Pending'}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Actions */}
-                      <td className="px-4 py-3.5">
+                      <td className="px-3.5 py-3 align-middle">
                         <div className="flex items-center gap-1.5">
                           {b.status === 'active' && (
                             <>
@@ -1399,7 +1643,7 @@ export function AdminBookingsClient({
                                 type="button"
                                 size="sm"
                                 onClick={() => openReturnDialog(b)}
-                                className="h-8 px-3 text-[11px] font-bold bg-foreground text-background hover:bg-foreground/90 rounded-lg gap-1.5"
+                                className="h-7 px-3 text-[10px] font-semibold bg-[#0f172a] hover:bg-slate-800 text-white rounded-full inline-flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
                                 aria-label={`Process vehicle return for booking ${b.booking_number}`}
                               >
                                 <RotateCcw className="w-3 h-3" aria-hidden="true" />
@@ -1411,7 +1655,7 @@ export function AdminBookingsClient({
                                 size="sm"
                                 variant="outline"
                                 onClick={() => openExtendDialog(b)}
-                                className="h-8 px-2.5 text-[11px] font-semibold rounded-lg border-border hover:bg-muted"
+                                className="h-7 px-2.5 text-[10px] font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-full shadow-2xs transition-all cursor-pointer dark:bg-card dark:text-slate-200 dark:border-border"
                                 aria-label={`Extend duration for booking ${b.booking_number}`}
                               >
                                 Extend
@@ -1419,19 +1663,90 @@ export function AdminBookingsClient({
                             </>
                           )}
 
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setSelectedBooking(b)
-                              setViewDetailsOpen(true)
-                            }}
-                            className="h-8 w-8 p-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground"
-                            aria-label={`View details for booking ${b.booking_number}`}
-                          >
-                            <Eye className="w-3.5 h-3.5" aria-hidden="true" />
-                          </Button>
+                          {b.status !== 'active' && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedBooking(b)
+                                setViewDetailsOpen(true)
+                              }}
+                              className="h-7 px-2.5 text-[10px] font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-full shadow-2xs transition-all cursor-pointer dark:bg-card dark:text-slate-200 dark:border-border"
+                            >
+                              View Details
+                            </Button>
+                          )}
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-muted transition-colors cursor-pointer"
+                                aria-label={`Actions for booking ${b.booking_number}`}
+                              >
+                                <MoreVertical className="w-3.5 h-3.5" aria-hidden="true" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedBooking(b)
+                                  setViewDetailsOpen(true)
+                                }}
+                                className="cursor-pointer gap-2"
+                              >
+                                <Eye className="w-4 h-4 text-slate-500" />
+                                <span>View Full Details</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  printThermalReceipt(generateRentalReceiptText(b), b.booking_number)
+                                }}
+                                className="cursor-pointer gap-2"
+                              >
+                                <Printer className="w-4 h-4 text-slate-500" />
+                                <span>Print Thermal Invoice</span>
+                              </DropdownMenuItem>
+                              {customerPhone && (
+                                <DropdownMenuItem asChild>
+                                  <a href={`tel:${customerPhone}`} className="cursor-pointer gap-2 flex items-center">
+                                    <Phone className="w-4 h-4 text-slate-500" />
+                                    <span>Call Customer</span>
+                                  </a>
+                                </DropdownMenuItem>
+                              )}
+                              {waUrl && (
+                                <DropdownMenuItem asChild>
+                                  <a href={waUrl} target="_blank" rel="noopener noreferrer" className="cursor-pointer gap-2 flex items-center">
+                                    <MessageSquare className="w-4 h-4 text-emerald-600" />
+                                    <span>WhatsApp Customer</span>
+                                  </a>
+                                </DropdownMenuItem>
+                              )}
+                              {b.status === 'active' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => openReturnDialog(b)}
+                                    className="cursor-pointer gap-2 text-rose-600 focus:text-rose-600"
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
+                                    <span>Mark Returned</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => openExtendDialog(b)}
+                                    className="cursor-pointer gap-2"
+                                  >
+                                    <Clock className="w-4 h-4 text-slate-500" />
+                                    <span>Extend Duration</span>
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -1447,62 +1762,108 @@ export function AdminBookingsClient({
       {/* 3. RETURN CAR INSPECTION & LIVE BILL CALCULATION MODAL        */}
       {/* ============================================================ */}
       <Dialog open={returnModalOpen} onOpenChange={setReturnModalOpen}>
-        <DialogContent className="w-[96vw] max-w-2xl max-h-[92dvh] overflow-y-auto rounded-3xl p-4 sm:p-6 md:p-8">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-xl font-black flex items-center gap-2 text-foreground">
-              <RotateCcw className="w-5 h-5 text-emerald-600" aria-hidden="true" />
-              <span>Return Car & Finalize Bill</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Complete vehicle inspection, check odometer, record damages/violations, and finalize customer payment.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="w-[96vw] max-w-3xl max-h-[94dvh] overflow-y-auto rounded-3xl p-5 sm:p-7 md:p-8 bg-[#f8fafc] dark:bg-background border border-slate-200/80 dark:border-border/80 shadow-2xl">
+          {/* Top Bar Header matching image */}
+          <div className="flex items-start justify-between gap-4 pb-1">
+            <div className="flex items-start gap-2.5">
+              <button
+                type="button"
+                onClick={() => setReturnModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-blue-600 transition-colors cursor-pointer shrink-0 mt-0.5"
+                title="Close"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <div>
+                <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Return Car & Finalize Bill
+                </DialogTitle>
+                <DialogDescription className="text-xs sm:text-sm text-slate-500 dark:text-muted-foreground mt-0.5 leading-snug">
+                  Complete vehicle inspection, check odometer, record damages/violations, and finalize customer payment.
+                </DialogDescription>
+              </div>
+            </div>
+
+            {/* Vehicle Rental Pill Badge */}
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-semibold shrink-0 shadow-2xs">
+              <Car className="w-3.5 h-3.5" />
+              <span>Vehicle Rental</span>
+            </div>
+          </div>
 
           {selectedBooking && (
-            <form onSubmit={handleCompleteReturn} className="space-y-4 pt-2">
-              {/* Car & Customer Brief */}
-              <div className="p-3.5 bg-muted/40 border border-border/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-                <div>
-                  <span className="font-black text-foreground block text-sm sm:text-base">
-                    {selectedBooking.vehicle?.brand} {selectedBooking.vehicle?.model}
-                  </span>
-                  <span className="font-mono text-xs font-bold text-primary">
-                    {selectedBooking.vehicle?.registration_number} • ID: #{selectedBooking.booking_number}
-                  </span>
+            <form onSubmit={handleCompleteReturn} className="space-y-4 pt-1">
+              {/* Car & Customer Card */}
+              <div className="p-4 sm:p-4.5 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-[6px] bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <Car className="w-5 h-5 stroke-[1.8]" />
+                  </div>
+                  <div>
+                    <span className="font-black text-slate-900 dark:text-white text-sm sm:text-base uppercase tracking-tight block">
+                      {selectedBooking.vehicle?.brand} {selectedBooking.vehicle?.model}
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-muted-foreground font-medium block mt-0.5">
+                      {selectedBooking.vehicle?.registration_number} • ID: #{selectedBooking.booking_number}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-left sm:text-right">
-                  <span className="font-bold text-foreground block">
+
+                <div className="text-left sm:text-right w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E2E8F0] dark:border-border/60">
+                  <span className="font-bold text-slate-800 dark:text-slate-100 text-xs sm:text-sm uppercase tracking-tight block">
                     {getSafeCustomerName(selectedBooking.customer)}
                   </span>
-                  <span className="text-muted-foreground text-xs">
-                    📞 {getSafeCustomerPhone(selectedBooking.customer) || '—'}
+                  <span className="text-xs text-slate-500 dark:text-muted-foreground flex items-center sm:justify-end gap-1 mt-0.5 font-medium">
+                    <Phone className="w-3 h-3 text-slate-400" />
+                    <span>{getSafeCustomerPhone(selectedBooking.customer) || '—'}</span>
                   </span>
                 </div>
               </div>
 
-              {/* Inspection Fields (Stacking on mobile, 3-col on tablet/desktop) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Inspection Fields (3-col) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                {/* Return Date & Time */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="ret-dt" className="text-xs font-semibold">
-                    Return Date & Time
+                  <Label htmlFor="ret-dt" className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+                    <span>Return Date & Time</span>
                   </Label>
-                  <Input
-                    id="ret-dt"
-                    type="datetime-local"
-                    value={returnDatetime}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleReturnDatetimeChange(e.target.value)}
-                    className="min-h-[44px] text-xs sm:text-sm rounded-xl"
-                  />
+                  <div className="relative group cursor-pointer">
+                    <input
+                      id="ret-dt"
+                      type="datetime-local"
+                      value={returnDatetime}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleReturnDatetimeChange(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20"
+                    />
+                    <div className="w-full h-10 px-3.5 flex items-center justify-between text-xs sm:text-sm rounded-[6px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card text-slate-800 dark:text-slate-100 font-medium group-hover:border-blue-400 transition-colors shadow-2xs">
+                      <span>
+                        {(() => {
+                          try {
+                            if (!returnDatetime) return 'Select return date & time'
+                            const d = new Date(returnDatetime)
+                            if (isNaN(d.getTime())) return 'Select return date & time'
+                            return format(d, 'MM/dd/yyyy hh:mm a')
+                          } catch {
+                            return 'Select return date & time'
+                          }
+                        })()}
+                      </span>
+                      <Calendar className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                    </div>
+                  </div>
                 </div>
 
+                {/* Ending Odometer */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="ret-km" className="text-xs font-semibold">
-                      Ending Odometer (KM) *
+                    <Label htmlFor="ret-km" className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <Gauge className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+                      <span>Ending Odometer (KM) *</span>
                     </Label>
                     {activeKmInfo.isExceeded && (
                       <span className="text-[10px] text-rose-600 font-bold">
-                        +{activeKmInfo.extraKm} km limit exceeded
+                        +{activeKmInfo.extraKm} km exceeded
                       </span>
                     )}
                   </div>
@@ -1513,30 +1874,33 @@ export function AdminBookingsClient({
                     value={returnEndingKm}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleEndingKmChange(e.target.value)}
                     className={cn(
-                      "min-h-[44px] text-xs sm:text-sm rounded-xl font-mono",
+                      "h-10 text-xs sm:text-sm rounded-[6px] font-medium bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-800 dark:text-slate-100 shadow-2xs",
                       activeKmInfo.isExceeded && "border-rose-500/50 bg-rose-500/5 focus:border-rose-500"
                     )}
                   />
-                  <div className="text-[10px] space-y-0.5 text-muted-foreground block">
-                    <div className="flex items-center justify-between">
-                      <span>Start: {selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer} KM</span>
-                      <span className="font-semibold text-foreground">Driven: {activeKmInfo.driven} KM</span>
+                  <div className="text-[11px] space-y-0.5 text-slate-500 dark:text-muted-foreground block pt-0.5">
+                    <div className="flex items-center gap-1 text-[11px]">
+                      <span>Start: <strong className="font-bold text-slate-800 dark:text-slate-200">{selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer} KM</strong></span>
+                      <span className="text-slate-300 mx-1">|</span>
+                      <span>Distance: <strong className="font-bold text-slate-800 dark:text-slate-200">{activeKmInfo.driven} KM</strong></span>
                     </div>
-                    <div className="text-[10px]">
-                      Limit: <strong className="text-foreground">{activeKmInfo.totalIncludedKm} KM</strong> ({activeKmInfo.limitPer24h} km/24h × {activeKmInfo.rentalDays} day{activeKmInfo.rentalDays > 1 ? 's' : ''})
+                    <div className="text-[10px] text-slate-400">
+                      Limit: <strong className="text-slate-700 dark:text-slate-300 font-bold">{activeKmInfo.totalIncludedKm} KM</strong> ({activeKmInfo.limitPer24h} km/24h = {activeKmInfo.rentalDays} day{activeKmInfo.rentalDays > 1 ? 's' : ''})
                     </div>
                   </div>
                 </div>
 
+                {/* Fuel Return Level */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="ret-fuel" className="text-xs font-semibold">
-                    Fuel Return Level
+                  <Label htmlFor="ret-fuel" className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Fuel className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+                    <span>Fuel Return Level</span>
                   </Label>
                   <Select value={returnFuelLevel} onValueChange={setReturnFuelLevel}>
-                    <SelectTrigger id="ret-fuel" className="min-h-[44px] text-xs sm:text-sm rounded-xl">
+                    <SelectTrigger id="ret-fuel" className="h-10 text-xs sm:text-sm rounded-[6px] bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-800 dark:text-slate-100 shadow-2xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-[8px] border-[#E2E8F0]">
                       <SelectItem value="full">Full Tank (100%)</SelectItem>
                       <SelectItem value="three_quarter">3/4 Tank (75%)</SelectItem>
                       <SelectItem value="half">Half Tank (50%)</SelectItem>
@@ -1547,10 +1911,15 @@ export function AdminBookingsClient({
                 </div>
               </div>
 
-              {/* Incidentals & Extra Charges (Simple & Compact) */}
-              <div className="p-3 bg-muted/30 border border-border/60 rounded-2xl space-y-2">
+              {/* Incidentals & Extra Charges (Optional) */}
+              <div className="p-4 sm:p-4.5 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card space-y-3 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground">Incidentals & Extra Charges (Optional)</span>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                      Incidentals & Extra Charges <span className="text-slate-400 font-normal text-xs ml-0.5">(Optional)</span>
+                    </span>
+                  </div>
                   {activeOverdueInfo.isOverdue && (
                     <span className="text-[10px] text-amber-600 font-bold">
                       ⚠ Overdue: {activeOverdueInfo.days}d (₹{activeOverdueInfo.fee.toLocaleString('en-IN')})
@@ -1558,59 +1927,97 @@ export function AdminBookingsClient({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  <div className="space-y-1">
-                    <Label htmlFor="ret-damage-cost" className="text-[11px] font-semibold text-muted-foreground">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 items-end">
+                  <div className="flex flex-col justify-end space-y-1.5 min-w-0">
+                    <Label htmlFor="ret-damage-cost" className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap truncate block">
                       Damage Cost (₹)
                     </Label>
                     <Input
                       id="ret-damage-cost"
                       type="number"
+                      min={0}
                       value={damageCost}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDamageCost(e.target.value)}
-                      className="min-h-[40px] text-xs rounded-xl font-mono"
+                      className="h-10 text-xs sm:text-sm rounded-[6px] font-medium bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-900 dark:text-white shadow-2xs w-full"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="late-fee" className="text-[11px] font-semibold text-muted-foreground">
+                  <div className="flex flex-col justify-end space-y-1.5 min-w-0">
+                    <Label htmlFor="late-fee" className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap truncate block">
                       Late Fee (₹)
                     </Label>
                     <Input
                       id="late-fee"
                       type="number"
+                      min={0}
                       value={lateCharges}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLateCharges(e.target.value)}
-                      className="min-h-[40px] text-xs rounded-xl font-mono text-amber-600 font-bold"
+                      className="h-10 text-xs sm:text-sm rounded-[6px] font-medium bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-900 dark:text-white shadow-2xs w-full"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="extra-km-fee" className="text-[11px] font-semibold text-muted-foreground">
+                  <div className="flex flex-col justify-end space-y-1.5 min-w-0">
+                    <Label htmlFor="extra-km-fee" className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap truncate block">
                       Extra KM (₹)
                     </Label>
                     <Input
                       id="extra-km-fee"
                       type="number"
+                      min={0}
                       value={extraKmCharges}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExtraKmCharges(e.target.value)}
                       className={cn(
-                        "min-h-[40px] text-xs rounded-xl font-mono",
+                        "h-10 text-xs sm:text-sm rounded-[6px] font-medium bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-900 dark:text-white shadow-2xs w-full",
                         activeKmInfo.isExceeded && "text-rose-600 font-bold border-rose-500/40"
                       )}
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="disc-fee" className="text-[11px] font-semibold text-muted-foreground">
+                  <div className="flex flex-col justify-end space-y-1.5 min-w-0">
+                    <Label htmlFor="ret-overspeed" className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap truncate block" title="Over Speed (₹)">
+                      Over Speed (₹)
+                    </Label>
+                    <Input
+                      id="ret-overspeed"
+                      type="number"
+                      min={0}
+                      value={overspeedingCharges}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOverspeedingCharges(e.target.value)}
+                      className={cn(
+                        "h-10 text-xs sm:text-sm rounded-[6px] font-medium bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-900 dark:text-white shadow-2xs w-full",
+                        numOverspeed > 0 && "text-rose-600 font-bold border-rose-500/40"
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex flex-col justify-end space-y-1.5 min-w-0">
+                    <Label htmlFor="ret-car-wash" className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap truncate block" title="Car Washing (₹)">
+                      Car Washing (₹)
+                    </Label>
+                    <Input
+                      id="ret-car-wash"
+                      type="number"
+                      min={0}
+                      value={cleaningCharges}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCleaningCharges(e.target.value)}
+                      className={cn(
+                        "h-10 text-xs sm:text-sm rounded-[6px] font-medium bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-900 dark:text-white shadow-2xs w-full",
+                        numCleaning > 0 && "text-blue-600 font-bold border-blue-500/40"
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex flex-col justify-end space-y-1.5 min-w-0">
+                    <Label htmlFor="disc-fee" className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap truncate block">
                       Discount (₹)
                     </Label>
                     <Input
                       id="disc-fee"
                       type="number"
+                      min={0}
                       value={returnDiscount}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReturnDiscount(e.target.value)}
-                      className="min-h-[40px] text-xs rounded-xl font-mono text-emerald-600"
+                      className="h-10 text-xs sm:text-sm rounded-[6px] font-medium border-[#E2E8F0] dark:border-emerald-700/60 bg-white dark:bg-card text-emerald-700 dark:text-emerald-300 focus:border-emerald-500 shadow-2xs w-full"
                     />
                   </div>
                 </div>
@@ -1624,23 +2031,18 @@ export function AdminBookingsClient({
                 const diffMs = Math.max(0, returnDate.getTime() - pickupDate.getTime())
                 const totalHours = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)))
                 const totalDays = Math.max(1, Math.floor(totalHours / 24))
-                const durationText = `${totalDays} Day${totalDays > 1 ? 's' : ''} / ${totalHours} Hrs`
+                const remainingHours = totalHours % 24
+                const durationText = `${totalDays} Day${totalDays > 1 ? 's' : ''} / ${remainingHours > 0 ? `${remainingHours} Hr${remainingHours > 1 ? 's' : ''}` : '0 Hr'}`
 
                 const depositAmt = Number(
                   selectedBooking?.security_deposit ??
                   (selectedBooking?.vehicle as any)?.security_deposit ??
-                  2000
+                  5000
                 )
-                const insuranceAmt = Number(
-                  selectedBooking?.insurance_charge ??
-                  (selectedBooking?.with_insurance ? 1200 : 1200)
-                )
-
                 // Subtotal calculation
                 const dynamicSubtotal = Math.max(
                   0,
                   baseRentalAmount +
-                  insuranceAmt +
                   numLate +
                   numExtraKm +
                   numDamage +
@@ -1657,7 +2059,7 @@ export function AdminBookingsClient({
                   depositSettlement === 'forfeited'
                     ? depositAmt
                     : depositSettlement === 'deducted'
-                      ? Math.min(depositAmt, numDamage + numOverspeed + Math.max(0, remainingSettlementDue))
+                      ? Math.min(depositAmt, numDamage + numOverspeed + numCleaning + Math.max(0, remainingSettlementDue))
                       : 0
 
                 const depositRefundedToBank =
@@ -1680,26 +2082,26 @@ export function AdminBookingsClient({
 
                 return (
                   <div className="space-y-4">
-                    {/* Top Escrow Account Banner (Sand/Tan Tone matching mockup) */}
-                    <div className="p-4 sm:p-5 bg-[#d3c2b2]/45 dark:bg-amber-950/30 border border-[#c4b09e]/70 dark:border-amber-800/40 rounded-2xl space-y-3 shadow-xs">
+                    {/* Security Deposit Escrow Account */}
+                    <div className="p-4 sm:p-4.5 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card space-y-4 shadow-2xs">
                       {/* Banner Header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-[#b48039] shrink-0" aria-hidden="true" />
-                          <span className="font-bold text-xs sm:text-sm text-[#b48039] tracking-tight">
+                          <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0" aria-hidden="true" />
+                          <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                             Security Deposit Escrow Account
                           </span>
                         </div>
 
-                        {/* Status Badge (Clickable to switch: HELD / REFUNDED / DEDUCTED) */}
+                        {/* Status Badge */}
                         <button
                           type="button"
                           onClick={() => setDepositSettlement(prev => prev === 'held' ? 'refunded' : prev === 'refunded' ? 'deducted' : 'held')}
                           title="Click to toggle status: HELD / REFUNDED / DEDUCTED"
-                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-full shadow-2xs cursor-pointer hover:bg-slate-50 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-card border border-[#E2E8F0] dark:border-border rounded-[6px] shadow-2xs cursor-pointer hover:bg-slate-50 dark:hover:bg-muted transition-colors"
                         >
-                          <Clock className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" aria-hidden="true" />
-                          <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-slate-700 dark:text-slate-300 uppercase">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" />
+                          <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
                             {escrowStatusLabel}
                           </span>
                         </button>
@@ -1708,152 +2110,167 @@ export function AdminBookingsClient({
                       {/* 3-Column Stats Row */}
                       <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-1">
                         <div>
-                          <span className="block text-[11px] text-[#a57a44] dark:text-amber-400/90 font-medium">
-                            Total Escrowed:
+                          <span className="block text-xs text-slate-500 dark:text-muted-foreground font-medium">
+                            Total Escrowed
                           </span>
-                          <span className="block font-mono font-bold text-xs sm:text-sm text-[#b48039] dark:text-amber-400">
+                          <span className="block font-black text-xl sm:text-2xl text-slate-900 dark:text-white mt-1">
                             ₹{depositAmt.toLocaleString('en-IN')}
                           </span>
                         </div>
 
                         <div>
-                          <span className="block text-[11px] text-[#a57a44] dark:text-amber-400/90 font-medium">
-                            Deductions (Fuel/Late):
+                          <span className="block text-xs text-slate-500 dark:text-muted-foreground font-medium">
+                            Deductions (Fuel/Late)
                           </span>
-                          <span className="block font-mono font-bold text-xs sm:text-sm text-rose-600 dark:text-rose-400">
+                          <span className="block font-black text-xl sm:text-2xl text-rose-500 mt-1">
                             ₹{depositDeductions.toLocaleString('en-IN')}
                           </span>
                         </div>
 
                         <div>
-                          <span className="block text-[11px] text-[#a57a44] dark:text-amber-400/90 font-medium">
-                            Refunded to Bank:
+                          <span className="block text-xs text-slate-500 dark:text-muted-foreground font-medium">
+                            Refunded to Bank
                           </span>
-                          <span className="block font-mono font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400">
+                          <span className="block font-black text-xl sm:text-2xl text-emerald-600 mt-1">
                             ₹{depositRefundedToBank.toLocaleString('en-IN')}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* FINANCIAL SETTLEMENT Section */}
-                    <div className="space-y-2 pt-1">
-                      <h4 className="text-xs font-black tracking-wider uppercase text-foreground">
-                        FINANCIAL SETTLEMENT
-                      </h4>
+                    {/* Financial Settlement Card */}
+                    <div className="rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card p-4 sm:p-4.5 space-y-3.5 shadow-2xs">
+                      {/* Header */}
+                      <div className="flex items-center gap-2 pb-1">
+                        <FileText className="w-4 h-4 text-blue-600 shrink-0" aria-hidden="true" />
+                        <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                          Financial Settlement
+                        </h4>
+                      </div>
 
-                      <div className="rounded-2xl border border-slate-200/90 dark:border-border/80 bg-white dark:bg-card p-4 sm:p-5 space-y-3.5 shadow-2xs">
-                        {/* Table Header */}
-                        <div className="flex items-center justify-between text-xs font-bold text-foreground pb-1">
-                          <span>Description</span>
-                          <span>Amount (INR)</span>
-                        </div>
+                      {/* Table Header */}
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-slate-100 pb-2 border-b border-[#E2E8F0] dark:border-border/60">
+                        <span>Description</span>
+                        <span>Amount (INR)</span>
+                      </div>
 
-                        {/* Itemized Rows */}
-                        <div className="space-y-3 text-xs">
-                          {/* Base Rental */}
-                          <div className="flex items-center justify-between text-foreground/90">
-                            <span>Base Rental ({durationText})</span>
-                            <span className="font-mono font-semibold text-foreground">
-                              ₹{baseRentalAmount.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-
-                          {/* Zero-Depreciation Insurance Waiver */}
-                          <div className="flex items-center justify-between text-foreground/90">
-                            <span>Zero-Depreciation Insurance Waiver</span>
-                            <span className="font-mono font-semibold text-foreground">
-                              ₹{insuranceAmt.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-
-                          {/* Extra KM if applicable */}
-                          {numExtraKm > 0 && (
-                            <div className="flex items-center justify-between text-foreground/90">
-                              <span>Extra Distance Charges ({activeKmInfo.extraKm} km limit exceeded)</span>
-                              <span className="font-mono font-semibold text-foreground">
-                                +₹{numExtraKm.toLocaleString('en-IN')}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Late Fee if applicable */}
-                          {numLate > 0 && (
-                            <div className="flex items-center justify-between text-foreground/90">
-                              <span>Late Overdue Fee ({activeOverdueInfo.days} Day{activeOverdueInfo.days > 1 ? 's' : ''})</span>
-                              <span className="font-mono font-semibold text-foreground">
-                                +₹{numLate.toLocaleString('en-IN')}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Damage & Repair if applicable */}
-                          {numDamage > 0 && (
-                            <div className="flex items-center justify-between text-foreground/90">
-                              <span>Damage & Repair Assessment</span>
-                              <span className="font-mono font-semibold text-foreground">
-                                +₹{numDamage.toLocaleString('en-IN')}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Discount if applicable */}
-                          {numDiscount > 0 && (
-                            <div className="flex items-center justify-between text-emerald-600">
-                              <span>Promotional Discount Applied</span>
-                              <span className="font-mono font-semibold">
-                                -₹{numDiscount.toLocaleString('en-IN')}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Goods & Services Tax (GST @ 18%) */}
-                          <div className="flex items-center justify-between text-foreground/90">
-                            <span>Goods & Services Tax (GST @ {taxRate}%)</span>
-                            <span className="font-mono font-semibold text-foreground">
-                              ₹{dynamicTax.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-
-                          {/* Refundable Security Deposit (Liability) - Highlighted in Amber/Gold */}
-                          <div className="flex items-center justify-between text-[#d97706] dark:text-[#f59e0b] font-semibold">
-                            <span>Refundable Security Deposit (Liability)</span>
-                            <span className="font-mono">
-                              ₹{depositAmt.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Total Amount Paid Row */}
-                        <div className="border-t border-slate-200/80 dark:border-border/80 pt-3 flex items-center justify-between">
-                          <span className="text-sm font-black text-foreground">
-                            Total Amount Paid
-                          </span>
-                          <span className="font-mono text-base font-black text-foreground">
-                            ₹{totalSettlementPaid.toLocaleString('en-IN')}
+                      {/* Itemized Rows */}
+                      <div className="space-y-2.5 text-xs sm:text-sm">
+                        {/* Base Rental */}
+                        <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
+                          <span>Base Rental ({durationText})</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100">
+                            ₹{baseRentalAmount.toLocaleString('en-IN')}
                           </span>
                         </div>
 
-                        {/* Payment Status Info Subtitle */}
-                        {alreadyPaid > 0 && (
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-dashed border-slate-200/60 dark:border-border/60">
-                            <span>Advance Paid: ₹{alreadyPaid.toLocaleString('en-IN')}</span>
-                            <span className={cn('font-bold font-mono', remainingSettlementDue > 0 ? 'text-rose-600' : 'text-emerald-600')}>
-                              {remainingSettlementDue > 0 ? `Net Balance to Collect: ₹${remainingSettlementDue.toLocaleString('en-IN')}` : 'Full Rental Settled'}
+                        {/* Extra Distance Charges */}
+                        {numExtraKm > 0 && (
+                          <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
+                            <span>Extra Distance Charges ({activeKmInfo.extraKm} km limit exceeded)</span>
+                            <span className="font-bold text-slate-900 dark:text-slate-100">
+                              +₹{numExtraKm.toLocaleString('en-IN')}
                             </span>
                           </div>
                         )}
+
+                        {/* Late Fee */}
+                        {numLate > 0 && (
+                          <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
+                            <span>Late Overdue Fee ({activeOverdueInfo.days} Day{activeOverdueInfo.days > 1 ? 's' : ''})</span>
+                            <span className="font-bold text-slate-900 dark:text-slate-100">
+                              +₹{numLate.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Damage & Repair */}
+                        {numDamage > 0 && (
+                          <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
+                            <span>Damage & Repair Assessment</span>
+                            <span className="font-bold text-slate-900 dark:text-slate-100">
+                              +₹{numDamage.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Over Speeding Penalty */}
+                        {numOverspeed > 0 && (
+                          <div className="flex items-center justify-between text-rose-600 dark:text-rose-400 font-medium">
+                            <span>Over Speeding Penalty</span>
+                            <span className="font-bold">
+                              +₹{numOverspeed.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Car Washing Charge */}
+                        {numCleaning > 0 && (
+                          <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
+                            <span>Car Washing Charge</span>
+                            <span className="font-bold text-slate-900 dark:text-slate-100">
+                              +₹{numCleaning.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Discount */}
+                        {numDiscount > 0 && (
+                          <div className="flex items-center justify-between text-emerald-600">
+                            <span>Promotional Discount Applied</span>
+                            <span className="font-bold">
+                              -₹{numDiscount.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* GST */}
+                        <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
+                          <span>Goods & Services Tax (GST @ {taxRate}%)</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100">
+                            ₹{dynamicTax.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        {/* Refundable Security Deposit */}
+                        <div className="flex items-center justify-between text-amber-600 dark:text-amber-500 font-semibold">
+                          <span>Refundable Security Deposit (Liability)</span>
+                          <span className="font-bold">
+                            ₹{depositAmt.toLocaleString('en-IN')}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Total Amount Paid Strip */}
+                      <div className="bg-[#f0f6ff] dark:bg-blue-950/40 rounded-[6px] border border-blue-100 dark:border-blue-900/40 p-3 sm:p-3.5 flex items-center justify-between mt-2">
+                        <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                          Total Amount Paid
+                        </span>
+                        <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">
+                          ₹{totalSettlementPaid.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      {/* Payment Status Info Subtitle if advance was paid */}
+                      {alreadyPaid > 0 && (
+                        <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-dashed border-[#E2E8F0] dark:border-border/60">
+                          <span>Advance Paid: ₹{alreadyPaid.toLocaleString('en-IN')}</span>
+                          <span className={cn('font-bold font-mono', remainingSettlementDue > 0 ? 'text-rose-600' : 'text-emerald-600')}>
+                            {remainingSettlementDue > 0 ? `Net Balance to Collect: ₹${remainingSettlementDue.toLocaleString('en-IN')}` : 'Full Rental Settled'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
               })()}
 
-              {/* Settle Balance Payment Mode */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="space-y-1.5">
-                  <Label htmlFor="collected-amt" className="text-xs font-semibold">
-                    Payment Collected at Return (₹)
+              {/* Payment Settlement Row (2 Cards) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                <div className="p-4 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card space-y-2 shadow-2xs">
+                  <Label htmlFor="collected-amt" className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Payment Collected at Return (₹)</span>
                   </Label>
                   <Input
                     id="collected-amt"
@@ -1861,19 +2278,20 @@ export function AdminBookingsClient({
                     value={returnPaymentCollected}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReturnPaymentCollected(e.target.value)}
                     placeholder={String(remainingSettlementDue)}
-                    className="min-h-[44px] text-xs sm:text-sm rounded-xl font-mono"
+                    className="h-10 text-xs sm:text-sm rounded-[6px] font-medium bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-800 dark:text-slate-100"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="payment-mode" className="text-xs font-semibold">
-                    Payment Mode
+                <div className="p-4 rounded-[8px] border border-[#E2E8F0] dark:border-border bg-white dark:bg-card space-y-2 shadow-2xs">
+                  <Label htmlFor="payment-mode" className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Payment Mode</span>
                   </Label>
                   <Select value={returnPaymentMethod} onValueChange={setReturnPaymentMethod}>
-                    <SelectTrigger id="payment-mode" className="min-h-[44px] text-xs sm:text-sm rounded-xl">
+                    <SelectTrigger id="payment-mode" className="h-10 text-xs sm:text-sm rounded-[6px] bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-800 dark:text-slate-100">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-[8px] border-[#E2E8F0]">
                       <SelectItem value="cash">Cash Counter</SelectItem>
                       <SelectItem value="upi">UPI / QR Code</SelectItem>
                       <SelectItem value="card">Credit / Debit Card</SelectItem>
@@ -1883,20 +2301,20 @@ export function AdminBookingsClient({
                 </div>
               </div>
 
-              {/* Action Buttons with 44px Touch Targets */}
+              {/* Action Buttons with 42px Touch Targets */}
               <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setReturnModalOpen(false)}
-                  className="w-full sm:w-auto min-h-[44px] rounded-xl text-xs font-semibold"
+                  className="w-full sm:w-auto min-h-[42px] rounded-[6px] text-xs font-semibold border-[#E2E8F0] dark:border-border"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={processing}
-                  className="w-full sm:w-auto min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5"
+                  className="w-full sm:w-auto min-h-[42px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-[6px] shadow-xs gap-1.5"
                 >
                   {processing ? 'Processing Return...' : '✓ Complete Return & Release Car'}
                 </Button>
@@ -1980,7 +2398,7 @@ export function AdminBookingsClient({
         <DialogContent className="w-[96vw] max-w-lg max-h-[92dvh] overflow-y-auto rounded-3xl p-5 sm:p-6 md:p-7">
           <DialogHeader>
             <DialogTitle className="text-base sm:text-lg font-black flex items-center gap-2 text-foreground">
-              <FileText className="w-5 h-5 text-primary" aria-hidden="true" />
+              <Receipt className="w-5 h-5 text-primary" aria-hidden="true" />
               <span>Rental Record & Details</span>
             </DialogTitle>
             <DialogDescription className="text-xs font-mono">
@@ -1990,77 +2408,59 @@ export function AdminBookingsClient({
 
           {selectedBooking && (
             <div className="space-y-4 pt-2 text-xs">
-              {/* Vehicle & Customer Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-3 bg-muted/40 rounded-2xl border border-border/60 space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Vehicle</span>
-                  <span className="font-bold text-foreground text-sm block">
-                    {selectedBooking.vehicle?.brand} {selectedBooking.vehicle?.model}
-                  </span>
-                  <span className="font-mono text-xs text-primary font-bold block">
-                    {selectedBooking.vehicle?.registration_number}
-                  </span>
+              {/* Thermal Invoice Preview Card matching requested template */}
+              <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3.5 sm:p-4 shadow-sm space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800 text-xs">
+                  <div className="flex items-center gap-2 font-bold text-slate-800 dark:text-zinc-200">
+                    <Receipt className="w-4 h-4 text-primary" />
+                    <span>POS / Thermal Invoice Layout</span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleCopyReceipt(generateRentalReceiptText(selectedBooking))}
+                    className="h-7 px-2.5 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg gap-1.5 font-semibold cursor-pointer"
+                  >
+                    {copiedReceipt ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Text</span>
+                      </>
+                    )}
+                  </Button>
                 </div>
 
-                <div className="p-3 bg-muted/40 rounded-2xl border border-border/60 space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Customer</span>
-                  <span className="font-bold text-foreground text-sm block truncate">
-                    {getSafeCustomerName(selectedBooking.customer)}
-                  </span>
-                  <span className="text-muted-foreground text-xs block">
-                    📞 {getSafeCustomerPhone(selectedBooking.customer) || '—'}
-                  </span>
+                <div
+                  style={{ fontFamily: "'Courier New', Courier, Consolas, monospace" }}
+                  className="bg-slate-50 dark:bg-black/90 text-slate-900 dark:text-emerald-400 p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-zinc-800/80 text-[11px] sm:text-xs leading-relaxed overflow-x-auto whitespace-pre select-all shadow-inner tracking-normal"
+                >
+                  {generateRentalReceiptText(selectedBooking)}
                 </div>
               </div>
 
-              {/* Schedule & Odometer Breakdown */}
-              <div className="p-3.5 bg-muted/20 border border-border/60 rounded-2xl space-y-1.5 font-medium">
-                <div>Pickup: {format(new Date(selectedBooking.pickup_datetime), 'dd MMM yyyy, hh:mm a')}</div>
-                <div>Return: {format(new Date(selectedBooking.return_datetime), 'dd MMM yyyy, hh:mm a')}</div>
-                <div className="pt-1 border-t border-border/50 text-[11px]">
-                  <div>Starting Odometer: {selectedBooking.pickup_odometer || selectedBooking.vehicle?.current_odometer} KM</div>
-                  {selectedBooking.return_odometer && (
-                    <>
-                      <div>Ending Odometer: {selectedBooking.return_odometer} KM (Total: {selectedBooking.return_odometer - Number(selectedBooking.pickup_odometer || 0)} KM driven)</div>
-                      <div>24h Limit: {selectedBooking.included_km || 300} KM ({selectedBooking.vehicle?.included_km_per_day || 300} km/24h)</div>
-                      <div>Extra Distance: {selectedBooking.extra_km ? `${selectedBooking.extra_km} KM beyond limit (Charge: ₹${selectedBooking.extra_km_charge})` : '0 KM (Within limit)'}</div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Financial Summary */}
-              <div className="p-3.5 bg-card border border-border rounded-2xl space-y-1.5">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Base Rental:</span>
-                  <span className="font-mono font-bold text-foreground">₹{selectedBooking.base_rental}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Security Deposit:</span>
-                  <span className="font-mono font-bold text-foreground">₹{selectedBooking.security_deposit}</span>
-                </div>
-                <div className="flex justify-between font-black text-sm text-foreground border-t border-border pt-2">
-                  <span>Grand Total:</span>
-                  <span className="font-mono text-primary text-base">₹{selectedBooking.grand_total}</span>
-                </div>
-              </div>
-
+              {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => window.print()}
-                  className="w-full sm:w-auto min-h-[44px] text-xs rounded-xl gap-1.5 font-bold"
+                  onClick={() => setViewDetailsOpen(false)}
+                  className="w-full sm:w-auto min-h-[44px] text-xs rounded-xl cursor-pointer"
                 >
-                  <Printer className="w-4 h-4" aria-hidden="true" />
-                  <span>Print Agreement</span>
+                  Close
                 </Button>
                 <Button
                   type="button"
-                  onClick={() => setViewDetailsOpen(false)}
-                  className="w-full sm:w-auto min-h-[44px] text-xs rounded-xl"
+                  onClick={() => printThermalReceipt(generateRentalReceiptText(selectedBooking), selectedBooking.booking_number)}
+                  className="w-full sm:w-auto min-h-[44px] text-xs rounded-xl gap-2 font-bold gradient-brand text-white shadow-sm shadow-primary/25 cursor-pointer"
                 >
-                  Close
+                  <Printer className="w-4 h-4" aria-hidden="true" />
+                  <span>Print Rental Invoice</span>
                 </Button>
               </div>
             </div>

@@ -103,10 +103,12 @@ export async function POST(req: Request) {
     const driverFee = Number(driver_charge) || 0
     const insFee = Number(insurance_charge) || 0
     const discount = Number(discount_amount) || 0
-    const taxRateNum = Number(tax_rate) || 18
+    const taxRateNum = (tax_rate !== undefined && tax_rate !== null && !isNaN(Number(tax_rate)))
+      ? Math.max(0, Number(tax_rate))
+      : 18
 
     const subtotal = Math.max(0, baseRental + driverFee + insFee - discount)
-    const taxAmount = Math.round((subtotal * (taxRateNum / 100)) * 100) / 100
+    const taxAmount = taxRateNum > 0 ? Math.round((subtotal * (taxRateNum / 100)) * 100) / 100 : 0
     const grandTotal = Math.round((subtotal + taxAmount + secDeposit) * 100) / 100
     const amountPaid = Number(advance_amount_paid) || 0
     const outstanding = Math.max(0, grandTotal - amountPaid)

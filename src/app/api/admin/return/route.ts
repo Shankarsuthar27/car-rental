@@ -81,14 +81,18 @@ export async function POST(req: Request) {
     const overspeedFee = Number(overspeeding_charges) || 0
     const otherFee = Number(other_charges) || 0
     const discount = Number(discount_amount) || 0
-    const taxRateNum = Number(tax_rate || booking.tax_rate || 18)
+    const taxRateNum = (tax_rate !== undefined && tax_rate !== null && !isNaN(Number(tax_rate)))
+      ? Math.max(0, Number(tax_rate))
+      : (booking?.tax_rate !== undefined && booking?.tax_rate !== null && !isNaN(Number(booking.tax_rate)))
+      ? Math.max(0, Number(booking.tax_rate))
+      : 18
 
     // Formula: Base Rental + Late + Extra KM + Damage + Cleaning + Over Speeding + Other - Discount
     const subtotal = Math.max(
       0,
       baseRental + lateFee + extraKmFee + damageFee + cleaningFee + overspeedFee + otherFee - discount
     )
-    const taxAmount = Math.round((subtotal * (taxRateNum / 100)) * 100) / 100
+    const taxAmount = taxRateNum > 0 ? Math.round((subtotal * (taxRateNum / 100)) * 100) / 100 : 0
     const secDeposit = Number(booking.security_deposit || 0)
 
     // Final total calculation
