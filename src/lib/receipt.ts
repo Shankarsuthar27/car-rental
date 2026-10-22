@@ -140,7 +140,7 @@ export function generateRentalReceiptText(b: Booking): string {
     accountedTotal -= discountAmount
   }
 
-  // Account for any remaining difference with grandTotal (e.g. 18% GST on existing bookings)
+  // Account for any remaining difference with grandTotal (e.g. 18% GST or deposit refund)
   const remainingDiff = Math.round(grandTotal - accountedTotal)
   if (remainingDiff > 0) {
     if (taxAmount === 0 && Math.abs(remainingDiff - Math.round(baseRental * 0.18)) <= 2) {
@@ -148,8 +148,8 @@ export function generateRentalReceiptText(b: Booking): string {
     } else {
       billingRows.push(formatReceiptBillingRow('Extra Charges', remainingDiff))
     }
-  } else if (remainingDiff < 0 && discountAmount === 0) {
-    billingRows.push(formatReceiptBillingRow('Discount Applied', Math.abs(remainingDiff), '-₹ '))
+  } else if (remainingDiff < 0) {
+    billingRows.push(formatReceiptBillingRow('Refunded Deposit', Math.abs(remainingDiff), '-₹ '))
   }
 
   return [

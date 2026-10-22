@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { DateRangePickerWithTime } from '@/components/admin/reports/DateRangePickerWithTime'
 import { generateRentalReceiptText, printThermalReceipt } from '@/lib/receipt'
+import { generateReportPDF, printReportSection } from '@/lib/reportPdf'
 
 interface RentalReportRow {
   id: string
@@ -150,10 +151,19 @@ export default function AdminReportsPage() {
     }
   }
 
+  // Helper to ensure we export/print all records in this report section
+  const getRecordsForReport = () => {
+    if (tableSearch.trim() && filteredData.length > 0) {
+      return filteredData
+    }
+    return rentalData.length > 0 ? rentalData : filteredData
+  }
+
   // Export handlers
   const handleCopy = () => {
+    const records = getRecordsForReport()
     const headers = ['Rental ID', 'Date', 'Vehicle', 'Customer', 'Rental Typ', 'Duration', 'Total Amo', 'Payment Status']
-    const rows = filteredData.map(r => [
+    const rows = records.map(r => [
       r.id,
       r.date,
       r.vehicle,
@@ -170,8 +180,9 @@ export default function AdminReportsPage() {
   }
 
   const handleExportCSV = (filename = 'Fleet_Rental_Report.csv') => {
+    const records = getRecordsForReport()
     const headers = ['Rental ID', 'Date', 'Vehicle', 'Customer', 'Rental Typ', 'Duration', 'Total Amount (INR)', 'Payment Status']
-    const rows = filteredData.map(r => [
+    const rows = records.map(r => [
       `"${r.id}"`,
       `"${r.date}"`,
       `"${r.vehicle}"`,
@@ -192,8 +203,16 @@ export default function AdminReportsPage() {
     document.body.removeChild(link)
   }
 
-  const handlePrint = () => {
-    window.print()
+  // PDF Export of this section for all records
+  const handleExportPDF = () => {
+    const records = getRecordsForReport()
+    generateReportPDF(records, dateRange)
+  }
+
+  // Print of this section for all records
+  const handlePrintReport = () => {
+    const records = getRecordsForReport()
+    printReportSection(records, dateRange)
   }
 
   const handlePrintRowInvoice = (row: RentalReportRow) => {
@@ -312,7 +331,7 @@ export default function AdminReportsPage() {
 
 
 
-            {/* Action Buttons: Search, PDF, Print Invoice (Aligned to far right) */}
+            {/* Action Buttons: Search, PDF, Print (Aligned to far right) */}
             <div className="flex items-center gap-2 sm:ml-auto">
               <button
                 type="button"
@@ -325,24 +344,23 @@ export default function AdminReportsPage() {
 
               <button
                 type="button"
-                onClick={handlePrint}
+                onClick={handleExportPDF}
                 className="px-4 py-1.5 text-xs font-bold text-white bg-[#00c0ef] hover:bg-[#00acd6] active:bg-[#0097bc] rounded-[4px] shadow-2xs transition-colors cursor-pointer border-none flex items-center gap-1.5"
+                title="Download PDF report for all records"
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>PDF</span>
               </button>
 
-              {filteredData.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => handlePrintRowInvoice(filteredData[0])}
-                  className="px-4 py-1.5 text-xs font-bold text-white bg-[#00c0ef] hover:bg-[#00acd6] active:bg-[#0097bc] rounded-[4px] shadow-2xs transition-colors cursor-pointer border-none flex items-center gap-1.5"
-                  title="Print invoice for the first rental record in view"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print Invoice</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handlePrintReport}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-[#00c0ef] hover:bg-[#00acd6] active:bg-[#0097bc] rounded-[4px] shadow-2xs transition-colors cursor-pointer border-none flex items-center gap-1.5"
+                title="Print report for all records"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print</span>
+              </button>
             </div>
           </div>
         </div>
@@ -356,7 +374,7 @@ export default function AdminReportsPage() {
                 type="button"
                 onClick={handleCopy}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border rounded-l-[4px] transition-colors cursor-pointer"
-                title="Copy to clipboard"
+                title="Copy all records to clipboard"
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
                 <span>{copied ? 'Copied' : 'Copy'}</span>
@@ -384,9 +402,19 @@ export default function AdminReportsPage() {
 
               <button
                 type="button"
-                onClick={handlePrint}
+                onClick={handleExportPDF}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border transition-colors cursor-pointer"
+                title="Export all records as PDF"
+              >
+                <FileText className="w-3.5 h-3.5 text-rose-600" />
+                <span>PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePrintReport}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border rounded-r-[4px] transition-colors cursor-pointer"
-                title="Print Report"
+                title="Print all records of this report section"
               >
                 <Printer className="w-3.5 h-3.5 text-slate-600" />
                 <span>Print</span>
