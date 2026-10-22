@@ -171,6 +171,11 @@ function formatReceiptDate(dateStr?: string | null): string {
   }
 }
 
+function formatReceiptBillingRow(label: string, amount: number, prefix: string = '₹ '): string {
+  const paddedLabel = label.padEnd(18, ' ')
+  return `${paddedLabel}: ${prefix}${amount}`
+}
+
 export function generateRentalReceiptText(b: Booking): string {
   const bookingId = b.booking_number
     ? (b.booking_number.startsWith('#') ? b.booking_number : `#${b.booking_number}`)
@@ -194,9 +199,99 @@ export function generateRentalReceiptText(b: Booking): string {
   const dailyLimit = b.vehicle?.included_km_per_day || b.included_km || 300
   const extraDist = Number(b.extra_km ?? (totalDriven > dailyLimit ? totalDriven - dailyLimit : 0))
 
+  // Financial values
   const baseRental = Number(b.base_rental || 0)
   const securityDeposit = Number(b.security_deposit || 0)
   const grandTotal = Number(b.grand_total || (baseRental + securityDeposit))
+
+  // Extra charges and incidentals
+  const extraKmCharge = Number(b.extra_km_charge || 0)
+  const lateFee = Number(b.late_fee || 0)
+  const driverCharge = Number(b.driver_charge || 0)
+  const fuelCharge = Number(b.fuel_charge || 0)
+  const insuranceCharge = Number(b.insurance_charge || 0)
+  const cleaningCharge = Number((b as any).cleaning_charges || (b as any).cleaning_fee || 0)
+  const damageCharge = Number((b as any).damage_cost || (b as any).damage_charges || (b as any).damage_fee || 0)
+  const overspeedCharge = Number((b as any).overspeeding_charges || (b as any).speeding_fee || 0)
+  const otherCharge = Number((b as any).other_charges || (b as any).other_fee || 0)
+  const taxAmount = Number(b.tax_amount || 0)
+  const discountAmount = Number(b.discount_amount || b.coupon_discount || 0)
+
+  // Construct itemized rows
+  const billingRows: string[] = [
+    formatReceiptBillingRow('Base Rental', baseRental),
+    formatReceiptBillingRow('Security Deposit', securityDeposit),
+  ]
+
+  let accountedTotal = baseRental + securityDeposit
+
+  if (extraKmCharge > 0) {
+    billingRows.push(formatReceiptBillingRow('Extra Distance', extraKmCharge))
+    accountedTotal += extraKmCharge
+  }
+
+  if (lateFee > 0) {
+    billingRows.push(formatReceiptBillingRow('Late Fee', lateFee))
+    accountedTotal += lateFee
+  }
+
+  if (driverCharge > 0) {
+    billingRows.push(formatReceiptBillingRow('Driver Charges', driverCharge))
+    accountedTotal += driverCharge
+  }
+
+  if (fuelCharge > 0) {
+    billingRows.push(formatReceiptBillingRow('Fuel Charges', fuelCharge))
+    accountedTotal += fuelCharge
+  }
+
+  if (insuranceCharge > 0) {
+    billingRows.push(formatReceiptBillingRow('Insurance Waiver', insuranceCharge))
+    accountedTotal += insuranceCharge
+  }
+
+  if (cleaningCharge > 0) {
+    billingRows.push(formatReceiptBillingRow('Car Washing', cleaningCharge))
+    accountedTotal += cleaningCharge
+  }
+
+  if (damageCharge > 0) {
+    billingRows.push(formatReceiptBillingRow('Damage / Repair', damageCharge))
+    accountedTotal += damageCharge
+  }
+
+  if (overspeedCharge > 0) {
+    billingRows.push(formatReceiptBillingRow('Over Speeding', overspeedCharge))
+    accountedTotal += overspeedCharge
+  }
+
+  if (otherCharge > 0) {
+    billingRows.push(formatReceiptBillingRow('Other Charges', otherCharge))
+    accountedTotal += otherCharge
+  }
+
+  if (taxAmount > 0) {
+    const taxLabel = b.tax_rate ? `GST (${b.tax_rate}%)` : 'GST / Taxes'
+    billingRows.push(formatReceiptBillingRow(taxLabel, taxAmount))
+    accountedTotal += taxAmount
+  }
+
+  if (discountAmount > 0) {
+    billingRows.push(formatReceiptBillingRow('Discount Applied', discountAmount, '-₹ '))
+    accountedTotal -= discountAmount
+  }
+
+  // Account for any remaining difference with grandTotal (e.g. 18% GST on existing bookings)
+  const remainingDiff = Math.round(grandTotal - accountedTotal)
+  if (remainingDiff > 0) {
+    if (taxAmount === 0 && Math.abs(remainingDiff - Math.round(baseRental * 0.18)) <= 2) {
+      billingRows.push(formatReceiptBillingRow('GST (18%)', remainingDiff))
+    } else {
+      billingRows.push(formatReceiptBillingRow('Extra Charges', remainingDiff))
+    }
+  } else if (remainingDiff < 0 && discountAmount === 0) {
+    billingRows.push(formatReceiptBillingRow('Discount Applied', Math.abs(remainingDiff), '-₹ '))
+  }
 
   return [
     '========================================',
@@ -225,8 +320,7 @@ export function generateRentalReceiptText(b: Booking): string {
     '',
     '----------------------------------------',
     '[BILLING SUMMARY]',
-    `Base Rental       : ₹ ${baseRental}`,
-    `Security Deposit  : ₹ ${securityDeposit}`,
+    ...billingRows,
     '----------------------------------------',
     `GRAND TOTAL       : ₹ ${grandTotal}`,
     '========================================',
@@ -1761,8 +1855,19 @@ export function AdminBookingsClient({
       {/* ============================================================ */}
       {/* 3. RETURN CAR INSPECTION & LIVE BILL CALCULATION MODAL        */}
       {/* ============================================================ */}
-      <Dialog open={returnModalOpen} onOpenChange={setReturnModalOpen}>
-        <DialogContent className="w-[96vw] max-w-3xl max-h-[94dvh] overflow-y-auto rounded-3xl p-5 sm:p-7 md:p-8 bg-[#f8fafc] dark:bg-background border border-slate-200/80 dark:border-border/80 shadow-2xl">
+      <Dialog
+        open={returnModalOpen}
+        onOpenChange={(open) => {
+          if (open) setReturnModalOpen(true)
+        }}
+      >
+        <DialogContent
+          hideCloseButton
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          className="w-[96vw] max-w-3xl max-h-[94dvh] overflow-y-auto rounded-3xl p-5 sm:p-7 md:p-8 bg-[#f8fafc] dark:bg-background border border-slate-200/80 dark:border-border/80 shadow-2xl"
+        >
           {/* Top Bar Header matching image */}
           <div className="flex items-start justify-between gap-4 pb-1">
             <div className="flex items-start gap-2.5">
@@ -1770,7 +1875,8 @@ export function AdminBookingsClient({
                 type="button"
                 onClick={() => setReturnModalOpen(false)}
                 className="w-8 h-8 rounded-full hover:bg-slate-200/60 dark:hover:bg-muted flex items-center justify-center text-blue-600 transition-colors cursor-pointer shrink-0 mt-0.5"
-                title="Close"
+                title="Back / Close"
+                aria-label="Back to bookings"
               >
                 <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
               </button>

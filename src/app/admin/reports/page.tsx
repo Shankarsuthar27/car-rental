@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { DateRangePickerWithTime } from '@/components/admin/reports/DateRangePickerWithTime'
+import { generateRentalReceiptText, printThermalReceipt } from '@/lib/receipt'
 
 interface RentalReportRow {
   id: string
@@ -35,6 +36,7 @@ interface RentalReportRow {
   paymentStatus: 'Paid' | 'Pending' | 'Partially Paid'
   billType: string
   outlet: string
+  rawBooking?: any
 }
 
 export default function AdminReportsPage() {
@@ -88,6 +90,7 @@ export default function AdminReportsPage() {
               paymentStatus: payStatus,
               billType: b.with_driver ? 'Chauffeur Driven' : 'Self Drive',
               outlet: b.pickup_branch?.name || 'Main Hub (Jaipur)',
+              rawBooking: b,
             }
           })
           setRentalData(mapped)
@@ -193,6 +196,19 @@ export default function AdminReportsPage() {
     window.print()
   }
 
+  const handlePrintRowInvoice = (row: RentalReportRow) => {
+    const booking = row.rawBooking || {
+      booking_number: row.id,
+      customer: { profile: { full_name: row.customer } },
+      vehicle: { brand: row.vehicle, model: '', registration_number: '' },
+      grand_total: row.totalAmount,
+      base_rental: row.totalAmount,
+      security_deposit: 0,
+    }
+    const receiptText = generateRentalReceiptText(booking)
+    printThermalReceipt(receiptText, booking.booking_number || row.id)
+  }
+
   // Summary Metrics calculations
   const totalRevenue = useMemo(() => {
     return filteredData.reduce((acc, row) => acc + row.totalAmount, 0)
@@ -296,7 +312,7 @@ export default function AdminReportsPage() {
 
 
 
-            {/* Action Buttons: Search & PDF (Aligned to far right) */}
+            {/* Action Buttons: Search, PDF, Print Invoice (Aligned to far right) */}
             <div className="flex items-center gap-2 sm:ml-auto">
               <button
                 type="button"
@@ -315,6 +331,18 @@ export default function AdminReportsPage() {
                 <FileText className="w-3.5 h-3.5" />
                 <span>PDF</span>
               </button>
+
+              {filteredData.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handlePrintRowInvoice(filteredData[0])}
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-[#00c0ef] hover:bg-[#00acd6] active:bg-[#0097bc] rounded-[4px] shadow-2xs transition-colors cursor-pointer border-none flex items-center gap-1.5"
+                  title="Print invoice for the first rental record in view"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Invoice</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -389,7 +417,7 @@ export default function AdminReportsPage() {
 
         {/* 3. DATA TABLE (UPDATED HEADERS) */}
         <div className="w-full overflow-x-auto border border-slate-200 dark:border-border rounded-[4px]">
-          <table className="w-full min-w-[880px] text-xs text-left border-collapse">
+          <table className="w-full min-w-[960px] text-xs text-left border-collapse">
             <thead className="bg-[#f8f9fa] dark:bg-muted/50 border-b-2 border-slate-200 dark:border-border">
               <tr>
                 {[
@@ -420,18 +448,21 @@ export default function AdminReportsPage() {
                     </div>
                   </th>
                 ))}
+                <th className="px-3 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 text-center select-none whitespace-nowrap">
+                  Invoice
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-xs text-slate-500">
+                  <td colSpan={9} className="py-8 text-center text-xs text-slate-500">
                     Loading rental records...
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-xs text-slate-500">
+                  <td colSpan={9} className="py-8 text-center text-xs text-slate-500">
                     No matching rental records found
                   </td>
                 </tr>
@@ -476,6 +507,17 @@ export default function AdminReportsPage() {
                       >
                         {row.paymentStatus}
                       </span>
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-center">
+                      <button
+                        type="button"
+                        onClick={() => handlePrintRowInvoice(row)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-card hover:bg-[#00c0ef] hover:text-white dark:hover:bg-[#00c0ef] dark:hover:text-white border border-slate-300 dark:border-border hover:border-[#00c0ef] rounded-[3px] shadow-2xs transition-all cursor-pointer"
+                        title={`Print Invoice for ${row.id}`}
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Print Invoice</span>
+                      </button>
                     </td>
                   </tr>
                 ))
