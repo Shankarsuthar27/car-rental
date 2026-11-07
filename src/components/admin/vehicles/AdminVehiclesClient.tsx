@@ -19,7 +19,6 @@ import {
   MapPin,
   Fuel,
   Users,
-  Eye,
   AlertTriangle,
   Sparkles,
   ShieldCheck,
@@ -1077,17 +1076,6 @@ export function AdminVehiclesClient({
                               </Button>
                             ) : null}
 
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              asChild
-                              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-lg"
-                              title="View vehicle preview"
-                            >
-                              <Link href={`/cars/${v.id}`} target="_blank">
-                                <Eye className="w-3.5 h-3.5 mr-1" /> View
-                              </Link>
-                            </Button>
 
                             <Button
                               variant="ghost"
