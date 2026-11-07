@@ -737,7 +737,7 @@ export function AssignCarWorkflow({
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-96 sm:max-h-[420px] overflow-y-auto pr-1.5 scrollbar-thin">
                 {vehicles.map(v => {
                   const isSelected = v.id === selectedVehicleId
                   const primaryImg = (v as any).images?.find((img: any) => img.is_primary)?.url || (v as any).images?.[0]?.url
