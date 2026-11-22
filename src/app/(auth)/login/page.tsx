@@ -27,7 +27,7 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(true)
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -100,17 +100,23 @@ function LoginForm() {
           </motion.div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
+          {/* Prevent browser auto-fill/auto-complete */}
+          <input type="text" style={{ display: 'none' }} aria-hidden="true" tabIndex={-1} />
+          <input type="password" style={{ display: 'none' }} aria-hidden="true" tabIndex={-1} />
+
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Admin Email / Username</Label>
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
+                name="admin_username"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="jalorecarrentel@gmail.com"
+                placeholder="Enter admin email or username"
+                autoComplete="off"
                 className="pl-10 h-11 rounded-xl bg-muted/30 text-xs focus-visible:ring-primary"
               />
             </div>
@@ -130,10 +136,12 @@ function LoginForm() {
               <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type={showPassword ? 'text' : 'password'}
+                name="admin_password"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••••••"
+                placeholder="Enter password"
+                autoComplete="new-password"
                 className="pl-10 pr-10 h-11 rounded-xl bg-muted/30 text-xs focus-visible:ring-primary"
               />
               <button
