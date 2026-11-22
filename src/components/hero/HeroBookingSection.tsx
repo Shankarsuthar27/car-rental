@@ -41,9 +41,8 @@ export function HeroBookingSection({
 
   const cityOptions = branches && branches.length > 0 ? branches : DEFAULT_CITIES
 
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const defaultPickupDate = tomorrow.toISOString().split('T')[0]
+  const today = new Date()
+  const defaultPickupDate = today.toISOString().split('T')[0]
 
   const returnDay = new Date()
   returnDay.setDate(returnDay.getDate() + 3)

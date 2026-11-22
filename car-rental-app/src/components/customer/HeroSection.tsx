@@ -31,14 +31,13 @@ interface HeroSectionProps {
 export function HeroSection({ branches }: HeroSectionProps) {
   const router = useRouter()
 
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
+  const today = new Date()
   const dayAfter = new Date()
-  dayAfter.setDate(dayAfter.getDate() + 3)
+  dayAfter.setDate(dayAfter.getDate() + 2)
 
   const [pickupBranch, setPickupBranch] = useState('')
   const [returnBranch, setReturnBranch] = useState('')
-  const [pickupDate, setPickupDate] = useState(tomorrow.toISOString().split('T')[0])
+  const [pickupDate, setPickupDate] = useState(today.toISOString().split('T')[0])
   const [returnDate, setReturnDate] = useState(dayAfter.toISOString().split('T')[0])
   const [pickupTime, setPickupTime] = useState('10:00')
   const [returnTime, setReturnTime] = useState('10:00')

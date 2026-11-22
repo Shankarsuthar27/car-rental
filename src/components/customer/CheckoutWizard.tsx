@@ -76,11 +76,10 @@ export function CheckoutWizard({
   const [currentStep, setCurrentStep] = useState<number>(1)
 
   // Booking & Location State
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
+  const today = new Date()
   const defaultPickup = initialParams.pickup
     ? initialParams.pickup.split('T')[0]
-    : tomorrow.toISOString().split('T')[0]
+    : today.toISOString().split('T')[0]
   const defaultPickupTime = initialParams.pickup?.includes('T')
     ? initialParams.pickup.split('T')[1].slice(0, 5)
     : '10:00'

@@ -67,7 +67,17 @@ export default function AdminReportsPage() {
             const brandModel = b.vehicle ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Vehicle'
             const regNo = b.vehicle?.registration_number ? ` (${b.vehicle.registration_number})` : ''
             const customerName = b.customer?.profile?.full_name || b.customer?.name || b.customer?.customer_code || 'Guest Customer'
-            const dateStr = b.created_at ? new Date(b.created_at).toLocaleDateString('en-US') : ''
+            const rawDate = b.pickup_datetime || b.created_at
+            let dateStr = ''
+            if (rawDate) {
+              const d = new Date(rawDate)
+              if (!isNaN(d.getTime())) {
+                const day = String(d.getDate()).padStart(2, '0')
+                const month = String(d.getMonth() + 1).padStart(2, '0')
+                const year = d.getFullYear()
+                dateStr = `${day}/${month}/${year}`
+              }
+            }
             const rentalTypeStr = b.with_driver ? 'Chauffeur Driven' : 'Self Drive'
             
             let durationStr = '1 Day'
@@ -162,7 +172,7 @@ export default function AdminReportsPage() {
   // Export handlers
   const handleCopy = () => {
     const records = getRecordsForReport()
-    const headers = ['Rental ID', 'Date', 'Vehicle', 'Customer', 'Rental Typ', 'Duration', 'Total Amo', 'Payment Status']
+    const headers = ['Rental ID', 'Date', 'Vehicle', 'Customer', 'Rental Type', 'Duration', 'Total Amount (INR)', 'Payment Status']
     const rows = records.map(r => [
       r.id,
       r.date,
@@ -181,19 +191,96 @@ export default function AdminReportsPage() {
 
   const handleExportCSV = (filename = 'Fleet_Rental_Report.csv') => {
     const records = getRecordsForReport()
-    const headers = ['Rental ID', 'Date', 'Vehicle', 'Customer', 'Rental Typ', 'Duration', 'Total Amount (INR)', 'Payment Status']
+    const headers = ['Rental ID', 'Date', 'Vehicle', 'Customer', 'Rental Type', 'Duration', 'Total Amount (INR)', 'Payment Status']
     const rows = records.map(r => [
       `"${r.id}"`,
-      `"${r.date}"`,
-      `"${r.vehicle}"`,
-      `"${r.customer}"`,
+      `="${r.date}"`, // Formats as explicit text in Excel to prevent ####### overflow
+      `"${r.vehicle.replace(/"/g, '""')}"`,
+      `"${r.customer.replace(/"/g, '""')}"`,
       `"${r.rentalType}"`,
       `"${r.duration}"`,
       r.totalAmount,
       `"${r.paymentStatus}"`
     ].join(','))
-    const csvContent = [headers.join(','), ...rows].join('\n')
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // True Excel (.xls) Export with auto-fitted column widths and mso formatting
+  const handleExportExcel = (filename = 'Fleet_Rental_Report.xls') => {
+    const records = getRecordsForReport()
+    const headers = ['Rental ID', 'Date', 'Vehicle', 'Customer', 'Rental Type', 'Duration', 'Total Amount (INR)', 'Payment Status']
+
+    const rowsHtml = records.map(r => `
+      <tr>
+        <td style="mso-number-format:'\\@';">${r.id}</td>
+        <td style="mso-number-format:'\\@'; text-align: center;">${r.date}</td>
+        <td>${r.vehicle}</td>
+        <td>${r.customer}</td>
+        <td style="text-align: center;">${r.rentalType}</td>
+        <td style="text-align: center;">${r.duration}</td>
+        <td style="text-align: right; mso-number-format:'#,##0';">${r.totalAmount}</td>
+        <td style="text-align: center;">${r.paymentStatus}</td>
+      </tr>
+    `).join('')
+
+    const excelHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>Fleet Rental Report</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          table { border-collapse: collapse; font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+          th { background-color: #1e40af; color: #ffffff; font-weight: bold; border: 1px solid #94a3b8; padding: 10px 14px; text-align: left; }
+          td { border: 1px solid #cbd5e1; padding: 8px 12px; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <colgroup>
+            <col style="width: 140pt;" />
+            <col style="width: 100pt;" />
+            <col style="width: 200pt;" />
+            <col style="width: 150pt;" />
+            <col style="width: 100pt;" />
+            <col style="width: 80pt;" />
+            <col style="width: 110pt;" />
+            <col style="width: 90pt;" />
+          </colgroup>
+          <thead>
+            <tr>
+              ${headers.map(h => `<th>${h}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `
+
+    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.setAttribute('href', url)
@@ -382,7 +469,7 @@ export default function AdminReportsPage() {
 
               <button
                 type="button"
-                onClick={() => handleExportCSV('Fleet_Rental_Report.xlsx.csv')}
+                onClick={() => handleExportExcel('Fleet_Rental_Report.xls')}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border transition-colors cursor-pointer"
                 title="Export to Excel"
               >
@@ -453,9 +540,9 @@ export default function AdminReportsPage() {
                   { key: 'date', label: 'Date' },
                   { key: 'vehicle', label: 'Vehicle' },
                   { key: 'customer', label: 'Customer' },
-                  { key: 'rentalType', label: 'Rental Typ' },
+                  { key: 'rentalType', label: 'Rental Type' },
                   { key: 'duration', label: 'Duration' },
-                  { key: 'totalAmount', label: 'Total Amo' },
+                  { key: 'totalAmount', label: 'Total Amount' },
                   { key: 'paymentStatus', label: 'Payment Status' },
                 ].map((col) => (
                   <th

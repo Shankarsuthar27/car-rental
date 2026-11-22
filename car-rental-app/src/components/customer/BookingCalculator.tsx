@@ -44,8 +44,10 @@ export function BookingCalculator({ vehicle, branches }: BookingCalculatorProps)
   const router = useRouter()
 
   // Match the date/time from the mockup UI: 09/25/2026 10:00 AM to 09/27/2026 06:00 PM
-  const [pickupDate, setPickupDate] = useState('2026-09-25')
-  const [returnDate, setReturnDate] = useState('2026-09-27')
+  const todayStr = new Date().toISOString().split('T')[0]
+  const returnStr = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const [pickupDate, setPickupDate] = useState(todayStr)
+  const [returnDate, setReturnDate] = useState(returnStr)
   const [pickupTime, setPickupTime] = useState('10:00')
   const [returnTime, setReturnTime] = useState('18:00')
 

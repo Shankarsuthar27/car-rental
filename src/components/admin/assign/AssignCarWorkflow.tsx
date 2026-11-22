@@ -196,9 +196,10 @@ export function AssignCarWorkflow({
 
   // Reset / Blank Rental terms & schedule
   const resetRentalTermsAndSchedule = () => {
-    hasUserModifiedDates.current = true
-    setPickupDatetime('')
-    setReturnDatetime('')
+    hasUserModifiedDates.current = false
+    const fresh = getDefaultDates()
+    setPickupDatetime(fresh.pickup)
+    setReturnDatetime(fresh.returnDate)
     setCustomDailyRate('')
     setStartingKm('')
     setSecurityDeposit('')
