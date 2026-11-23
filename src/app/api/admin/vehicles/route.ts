@@ -1,7 +1,26 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { VehicleService } from '@/services/VehicleService'
 import type { Vehicle, VehicleStatus } from '@/types'
+
+async function checkPermission(requiredPermission: string): Promise<boolean> {
+  const cookieStore = await cookies()
+  const role = cookieStore.get('driveease_demo_role')?.value
+  if (role === 'super_admin' || role === 'owner') return true
+
+  const userPermsRaw = cookieStore.get('driveease_user_permissions')?.value
+  if (!userPermsRaw) return false
+  try {
+    let raw = userPermsRaw
+    try { raw = decodeURIComponent(userPermsRaw) } catch {}
+    const perms = JSON.parse(raw)
+    if (Array.isArray(perms)) {
+      if (perms.includes('*') || perms.includes(requiredPermission)) return true
+    }
+  } catch {}
+  return false
+}
 
 // GET: Fetch all vehicles with branches and images
 export async function GET(req: Request) {
@@ -52,6 +71,12 @@ export async function GET(req: Request) {
 // POST: Register New Fleet Vehicle
 export async function POST(req: Request) {
   try {
+    if (!(await checkPermission('vehicles.manage'))) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Permission Denied: You do not have permission to register new vehicles.' } },
+        { status: 403 }
+      )
+    }
     const body = await req.json()
     const {
       brand,
@@ -358,6 +383,12 @@ export async function PUT(req: Request) {
 // PATCH: Quick Update Status
 export async function PATCH(req: Request) {
   try {
+    if (!(await checkPermission('vehicles.manage'))) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Permission Denied: You do not have permission to modify vehicles.' } },
+        { status: 403 }
+      )
+    }
     const body = await req.json()
     const { id, status, is_active } = body
 
@@ -404,6 +435,14 @@ export async function PATCH(req: Request) {
 // DELETE: Delete or Deactivate Fleet Vehicle
 export async function DELETE(req: Request) {
   try {
+    const canDelete =
+      (await checkPermission('vehicles.delete')) || (await checkPermission('vehicles.manage'))
+    if (!canDelete) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Permission Denied: You do not have permission to delete vehicles.' } },
+        { status: 403 }
+      )
+    }
     const { searchParams } = new URL(req.url)
     let id = searchParams.get('id')
 

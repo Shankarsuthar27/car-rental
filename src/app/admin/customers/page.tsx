@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminCustomersClient } from '@/components/admin/customers/AdminCustomersClient'
 import { formatCustomer, DEFAULT_DEMO_CUSTOMERS } from '@/lib/customers'
+import { PermissionGuard } from '@/components/admin/PermissionGuard'
 import type { Customer } from '@/types'
 
 export const metadata: Metadata = {
@@ -32,7 +33,9 @@ export default async function AdminCustomersPage() {
 
   return (
     <div className="p-3.5 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
-      <AdminCustomersClient initialCustomers={customers} />
+      <PermissionGuard permission="customers.view">
+        <AdminCustomersClient initialCustomers={customers} />
+      </PermissionGuard>
     </div>
   )
 }

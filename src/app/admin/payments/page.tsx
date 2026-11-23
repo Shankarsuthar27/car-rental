@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminPaymentsClient } from '@/components/admin/payments/AdminPaymentsClient'
+import { PermissionGuard } from '@/components/admin/PermissionGuard'
 
 export const metadata: Metadata = {
   title: 'Payment Transactions & Settlements — DriveEase Admin'
@@ -26,7 +27,9 @@ export default async function AdminPaymentsPage() {
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <AdminPaymentsClient initialPayments={payments} />
+      <PermissionGuard permission="payments.view">
+        <AdminPaymentsClient initialPayments={payments} />
+      </PermissionGuard>
     </div>
   )
 }

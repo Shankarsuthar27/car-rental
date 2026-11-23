@@ -71,6 +71,7 @@ import {
 } from '@/components/ui/select'
 import type { Customer, KycStatus } from '@/types'
 import { cn } from '@/lib/utils'
+import { usePermissions } from '@/context/PermissionContext'
 
 interface AdminCustomersClientProps {
   initialCustomers: Customer[]
@@ -171,6 +172,7 @@ function renderKycBadge(status?: KycStatus | string) {
 export function AdminCustomersClient({
   initialCustomers
 }: AdminCustomersClientProps) {
+  const { can } = usePermissions()
   const searchParams = useSearchParams()
 
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers)
@@ -333,6 +335,10 @@ export function AdminCustomersClient({
 
   // Export Filtered Customers to CSV
   const exportCustomersCsv = () => {
+    if (!can('reports.export')) {
+      showFeedback('error', 'Permission required: Export Reports')
+      return
+    }
     if (filtered.length === 0) {
       showFeedback('error', 'No customer records to export.')
       return
@@ -383,6 +389,10 @@ export function AdminCustomersClient({
   // Handle Add Customer Submit
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!can('customers.manage')) {
+      showFeedback('error', 'Permission required: Create & Manage Customers')
+      return
+    }
     setProcessing(true)
 
     try {
@@ -471,6 +481,10 @@ export function AdminCustomersClient({
 
   // Open Edit Dialog
   const openEditDialog = (c: Customer) => {
+    if (!can('customers.manage')) {
+      showFeedback('error', 'Permission required: Create & Manage Customers')
+      return
+    }
     setSelectedCust(c)
     setEditId(c.id)
     setEditName(c.profile?.full_name || '')
@@ -489,6 +503,10 @@ export function AdminCustomersClient({
   // Handle Edit Customer Submit
   const handleEditCustomer = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!can('customers.manage')) {
+      showFeedback('error', 'Permission required: Create & Manage Customers')
+      return
+    }
     setProcessing(true)
 
     try {
@@ -558,6 +576,10 @@ export function AdminCustomersClient({
   // Approve, Mark Pending, Re-upload, or Reject KYC
   const handleReviewKYC = async (status: KycStatus) => {
     if (!selectedCust) return
+    if (!can('customers.manage')) {
+      showFeedback('error', 'Permission required: Create & Manage Customers')
+      return
+    }
     setProcessing(true)
 
     const notesToSave = reviewNotes.trim() || selectedCust.kyc_notes || ''
@@ -605,6 +627,10 @@ export function AdminCustomersClient({
 
   // Open Delete Customer Modal
   const openDeleteModal = (c: Customer) => {
+    if (!can('customers.delete')) {
+      showFeedback('error', 'Permission required: Delete Customers')
+      return
+    }
     setCustomerToDelete(c)
     setDeleteModalOpen(true)
   }
@@ -612,6 +638,10 @@ export function AdminCustomersClient({
   // Handle Delete Customer Submit
   const handleDeleteCustomer = async () => {
     if (!customerToDelete) return
+    if (!can('customers.delete')) {
+      showFeedback('error', 'Permission required: Delete Customers')
+      return
+    }
     setProcessing(true)
 
     try {
@@ -696,17 +726,21 @@ export function AdminCustomersClient({
         <div className="flex items-center gap-2.5">
           <Button
             type="button"
+            disabled={!can('customers.manage')}
             onClick={() => setAddModalOpen(true)}
-            className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold rounded-2xl h-12 shadow-xs text-sm gap-2"
+            className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold rounded-2xl h-12 shadow-xs text-sm gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            title={can('customers.manage') ? 'Add customer' : 'Permission required: Create & Manage Customers'}
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             Add customer
           </Button>
           <Button
             type="button"
+            disabled={!can('reports.export')}
             onClick={exportCustomersCsv}
             variant="outline"
-            className="bg-white dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-semibold rounded-2xl h-12 px-5 shadow-xs text-sm gap-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+            className="bg-white dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-semibold rounded-2xl h-12 px-5 shadow-xs text-sm gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+            title={can('reports.export') ? 'Export to CSV' : 'Permission required: Export Reports'}
           >
             <Download className="w-4 h-4 text-slate-700 dark:text-slate-300" />
             Export
@@ -981,18 +1015,21 @@ export function AdminCustomersClient({
 
           <div className="flex items-center gap-2.5 self-start sm:self-auto">
             <Button
+              disabled={!can('reports.export')}
               onClick={exportCustomersCsv}
               variant="outline"
               size="sm"
-              className="text-xs font-semibold h-9 rounded-xl gap-1.5 shadow-xs bg-card hover:bg-muted cursor-pointer"
-              title="Export filtered customers to CSV"
+              className="text-xs font-semibold h-9 rounded-xl gap-1.5 shadow-xs bg-card hover:bg-muted cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              title={can('reports.export') ? "Export filtered customers to CSV" : "Permission required: Export Reports"}
             >
               <Download className="w-3.5 h-3.5 text-muted-foreground" /> Export CSV
             </Button>
 
             <Button
+              disabled={!can('customers.manage')}
               onClick={() => setAddModalOpen(true)}
-              className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs h-9 shadow-md shadow-primary/20 gap-1.5 rounded-xl cursor-pointer"
+              className="gradient-brand text-white border-0 hover:opacity-95 font-bold text-xs h-9 shadow-md shadow-primary/20 gap-1.5 rounded-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              title={can('customers.manage') ? "Add New Customer" : "Permission required: Create & Manage Customers"}
             >
               <Plus className="w-4 h-4" /> Add New Customer
             </Button>
@@ -1356,6 +1393,8 @@ export function AdminCustomersClient({
                         <AssignCarButton
                           href={`/admin/assign?customer_id=${cust.id}`}
                           size="xs"
+                          disabled={!can('bookings.create')}
+                          title={can('bookings.create') ? undefined : 'Permission required: Assign Car'}
                         />
                       </div>
                     </div>
@@ -1473,6 +1512,8 @@ export function AdminCustomersClient({
                           href={`/admin/assign?customer_id=${cust.id}`}
                           size="sm"
                           className="flex-1"
+                          disabled={!can('bookings.create')}
+                          title={can('bookings.create') ? undefined : 'Permission required: Assign Car'}
                         />
 
                         <Button
@@ -1492,9 +1533,10 @@ export function AdminCustomersClient({
                         <Button
                           size="sm"
                           variant="outline"
+                          disabled={!can('customers.manage')}
                           onClick={() => openEditDialog(cust)}
-                          className="h-8 px-2.5 text-xs rounded-xl bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer"
-                          title="Edit Profile"
+                          className="h-8 px-2.5 text-xs rounded-xl bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          title={can('customers.manage') ? "Edit Profile" : "Permission required: Create & Manage Customers"}
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </Button>
@@ -1502,9 +1544,10 @@ export function AdminCustomersClient({
                         <Button
                           size="sm"
                           variant="ghost"
+                          disabled={!can('customers.delete')}
                           onClick={() => openDeleteModal(cust)}
-                          className="h-8 px-2.5 text-xs rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
-                          title="Delete Customer"
+                          className="h-8 px-2.5 text-xs rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -1650,7 +1693,12 @@ export function AdminCustomersClient({
                       {/* Actions */}
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <AssignCarButton href={`/admin/assign?customer_id=${cust.id}`} size="xs" />
+                          <AssignCarButton
+                            href={`/admin/assign?customer_id=${cust.id}`}
+                            size="xs"
+                            disabled={!can('bookings.create')}
+                            title={can('bookings.create') ? undefined : 'Permission required: Assign Car'}
+                          />
 
                           <Button
                             size="sm"
@@ -1669,9 +1717,10 @@ export function AdminCustomersClient({
                           <Button
                             size="sm"
                             variant="ghost"
+                            disabled={!can('customers.manage')}
                             onClick={() => openEditDialog(cust)}
-                            className="h-8 text-xs px-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
-                            title="Edit Customer"
+                            className="h-8 text-xs px-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={can('customers.manage') ? "Edit Customer" : "Permission required: Create & Manage Customers"}
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </Button>
@@ -1679,9 +1728,10 @@ export function AdminCustomersClient({
                           <Button
                             size="sm"
                             variant="ghost"
+                            disabled={!can('customers.delete')}
                             onClick={() => openDeleteModal(cust)}
-                            className="h-8 text-xs px-2 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 cursor-pointer"
-                            title="Delete Customer"
+                            className="h-8 text-xs px-2 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
@@ -1799,7 +1849,13 @@ export function AdminCustomersClient({
 
                 {/* Actions Footer */}
                 <div className="flex items-center justify-between pt-2 border-t border-border/60 gap-1.5">
-                  <AssignCarButton href={`/admin/assign?customer_id=${cust.id}`} size="sm" className="flex-1" />
+                  <AssignCarButton
+                    href={`/admin/assign?customer_id=${cust.id}`}
+                    size="sm"
+                    className="flex-1"
+                    disabled={!can('bookings.create')}
+                    title={can('bookings.create') ? undefined : 'Permission required: Assign Car'}
+                  />
 
                   <Button
                     size="sm"
@@ -1818,9 +1874,10 @@ export function AdminCustomersClient({
                   <Button
                     size="sm"
                     variant="outline"
+                    disabled={!can('customers.manage')}
                     onClick={() => openEditDialog(cust)}
-                    className="h-8 px-2.5 text-xs rounded-xl text-muted-foreground hover:text-foreground cursor-pointer"
-                    title="Edit Profile"
+                    className="h-8 px-2.5 text-xs rounded-xl text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={can('customers.manage') ? "Edit Profile" : "Permission required: Create & Manage Customers"}
                   >
                     <Edit className="w-3.5 h-3.5" />
                   </Button>
@@ -1828,9 +1885,10 @@ export function AdminCustomersClient({
                   <Button
                     size="sm"
                     variant="ghost"
+                    disabled={!can('customers.delete')}
                     onClick={() => openDeleteModal(cust)}
-                    className="h-8 px-2.5 text-xs rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 cursor-pointer"
-                    title="Delete Customer"
+                    className="h-8 px-2.5 text-xs rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
@@ -2146,6 +2204,7 @@ export function AdminCustomersClient({
                 type="button"
                 variant="ghost"
                 size="sm"
+                disabled={!can('customers.delete')}
                 onClick={() => {
                   const c = customers.find(x => x.id === editId) || selectedCust
                   if (c) {
@@ -2153,7 +2212,8 @@ export function AdminCustomersClient({
                     openDeleteModal(c)
                   }
                 }}
-                className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl gap-1.5 cursor-pointer font-semibold mr-auto"
+                className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl gap-1.5 cursor-pointer font-semibold mr-auto disabled:opacity-40 disabled:cursor-not-allowed"
+                title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
               >
                 <Trash2 className="w-3.5 h-3.5" /> Delete Customer
               </Button>
@@ -2461,9 +2521,10 @@ export function AdminCustomersClient({
                     <Button
                       type="button"
                       size="sm"
-                      disabled={processing}
+                      disabled={processing || !can('customers.manage')}
                       onClick={() => handleReviewKYC('verified')}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-3.5 rounded-xl cursor-pointer gap-1.5 shadow-sm shadow-emerald-600/20"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-3.5 rounded-xl cursor-pointer gap-1.5 shadow-sm shadow-emerald-600/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={can('customers.manage') ? 'Approve KYC' : 'Permission required: Create & Manage Customers'}
                     >
                       <CheckCircle2 className="w-4 h-4" /> Approve KYC
                     </Button>
@@ -2472,9 +2533,10 @@ export function AdminCustomersClient({
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={processing}
+                      disabled={processing || !can('customers.manage')}
                       onClick={() => handleReviewKYC('pending')}
-                      className="text-xs h-9 px-3 rounded-xl border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 cursor-pointer gap-1.5 font-bold"
+                      className="text-xs h-9 px-3 rounded-xl border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 cursor-pointer gap-1.5 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={can('customers.manage') ? 'Mark Pending' : 'Permission required: Create & Manage Customers'}
                     >
                       <Clock className="w-4 h-4" /> Mark Pending
                     </Button>
@@ -2485,9 +2547,10 @@ export function AdminCustomersClient({
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={processing}
+                      disabled={processing || !can('customers.manage')}
                       onClick={() => handleReviewKYC('re_upload_requested')}
-                      className="text-xs h-9 px-3 rounded-xl border-orange-500/40 text-orange-700 dark:text-orange-400 hover:bg-orange-500/10 cursor-pointer font-bold gap-1"
+                      className="text-xs h-9 px-3 rounded-xl border-orange-500/40 text-orange-700 dark:text-orange-400 hover:bg-orange-500/10 cursor-pointer font-bold gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={can('customers.manage') ? 'Request Re-upload' : 'Permission required: Create & Manage Customers'}
                     >
                       Request Re-upload
                     </Button>
@@ -2498,9 +2561,10 @@ export function AdminCustomersClient({
                       type="button"
                       variant="destructive"
                       size="sm"
-                      disabled={processing}
+                      disabled={processing || !can('customers.manage')}
                       onClick={() => handleReviewKYC('rejected')}
-                      className="text-xs h-9 px-3 rounded-xl cursor-pointer font-bold gap-1"
+                      className="text-xs h-9 px-3 rounded-xl cursor-pointer font-bold gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={can('customers.manage') ? 'Reject KYC' : 'Permission required: Create & Manage Customers'}
                     >
                       Reject KYC
                     </Button>
@@ -2512,11 +2576,13 @@ export function AdminCustomersClient({
                     type="button"
                     variant="ghost"
                     size="sm"
+                    disabled={!can('customers.delete')}
                     onClick={() => {
                       setViewDetailsOpen(false)
                       if (selectedCust) openDeleteModal(selectedCust)
                     }}
-                    className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl h-9 px-2.5 gap-1.5 cursor-pointer font-semibold"
+                    className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl h-9 px-2.5 gap-1.5 cursor-pointer font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={can('customers.delete') ? 'Delete Customer' : 'Permission required: Delete Customers'}
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Delete
                   </Button>
@@ -2531,7 +2597,12 @@ export function AdminCustomersClient({
                     <ArrowLeft className="w-3.5 h-3.5" /> Back
                   </Button>
 
-                  <AssignCarButton href={`/admin/assign?customer_id=${selectedCust.id}`} size="sm" />
+                  <AssignCarButton
+                    href={`/admin/assign?customer_id=${selectedCust.id}`}
+                    size="sm"
+                    disabled={!can('bookings.create')}
+                    title={can('bookings.create') ? undefined : 'Permission required: Assign Car'}
+                  />
                 </div>
               </div>
             </div>

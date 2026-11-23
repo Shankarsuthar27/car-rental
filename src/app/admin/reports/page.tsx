@@ -25,6 +25,8 @@ import { cn } from '@/lib/utils'
 import { DateRangePickerWithTime } from '@/components/admin/reports/DateRangePickerWithTime'
 import { generateRentalReceiptText, printThermalReceipt } from '@/lib/receipt'
 import { generateReportPDF, printReportSection } from '@/lib/reportPdf'
+import { PermissionGuard } from '@/components/admin/PermissionGuard'
+import { usePermissions } from '@/context/PermissionContext'
 
 interface RentalReportRow {
   id: string
@@ -41,6 +43,7 @@ interface RentalReportRow {
 }
 
 export default function AdminReportsPage() {
+  const { can } = usePermissions()
   // Report data from database
   const [rentalData, setRentalData] = useState<RentalReportRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -325,8 +328,9 @@ export default function AdminReportsPage() {
   }, [totalRevenue])
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Page Header */}
+    <PermissionGuard permission="reports.view">
+      <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+        {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
@@ -431,9 +435,10 @@ export default function AdminReportsPage() {
 
               <button
                 type="button"
+                disabled={!can('reports.export')}
                 onClick={handleExportPDF}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-[#00c0ef] hover:bg-[#00acd6] active:bg-[#0097bc] rounded-[4px] shadow-2xs transition-colors cursor-pointer border-none flex items-center gap-1.5"
-                title="Download PDF report for all records"
+                className="px-4 py-1.5 text-xs font-bold text-white bg-[#00c0ef] hover:bg-[#00acd6] active:bg-[#0097bc] rounded-[4px] shadow-2xs transition-colors cursor-pointer border-none flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                title={can('reports.export') ? "Download PDF report for all records" : "Permission required: Export Reports"}
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>PDF</span>
@@ -441,9 +446,10 @@ export default function AdminReportsPage() {
 
               <button
                 type="button"
+                disabled={!can('reports.export')}
                 onClick={handlePrintReport}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-[#00c0ef] hover:bg-[#00acd6] active:bg-[#0097bc] rounded-[4px] shadow-2xs transition-colors cursor-pointer border-none flex items-center gap-1.5"
-                title="Print report for all records"
+                className="px-4 py-1.5 text-xs font-bold text-white bg-[#00c0ef] hover:bg-[#00acd6] active:bg-[#0097bc] rounded-[4px] shadow-2xs transition-colors cursor-pointer border-none flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                title={can('reports.export') ? "Print report for all records" : "Permission required: Export Reports"}
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Print</span>
@@ -459,9 +465,10 @@ export default function AdminReportsPage() {
             <div className="inline-flex items-center -space-x-px">
               <button
                 type="button"
+                disabled={!can('reports.export')}
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border rounded-l-[4px] transition-colors cursor-pointer"
-                title="Copy all records to clipboard"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border rounded-l-[4px] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                title={can('reports.export') ? "Copy all records to clipboard" : "Permission required: Export Reports"}
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
                 <span>{copied ? 'Copied' : 'Copy'}</span>
@@ -469,9 +476,10 @@ export default function AdminReportsPage() {
 
               <button
                 type="button"
+                disabled={!can('reports.export')}
                 onClick={() => handleExportExcel('Fleet_Rental_Report.xls')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border transition-colors cursor-pointer"
-                title="Export to Excel"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                title={can('reports.export') ? "Export to Excel" : "Permission required: Export Reports"}
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Excel</span>
@@ -479,9 +487,10 @@ export default function AdminReportsPage() {
 
               <button
                 type="button"
+                disabled={!can('reports.export')}
                 onClick={() => handleExportCSV('Fleet_Rental_Report.csv')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border transition-colors cursor-pointer"
-                title="Download CSV"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                title={can('reports.export') ? "Download CSV" : "Permission required: Export Reports"}
               >
                 <Download className="w-3.5 h-3.5 text-blue-600" />
                 <span>CSV</span>
@@ -489,9 +498,10 @@ export default function AdminReportsPage() {
 
               <button
                 type="button"
+                disabled={!can('reports.export')}
                 onClick={handleExportPDF}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border transition-colors cursor-pointer"
-                title="Export all records as PDF"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                title={can('reports.export') ? "Export all records as PDF" : "Permission required: Export Reports"}
               >
                 <FileText className="w-3.5 h-3.5 text-rose-600" />
                 <span>PDF</span>
@@ -499,9 +509,10 @@ export default function AdminReportsPage() {
 
               <button
                 type="button"
+                disabled={!can('reports.export')}
                 onClick={handlePrintReport}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border rounded-r-[4px] transition-colors cursor-pointer"
-                title="Print all records of this report section"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-border rounded-r-[4px] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                title={can('reports.export') ? "Print all records of this report section" : "Permission required: Export Reports"}
               >
                 <Printer className="w-3.5 h-3.5 text-slate-600" />
                 <span>Print</span>
@@ -736,5 +747,6 @@ export default function AdminReportsPage() {
         </div>
       </div>
     </div>
+  </PermissionGuard>
   )
 }

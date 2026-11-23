@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AssignCarWorkflow } from '@/components/admin/assign/AssignCarWorkflow'
 import { formatCustomer, DEFAULT_DEMO_CUSTOMERS } from '@/lib/customers'
+import { PermissionGuard } from '@/components/admin/PermissionGuard'
 import type { Customer, Vehicle } from '@/types'
 
 export const metadata: Metadata = {
@@ -49,10 +50,12 @@ export default async function AssignCarPage() {
 
   return (
     <div className="min-h-full bg-slate-50/50 dark:bg-background p-4 sm:p-6 md:p-8">
-      <AssignCarWorkflow
-        availableVehicles={availableVehicles}
-        customers={customers}
-      />
+      <PermissionGuard permission="bookings.create">
+        <AssignCarWorkflow
+          availableVehicles={availableVehicles}
+          customers={customers}
+        />
+      </PermissionGuard>
     </div>
   )
 }

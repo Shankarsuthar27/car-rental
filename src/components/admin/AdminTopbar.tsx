@@ -20,6 +20,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { AssignCarButton } from '@/components/ui/AssignCarButton'
+import { getInitials } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,9 +96,12 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
 
   const handleLogout = async () => {
     document.cookie = 'driveease_demo_role=; path=/; max-age=0; SameSite=Lax'
+    document.cookie = 'driveease_user_permissions=; path=/; max-age=0; SameSite=Lax'
+    document.cookie = 'driveease_user_name=; path=/; max-age=0; SameSite=Lax'
+    document.cookie = 'driveease_user_email=; path=/; max-age=0; SameSite=Lax'
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    window.location.href = '/login'
   }
 
   const unreadCount = notifications.filter(n => n.unread).length
@@ -106,9 +110,7 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })))
   }
 
-  const initials = profile?.full_name
-    ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-    : 'AD'
+  const initials = getInitials(profile?.full_name, 'AD')
 
   return (
     <header className="h-16 border-b border-border bg-background/85 backdrop-blur-md flex items-center justify-between px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 sticky top-0 z-20 select-none">

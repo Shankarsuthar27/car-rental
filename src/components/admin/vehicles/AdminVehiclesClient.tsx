@@ -38,6 +38,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { usePermissions } from '@/context/PermissionContext'
 import { Button } from '@/components/ui/button'
 import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import { Input } from '@/components/ui/input'
@@ -112,6 +113,7 @@ export function AdminVehiclesClient({
   branches
 }: AdminVehiclesClientProps) {
   const searchParams = useSearchParams()
+  const { can, isSuperAdmin } = usePermissions()
 
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
@@ -225,6 +227,10 @@ export function AdminVehiclesClient({
 
   // Quick Status Updater
   const handleUpdateStatus = async (vehicleId: string, updatedStatus: VehicleStatus) => {
+    if (!can('vehicles.manage')) {
+      showFeedback('error', 'Permission Denied: You do not have permission to change vehicle status.')
+      return
+    }
     try {
       const res = await fetch('/api/admin/vehicles', {
         method: 'PATCH',
@@ -248,6 +254,10 @@ export function AdminVehiclesClient({
 
   // Open Edit Modal
   const openEditModal = (v: Vehicle) => {
+    if (!can('vehicles.manage')) {
+      showFeedback('error', 'Permission Denied: You do not have permission to edit vehicles.')
+      return
+    }
     setEditId(v.id)
     setEditBrand(v.brand || '')
     setEditModel(v.model || '')
@@ -276,6 +286,10 @@ export function AdminVehiclesClient({
 
   // Open Delete Modal
   const openDeleteModal = (v: Vehicle) => {
+    if (!can('vehicles.delete')) {
+      showFeedback('error', 'Permission Denied: You do not have permission to delete vehicles.')
+      return
+    }
     setSelectedVehicle(v)
     setDeleteModalOpen(true)
   }
@@ -489,8 +503,10 @@ export function AdminVehiclesClient({
 
         {/* Add Vehicle Button & Dialog */}
         <Button
+          disabled={!can('vehicles.manage')}
           onClick={() => setAddModalOpen(true)}
-          className="gradient-brand text-white border-0 hover:opacity-90 font-bold gap-2 text-xs h-10 shadow-lg px-4 rounded-xl cursor-pointer"
+          className="gradient-brand text-white border-0 hover:opacity-90 font-bold gap-2 text-xs h-10 shadow-lg px-4 rounded-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          title={!can('vehicles.manage') ? 'Permission required: Add & Edit Vehicles' : 'Register New Fleet Vehicle'}
         >
           <Plus className="w-4 h-4" /> Register New Fleet Vehicle
         </Button>
@@ -755,12 +771,14 @@ export function AdminVehiclesClient({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40 rounded-2xl shadow-xl p-1.5">
                           <DropdownMenuItem
+                            disabled={!can('vehicles.manage')}
                             onClick={() => openEditModal(v)}
-                            className="text-xs gap-2 font-medium cursor-pointer rounded-xl"
+                            className="text-xs gap-2 font-medium cursor-pointer rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={!can('vehicles.manage') ? 'Permission required: Add & Edit Vehicles' : undefined}
                           >
                             <Edit className="w-3.5 h-3.5 text-primary" /> Edit Vehicle
                           </DropdownMenuItem>
-                          {v.status === 'available' && (
+                          {v.status === 'available' && can('bookings.create') && (
                             <DropdownMenuItem asChild className="text-xs gap-2 font-medium cursor-pointer rounded-xl">
                               <Link href={`/admin/assign?vehicle_id=${v.id}`}>
                                 <Zap className="w-3.5 h-3.5 text-amber-500" /> Assign Car
@@ -770,8 +788,10 @@ export function AdminVehiclesClient({
 
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
+                            disabled={!can('vehicles.delete')}
                             onClick={() => openDeleteModal(v)}
-                            className="text-xs gap-2 font-medium cursor-pointer text-rose-600 rounded-xl"
+                            className="text-xs gap-2 font-medium cursor-pointer text-rose-600 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={!can('vehicles.delete') ? 'Permission required: Delete Fleet Vehicles' : undefined}
                           >
                             <Trash2 className="w-3.5 h-3.5 text-rose-600" /> Delete Vehicle
                           </DropdownMenuItem>
@@ -853,7 +873,13 @@ export function AdminVehiclesClient({
                       {/* Action Buttons Row */}
                       <div className="pt-1">
                         {v.status === 'available' ? (
-                          <AssignCarButton href={`/admin/assign?vehicle_id=${v.id}`} size="sm" fullWidth />
+                          <AssignCarButton
+                            href={`/admin/assign?vehicle_id=${v.id}`}
+                            size="sm"
+                            fullWidth
+                            disabled={!can('bookings.create')}
+                            title={!can('bookings.create') ? 'Permission required: Create & Assign Bookings' : 'Assign car'}
+                          />
                         ) : v.status === 'rented' ? (
                           <Button
                             type="button"
@@ -871,8 +897,10 @@ export function AdminVehiclesClient({
                             type="button"
                             variant="outline"
                             size="sm"
+                            disabled={!can('vehicles.manage')}
                             onClick={() => openEditModal(v)}
-                            className="w-full min-h-[40px] text-xs text-muted-foreground border-border hover:bg-muted rounded-xl font-semibold capitalize"
+                            className="w-full min-h-[40px] text-xs text-muted-foreground border-border hover:bg-muted rounded-xl font-semibold capitalize disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={!can('vehicles.manage') ? 'Permission required: Add & Edit Vehicles' : 'Edit vehicle'}
                           >
                             {v.status === 'inactive' ? 'Unavailable' : v.status}
                           </Button>
@@ -1010,58 +1038,73 @@ export function AdminVehiclesClient({
 
                         {/* Status with Live Switcher Dropdown */}
                         <td className="p-4">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-full">
-                                <Badge
-                                  className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full cursor-pointer hover:opacity-80 transition-all border ${
-                                    STATUS_BADGE_MAP[v.status] || 'bg-muted text-muted-foreground'
-                                  }`}
+                          {can('vehicles.manage') ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-full cursor-pointer">
+                                  <Badge
+                                    className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full hover:opacity-80 transition-all border ${
+                                      STATUS_BADGE_MAP[v.status] || 'bg-muted text-muted-foreground'
+                                    }`}
+                                  >
+                                    {v.status}
+                                  </Badge>
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-40 rounded-xl shadow-xl">
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateStatus(v.id, 'available')}
+                                  className="text-xs gap-2 font-medium cursor-pointer"
                                 >
-                                  {v.status}
-                                </Badge>
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-40 rounded-xl shadow-xl">
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateStatus(v.id, 'available')}
-                                className="text-xs gap-2 font-medium cursor-pointer"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Available
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateStatus(v.id, 'reserved')}
-                                className="text-xs gap-2 font-medium cursor-pointer"
-                              >
-                                <Clock className="w-3.5 h-3.5 text-amber-500" /> Reserved
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateStatus(v.id, 'rented')}
-                                className="text-xs gap-2 font-medium cursor-pointer"
-                              >
-                                <Key className="w-3.5 h-3.5 text-blue-500" /> Rented
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateStatus(v.id, 'maintenance')}
-                                className="text-xs gap-2 font-medium cursor-pointer"
-                              >
-                                <Wrench className="w-3.5 h-3.5 text-orange-500" /> Maintenance
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateStatus(v.id, 'inactive')}
-                                className="text-xs gap-2 font-medium cursor-pointer text-muted-foreground"
-                              >
-                                <AlertTriangle className="w-3.5 h-3.5 text-zinc-400" /> Inactive / Garage
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Available
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateStatus(v.id, 'reserved')}
+                                  className="text-xs gap-2 font-medium cursor-pointer"
+                                >
+                                  <Clock className="w-3.5 h-3.5 text-amber-500" /> Reserved
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateStatus(v.id, 'rented')}
+                                  className="text-xs gap-2 font-medium cursor-pointer"
+                                >
+                                  <Key className="w-3.5 h-3.5 text-blue-500" /> Rented
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateStatus(v.id, 'maintenance')}
+                                  className="text-xs gap-2 font-medium cursor-pointer"
+                                >
+                                  <Wrench className="w-3.5 h-3.5 text-orange-500" /> Maintenance
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateStatus(v.id, 'inactive')}
+                                  className="text-xs gap-2 font-medium cursor-pointer text-muted-foreground"
+                                >
+                                  <AlertTriangle className="w-3.5 h-3.5 text-zinc-400" /> Inactive / Garage
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <Badge
+                              className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border ${
+                                STATUS_BADGE_MAP[v.status] || 'bg-muted text-muted-foreground'
+                              }`}
+                            >
+                              {v.status}
+                            </Badge>
+                          )}
                         </td>
 
                         {/* Actions */}
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {v.status === 'available' ? (
-                              <AssignCarButton href={`/admin/assign?vehicle_id=${v.id}`} size="xs" />
+                              <AssignCarButton
+                                href={`/admin/assign?vehicle_id=${v.id}`}
+                                size="xs"
+                                disabled={!can('bookings.create')}
+                                title={!can('bookings.create') ? 'Permission required: Create & Assign Bookings' : 'Assign car'}
+                              />
                             ) : v.status === 'rented' ? (
                               <Button
                                 size="sm"
@@ -1076,13 +1119,13 @@ export function AdminVehiclesClient({
                               </Button>
                             ) : null}
 
-
                             <Button
                               variant="ghost"
                               size="sm"
+                              disabled={!can('vehicles.manage')}
                               onClick={() => openEditModal(v)}
-                              className="h-8 px-2.5 text-xs text-primary hover:bg-primary/10 rounded-lg cursor-pointer font-semibold"
-                              title="Edit vehicle details"
+                              className="h-8 px-2.5 text-xs text-primary hover:bg-primary/10 rounded-lg cursor-pointer font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={!can('vehicles.manage') ? 'Permission required: Add & Edit Vehicles' : 'Edit vehicle details'}
                             >
                               <Edit className="w-3.5 h-3.5 mr-1" /> Edit
                             </Button>
@@ -1090,9 +1133,10 @@ export function AdminVehiclesClient({
                             <Button
                               variant="ghost"
                               size="sm"
+                              disabled={!can('vehicles.delete')}
                               onClick={() => openDeleteModal(v)}
-                              className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-lg cursor-pointer font-semibold"
-                              title="Delete vehicle"
+                              className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-lg cursor-pointer font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={!can('vehicles.delete') ? 'Permission required: Delete Fleet Vehicles' : 'Delete vehicle'}
                             >
                               <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
                             </Button>

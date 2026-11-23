@@ -3,6 +3,7 @@ import { BookingService } from '@/services/BookingService'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminBookingsClient } from '@/components/admin/bookings/AdminBookingsClient'
 import { formatCustomer } from '@/lib/customers'
+import { PermissionGuard } from '@/components/admin/PermissionGuard'
 import type { Booking, Branch } from '@/types'
 
 export const metadata: Metadata = {
@@ -45,7 +46,9 @@ export default async function AdminBookingsPage() {
 
   return (
     <div className="p-2.5 sm:p-6 md:p-8 max-w-full overflow-x-hidden">
-      <AdminBookingsClient initialBookings={bookings} branches={branches} />
+      <PermissionGuard permission="bookings.view">
+        <AdminBookingsClient initialBookings={bookings} branches={branches} />
+      </PermissionGuard>
     </div>
   )
 }

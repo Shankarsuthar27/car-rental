@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AssignCarButton } from '@/components/ui/AssignCarButton'
+import { usePermissions } from '@/context/PermissionContext'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -398,6 +399,7 @@ export function AdminBookingsClient({
   initialBookings,
   branches,
 }: AdminBookingsClientProps) {
+  const { can } = usePermissions()
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -550,6 +552,7 @@ export function AdminBookingsClient({
 
   // Open Return Dialog & Prefill
   const openReturnDialog = (b: Booking) => {
+    if (!can('bookings.create')) return
     setSelectedBooking(b)
     const now = new Date()
     const returnDtStr = format(now, "yyyy-MM-dd'T'HH:mm")
@@ -918,7 +921,12 @@ export function AdminBookingsClient({
           </p>
         </div>
 
-        <AssignCarButton href="/admin/assign" size="md" />
+        <AssignCarButton
+          href="/admin/assign"
+          size="md"
+          disabled={!can('bookings.create')}
+          title={can('bookings.create') ? undefined : 'Permission required: Create & Assign Bookings'}
+        />
       </div>
 
       {/* Mobile Fleet Quick KPI Summary (Under 1024px) */}
@@ -1189,7 +1197,12 @@ export function AdminBookingsClient({
                   Clear Search
                 </Button>
               )}
-              <AssignCarButton href="/admin/assign" size="md" />
+              <AssignCarButton
+          href="/admin/assign"
+          size="md"
+          disabled={!can('bookings.create')}
+          title={can('bookings.create') ? undefined : 'Permission required: Create & Assign Bookings'}
+        />
             </div>
           </div>
         ) : (
@@ -1444,9 +1457,11 @@ export function AdminBookingsClient({
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         type="button"
+                        disabled={!can('bookings.create')}
                         onClick={() => openReturnDialog(b)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] text-xs font-bold rounded-xl shadow-xs gap-1.5 active:scale-[0.98] transition-all"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] text-xs font-bold rounded-xl shadow-xs gap-1.5 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         aria-label={`Mark car ${car?.model || ''} returned`}
+                        title={can('bookings.create') ? undefined : 'Permission required: Create & Assign Bookings'}
                       >
                         <RotateCcw className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
                         <span>Return Car</span>
@@ -1736,9 +1751,11 @@ export function AdminBookingsClient({
                               <Button
                                 type="button"
                                 size="sm"
+                                disabled={!can('bookings.create')}
                                 onClick={() => openReturnDialog(b)}
-                                className="h-7 px-3 text-[10px] font-semibold bg-[#0f172a] hover:bg-slate-800 text-white rounded-full inline-flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+                                className="h-7 px-3 text-[10px] font-semibold bg-[#0f172a] hover:bg-slate-800 text-white rounded-full inline-flex items-center gap-1 shadow-2xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                 aria-label={`Process vehicle return for booking ${b.booking_number}`}
+                                title={can('bookings.create') ? undefined : 'Permission required: Create & Assign Bookings'}
                               >
                                 <RotateCcw className="w-3 h-3" aria-hidden="true" />
                                 Mark Returned
@@ -1748,9 +1765,11 @@ export function AdminBookingsClient({
                                 type="button"
                                 size="sm"
                                 variant="outline"
+                                disabled={!can('bookings.create')}
                                 onClick={() => openExtendDialog(b)}
-                                className="h-7 px-2.5 text-[10px] font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-full shadow-2xs transition-all cursor-pointer dark:bg-card dark:text-slate-200 dark:border-border"
+                                className="h-7 px-2.5 text-[10px] font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-full shadow-2xs transition-all cursor-pointer dark:bg-card dark:text-slate-200 dark:border-border disabled:opacity-40 disabled:cursor-not-allowed"
                                 aria-label={`Extend duration for booking ${b.booking_number}`}
+                                title={can('bookings.create') ? undefined : 'Permission required: Create & Assign Bookings'}
                               >
                                 Extend
                               </Button>
@@ -1796,10 +1815,11 @@ export function AdminBookingsClient({
                                 <span>View Full Details</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                disabled={!can('reports.export')}
                                 onClick={() => {
                                   printThermalReceipt(generateRentalReceiptText(b), b.booking_number)
                                 }}
-                                className="cursor-pointer gap-2"
+                                className="cursor-pointer gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 <Printer className="w-4 h-4 text-slate-500" />
                                 <span>Print Thermal Invoice</span>
@@ -1824,15 +1844,17 @@ export function AdminBookingsClient({
                                 <>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
+                                    disabled={!can('bookings.create')}
                                     onClick={() => openReturnDialog(b)}
-                                    className="cursor-pointer gap-2 text-rose-600 focus:text-rose-600"
+                                    className="cursor-pointer gap-2 text-rose-600 focus:text-rose-600 disabled:opacity-40 disabled:cursor-not-allowed"
                                   >
                                     <RotateCcw className="w-4 h-4" />
                                     <span>Mark Returned</span>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
+                                    disabled={!can('bookings.create')}
                                     onClick={() => openExtendDialog(b)}
-                                    className="cursor-pointer gap-2"
+                                    className="cursor-pointer gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                                   >
                                     <Clock className="w-4 h-4 text-slate-500" />
                                     <span>Extend Duration</span>

@@ -1,7 +1,26 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatCustomer, DEFAULT_DEMO_CUSTOMERS } from '@/lib/customers'
 import type { Customer } from '@/types'
+
+async function checkPermission(requiredPermission: string): Promise<boolean> {
+  const cookieStore = await cookies()
+  const role = cookieStore.get('driveease_demo_role')?.value
+  if (role === 'super_admin' || role === 'owner') return true
+
+  const userPermsRaw = cookieStore.get('driveease_user_permissions')?.value
+  if (!userPermsRaw) return false
+  try {
+    let raw = userPermsRaw
+    try { raw = decodeURIComponent(userPermsRaw) } catch {}
+    const perms = JSON.parse(raw)
+    if (Array.isArray(perms)) {
+      if (perms.includes('*') || perms.includes(requiredPermission)) return true
+    }
+  } catch {}
+  return false
+}
 
 // GET: Fetch customers
 export async function GET(req: Request) {
@@ -37,6 +56,13 @@ export async function GET(req: Request) {
 // POST: Add new customer
 export async function POST(req: Request) {
   try {
+    if (!await checkPermission('customers.manage')) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Permission denied: Create & Manage Customers permission required' } },
+        { status: 403 }
+      )
+    }
+
     const body = await req.json()
     const {
       full_name,
@@ -113,6 +139,13 @@ export async function POST(req: Request) {
 // PUT: Update customer details
 export async function PUT(req: Request) {
   try {
+    if (!await checkPermission('customers.manage')) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Permission denied: Create & Manage Customers permission required' } },
+        { status: 403 }
+      )
+    }
+
     const body = await req.json()
     const {
       id,
@@ -275,6 +308,13 @@ export async function PUT(req: Request) {
 // DELETE: Delete customer
 export async function DELETE(req: Request) {
   try {
+    if (!await checkPermission('customers.delete')) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Permission denied: Delete Customers permission required' } },
+        { status: 403 }
+      )
+    }
+
     const { searchParams } = new URL(req.url)
     let id = searchParams.get('id')
 

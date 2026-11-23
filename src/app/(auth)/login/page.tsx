@@ -57,10 +57,16 @@ function LoginForm() {
         return
       }
 
-      // Ensure client cookie is set for instant middleware validation
-      document.cookie = `driveease_demo_role=super_admin; path=/; max-age=${
-        rememberMe ? 2592000 : 86400
-      }; SameSite=Lax`
+      // Set client session cookies matching server returned role and permissions
+      const userRole = data.role || 'staff'
+      const userPerms = Array.isArray(data.permissions) ? data.permissions : []
+      const userName = data.name || 'Staff Member'
+      const maxAge = rememberMe ? 2592000 : 86400
+
+      document.cookie = `driveease_demo_role=${userRole}; path=/; max-age=${maxAge}; SameSite=Lax`
+      document.cookie = `driveease_user_permissions=${encodeURIComponent(JSON.stringify(userPerms))}; path=/; max-age=${maxAge}; SameSite=Lax`
+      document.cookie = `driveease_user_name=${encodeURIComponent(userName)}; path=/; max-age=${maxAge}; SameSite=Lax`
+      document.cookie = `driveease_user_email=${encodeURIComponent(cleanEmail)}; path=/; max-age=${maxAge}; SameSite=Lax`
 
       window.location.href = redirectTo || '/admin/dashboard'
     } catch (err) {
@@ -106,17 +112,29 @@ function LoginForm() {
           <input type="password" style={{ display: 'none' }} aria-hidden="true" tabIndex={-1} />
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Admin Email / Username</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold">Admin Email / Staff Username</Label>
+              {email.trim().toLowerCase() === 'jalorecarrentel@gmail.com' || email.trim().toLowerCase() === 'jalorecarrentel' ? (
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                Owner (Full Access)
+                </span>
+              ) : email.trim().length >= 2 ? (
+                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                  👤 Staff Member
+                </span>
+              ) : null}
+            </div>
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                name="admin_username"
+                name="login_account_id"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="Enter admin email or username"
+                placeholder="Enter staff ID (e.g. shankr) or email"
                 autoComplete="off"
+                spellCheck={false}
                 className="pl-10 h-11 rounded-xl bg-muted/30 text-xs focus-visible:ring-primary"
               />
             </div>
@@ -136,11 +154,11 @@ function LoginForm() {
               <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type={showPassword ? 'text' : 'password'}
-                name="admin_password"
+                name="login_account_secret"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder="Enter generated password"
                 autoComplete="new-password"
                 className="pl-10 pr-10 h-11 rounded-xl bg-muted/30 text-xs focus-visible:ring-primary"
               />

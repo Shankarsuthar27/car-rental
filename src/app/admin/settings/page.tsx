@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
 import { BrandLogo } from '@/components/brand/BrandLogo'
+import { PermissionGuard } from '@/components/admin/PermissionGuard'
 
 export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false)
@@ -64,7 +65,8 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-5xl">
+    <PermissionGuard permission="settings.manage">
+      <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-5xl">
       <div>
         <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 rounded-2xl gradient-brand flex items-center justify-center shadow-md shadow-primary/20 text-white">
@@ -393,5 +395,6 @@ export default function AdminSettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </PermissionGuard>
   )
 }

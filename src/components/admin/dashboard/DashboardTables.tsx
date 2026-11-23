@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format, differenceInMinutes, differenceInHours, isPast } from 'date-fns'
 import type { Booking, Vehicle } from '@/types'
 import { formatCustomer } from '@/lib/customers'
-import { cn } from '@/lib/utils'
+import { cn, getInitials } from '@/lib/utils'
 
 interface DashboardTablesProps {
   recentAssignments: any[]
@@ -137,12 +137,7 @@ export function DashboardTables({
                     const cust = b.customer ? formatCustomer(b.customer) : null
                     const customerName = cust?.profile?.full_name || b.customer?.emergency_contact_name || b.customer?.customer_code || 'Valued Customer'
                     const customerPhone = cust?.profile?.phone || b.customer?.emergency_contact_phone || '—'
-                    const initials = customerName
-                      .split(' ')
-                      .map((p: string) => p[0])
-                      .slice(0, 2)
-                      .join('')
-                      .toUpperCase() || 'C'
+                    const initials = getInitials(customerName, 'C')
                     const vehicleName = b.vehicle ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Vehicle Unassigned'
                     const regNumber = b.vehicle?.registration_number || '—'
 
@@ -374,12 +369,7 @@ export function DashboardTables({
                     const cust = b.customer ? formatCustomer(b.customer) : null
                     const customerName = cust?.profile?.full_name || b.customer?.emergency_contact_name || b.customer?.customer_code || 'Valued Customer'
                     const customerPhone = cust?.profile?.phone || b.customer?.emergency_contact_phone || '—'
-                    const initials = customerName
-                      .split(' ')
-                      .map((p: string) => p[0])
-                      .slice(0, 2)
-                      .join('')
-                      .toUpperCase() || 'C'
+                    const initials = getInitials(customerName, 'C')
                     const overdue = getOverdueInfo(b.return_datetime)
 
                     return (

@@ -16,13 +16,16 @@ import {
   BarChart3,
   Bell,
   Settings,
+  UserCog,
   ChevronRight,
   ChevronLeft,
   LogOut,
   X,
+  Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { usePermissions } from '@/hooks/usePermissions'
 import {
   Tooltip,
   TooltipContent,
@@ -41,6 +44,7 @@ interface NavItem {
   href?: string
   icon: React.ElementType
   badge?: string
+  permission?: string
   children?: NavChild[]
 }
 
@@ -54,6 +58,7 @@ const workspaceNavItems: NavItem[] = [
     label: 'Fleet',
     icon: CarFront,
     badge: '24',
+    permission: 'vehicles.view',
     children: [
       { label: 'All Cars', href: '/admin/vehicles' },
       { label: 'Available Cars', href: '/admin/vehicles?status=available', badgeColor: 'bg-emerald-400' },
@@ -65,6 +70,7 @@ const workspaceNavItems: NavItem[] = [
     label: 'Rentals',
     icon: Calendar,
     badge: '8',
+    permission: 'bookings.view',
     children: [
       { label: 'Active Rentals', href: '/admin/bookings?status=active', badgeColor: 'bg-blue-400' },
       { label: 'Completed', href: '/admin/bookings?status=completed', badgeColor: 'bg-zinc-400' },
@@ -75,30 +81,41 @@ const workspaceNavItems: NavItem[] = [
     label: 'Customers',
     href: '/admin/customers',
     icon: Users,
+    permission: 'customers.view',
   },
   {
     label: 'Assign car',
     href: '/admin/assign',
     icon: Zap,
+    permission: 'bookings.create',
   },
   {
     label: 'Payments',
     href: '/admin/payments',
     icon: CreditCard,
+    permission: 'payments.view',
   },
   {
     label: 'Rental history',
     href: '/admin/history',
     icon: History,
+    permission: 'bookings.view',
   },
   {
     label: 'Reports',
     href: '/admin/reports',
     icon: BarChart3,
+    permission: 'reports.view',
   },
 ]
 
 const utilityNavItems: NavItem[] = [
+  {
+    label: 'Staff & Roles',
+    href: '/admin/employees',
+    icon: UserCog,
+    permission: 'team.manage',
+  },
   {
     label: 'Notifications',
     href: '/admin/notifications',
@@ -108,6 +125,7 @@ const utilityNavItems: NavItem[] = [
     label: 'Settings',
     href: '/admin/settings',
     icon: Settings,
+    permission: 'settings.manage',
   },
 ]
 
@@ -120,6 +138,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { can } = usePermissions()
 
   // Track expanded groups
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
@@ -137,9 +156,12 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
 
   const handleLogout = async () => {
     document.cookie = 'driveease_demo_role=; path=/; max-age=0; SameSite=Lax'
+    document.cookie = 'driveease_user_permissions=; path=/; max-age=0; SameSite=Lax'
+    document.cookie = 'driveease_user_name=; path=/; max-age=0; SameSite=Lax'
+    document.cookie = 'driveease_user_email=; path=/; max-age=0; SameSite=Lax'
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    window.location.href = '/login'
   }
 
   const handleNavClick = () => {
@@ -185,13 +207,16 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
     const hasChildren = item.children && item.children.length > 0
     const active = isGroupActive(item)
     const expanded = hasChildren && isGroupExpanded(item)
+    const allowed = !item.permission || can(item.permission)
 
     // Collapsed mode item (when sidebar is mini 68px width)
     if (collapsed) {
       const linkContent = (
         <button
           type="button"
+          disabled={!allowed}
           onClick={() => {
+            if (!allowed) return
             if (hasChildren && item.children?.[0]) {
               router.push(item.children[0].href)
             } else if (item.href) {
@@ -199,10 +224,12 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
             }
           }}
           className={cn(
-            'w-10 h-10 mx-auto my-1 flex items-center justify-center rounded-xl transition-all duration-150 cursor-pointer',
-            active
-              ? 'bg-[#1f70ff] text-white shadow-lg shadow-blue-500/25 font-semibold'
-              : 'text-[#627794] hover:text-white hover:bg-white/[0.05]'
+            'w-10 h-10 mx-auto my-1 flex items-center justify-center rounded-xl transition-all duration-150',
+            !allowed
+              ? 'opacity-35 cursor-not-allowed text-[#4a5b73]'
+              : active
+              ? 'bg-[#1f70ff] text-white shadow-lg shadow-blue-500/25 font-semibold cursor-pointer'
+              : 'text-[#627794] hover:text-white hover:bg-white/[0.05] cursor-pointer'
           )}
         >
           <Icon className="w-5 h-5 shrink-0" />
@@ -218,13 +245,18 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           >
             <p className="font-bold text-xs pb-1 mb-1 border-b border-white/10 text-white flex items-center justify-between">
               <span>{item.label}</span>
-              {item.badge && (
+              {!allowed ? (
+                <Lock className="w-3 h-3 text-amber-400" />
+              ) : item.badge ? (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#131e30] text-[#5e7799]">
                   {item.badge}
                 </span>
-              )}
+              ) : null}
             </p>
-            {hasChildren && (
+            {!allowed && (
+              <p className="text-[11px] text-amber-400/90 font-medium">Permission required</p>
+            )}
+            {allowed && hasChildren && (
               <div className="space-y-1 pt-1">
                 {item.children?.map((child) => (
                   <Link
@@ -249,6 +281,20 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
 
     // Single item without dropdown children (e.g. Dashboard, Customers, Assign car, etc.)
     if (!hasChildren && item.href) {
+      if (!allowed) {
+        return (
+          <div
+            key={item.label}
+            className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-[13.5px] opacity-35 cursor-not-allowed select-none text-[#5e7492]"
+            title={`Permission required: ${item.label}`}
+          >
+            <Icon className="w-5 h-5 shrink-0 text-[#4a5b73]" />
+            <span className="truncate">{item.label}</span>
+            <Lock className="w-3.5 h-3.5 ml-auto shrink-0 text-slate-500" />
+          </div>
+        )
+      }
+
       return (
         <Link
           key={item.label}
@@ -286,6 +332,20 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
     }
 
     // Group with collapsible Dropdown (Fleet, Rentals)
+    if (!allowed) {
+      return (
+        <div
+          key={item.label}
+          className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-[13.5px] opacity-35 cursor-not-allowed select-none text-[#5e7492]"
+          title={`Permission required: ${item.label}`}
+        >
+          <Icon className="w-5 h-5 shrink-0 text-[#4a5b73]" />
+          <span className="truncate">{item.label}</span>
+          <Lock className="w-3.5 h-3.5 ml-auto shrink-0 text-slate-500" />
+        </div>
+      )
+    }
+
     return (
       <div key={item.label} className="space-y-0.5">
         <button
@@ -427,13 +487,17 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           )}
 
           <div className="space-y-1">
-            {workspaceNavItems.map(renderNavItem)}
+            {workspaceNavItems
+              .filter(item => !item.permission || can(item.permission))
+              .map(renderNavItem)}
           </div>
 
           {/* Settings & Notifications footer items */}
           <div className="pt-4 mt-3 border-t border-[#122036]">
             <div className="space-y-0.5">
-              {utilityNavItems.map(renderNavItem)}
+              {utilityNavItems
+                .filter(item => !item.permission || can(item.permission))
+                .map(renderNavItem)}
             </div>
           </div>
         </nav>

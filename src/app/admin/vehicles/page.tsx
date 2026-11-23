@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { VehicleService } from '@/services/VehicleService'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminVehiclesClient } from '@/components/admin/vehicles/AdminVehiclesClient'
+import { PermissionGuard } from '@/components/admin/PermissionGuard'
 import type { Vehicle, Branch } from '@/types'
 
 export const metadata: Metadata = {
@@ -37,7 +38,9 @@ export default async function AdminVehiclesPage() {
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <AdminVehiclesClient initialVehicles={vehicles} branches={branches} />
+      <PermissionGuard permission="vehicles.view">
+        <AdminVehiclesClient initialVehicles={vehicles} branches={branches} />
+      </PermissionGuard>
     </div>
   )
 }
