@@ -16,6 +16,7 @@ import {
   Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export interface DashboardStatsProps {
   stats: {
@@ -31,6 +32,9 @@ export interface DashboardStatsProps {
 }
 
 export function DashboardKPIs({ stats }: DashboardStatsProps) {
+  const { can } = usePermissions()
+  const canViewRevenue = can('reports.revenue')
+
   const cards = [
     {
       title: 'Total Cars',
@@ -94,12 +98,12 @@ export function DashboardKPIs({ stats }: DashboardStatsProps) {
     },
     {
       title: "Today's Revenue",
-      value: `₹${(stats.todayRevenue || 0).toLocaleString('en-IN')}`,
+      value: canViewRevenue ? `₹${(stats.todayRevenue || 0).toLocaleString('en-IN')}` : '₹ ••••••',
       icon: TrendingUp,
       color: 'text-emerald-600 dark:text-emerald-400',
       bgColor: 'bg-emerald-500/10 border-emerald-500/20',
-      href: '/admin/payments',
-      badge: 'Gross Income',
+      href: canViewRevenue ? '/admin/payments' : '#',
+      badge: canViewRevenue ? 'Gross Income' : 'Restricted',
       index: 6,
     },
     {

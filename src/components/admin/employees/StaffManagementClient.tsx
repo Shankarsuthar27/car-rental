@@ -22,6 +22,8 @@ import {
   X,
   Eye,
   EyeOff,
+  Pencil,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,6 +57,7 @@ interface EmployeeRecord {
   employee_code?: string
   department?: string
   designation?: string
+  emergency_contact?: string
   is_active: boolean
   permissions: string[]
   created_at: string
@@ -90,6 +93,7 @@ export function StaffManagementClient({
   // Success Credentials Dialog
   const [credentialsModalOpen, setCredentialsModalOpen] = useState(false)
   const [createdCredentials, setCreatedCredentials] = useState<{
+    id?: string
     name: string
     username?: string
     email: string
@@ -100,6 +104,23 @@ export function StaffManagementClient({
   } | null>(null)
   const [copied, setCopied] = useState(false)
   const [showPassword, setShowPassword] = useState(true)
+
+  // Created credentials inline editing
+  const [isEditingCreatedCreds, setIsEditingCreatedCreds] = useState(false)
+  const [customIdInput, setCustomIdInput] = useState('')
+  const [customPassInput, setCustomPassInput] = useState('')
+  const [savingCustomCreds, setSavingCustomCreds] = useState(false)
+  const [customCredsSuccessMsg, setCustomCredsSuccessMsg] = useState<string | null>(null)
+
+  // Dedicated Edit Credentials Modal (from staff cards)
+  const [editCredsModalOpen, setEditCredsModalOpen] = useState(false)
+  const [targetCredsEmp, setTargetCredsEmp] = useState<EmployeeRecord | null>(null)
+  const [targetCredsUsername, setTargetCredsUsername] = useState('')
+  const [targetCredsPassword, setTargetCredsPassword] = useState('')
+  const [targetCredsShowPassword, setTargetCredsShowPassword] = useState(true)
+  const [savingTargetCreds, setSavingTargetCreds] = useState(false)
+  const [targetCredsError, setTargetCredsError] = useState<string | null>(null)
+  const [targetCredsSuccess, setTargetCredsSuccess] = useState(false)
 
   // Form states for creating member
   const [name, setName] = useState('')
@@ -203,6 +224,10 @@ export function StaffManagementClient({
 
       setEmployees(prev => [newEmp, ...prev])
       setCreatedCredentials(json.credentials)
+      setCustomIdInput(json.credentials?.username || json.credentials?.email || '')
+      setCustomPassInput(json.credentials?.password || '')
+      setIsEditingCreatedCreds(false)
+      setCustomCredsSuccessMsg(null)
       setAddModalOpen(false)
       setCredentialsModalOpen(true)
 
@@ -214,6 +239,154 @@ export function StaffManagementClient({
       setErrorMsg(err.message || 'Error creating staff account.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // Helper: Generate clean 9-character random password
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$'
+    let res = ''
+    for (let i = 0; i < 9; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return res
+  }
+
+  // Save credentials edited in Created Credentials Modal
+  const handleSaveCreatedCreds = async () => {
+    if (!createdCredentials?.id) return
+    if (!customIdInput.trim()) {
+      alert('Please enter a valid Username / ID.')
+      return
+    }
+    if (!customPassInput.trim() || customPassInput.trim().length < 4) {
+      alert('Password must be at least 4 characters long.')
+      return
+    }
+
+    setSavingCustomCreds(true)
+    setCustomCredsSuccessMsg(null)
+
+    try {
+      const res = await fetch('/api/admin/members/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId: createdCredentials.id,
+          username: customIdInput.trim(),
+          password: customPassInput.trim(),
+        }),
+      })
+
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to update credentials.')
+
+      setCreatedCredentials(prev =>
+        prev
+          ? {
+              ...prev,
+              username: json.credentials?.username || customIdInput.trim(),
+              email: json.credentials?.email || prev.email,
+              password: customPassInput.trim(),
+            }
+          : null
+      )
+
+      // Update in employees list
+      setEmployees(prev =>
+        prev.map(e => {
+          if (e.id === createdCredentials.id) {
+            let meta: any = {}
+            try { meta = JSON.parse(e.emergency_contact || '{}') } catch {}
+            meta.username = json.credentials?.username || customIdInput.trim()
+            meta.short_username = json.credentials?.short_username || customIdInput.trim()
+            meta.email = json.credentials?.email || meta.email
+            return { ...e, emergency_contact: JSON.stringify(meta) }
+          }
+          return e
+        })
+      )
+
+      setIsEditingCreatedCreds(false)
+      setCustomCredsSuccessMsg('Login ID & Password saved successfully!')
+      setTimeout(() => setCustomCredsSuccessMsg(null), 3000)
+    } catch (err: any) {
+      alert(err.message || 'Error updating credentials.')
+    } finally {
+      setSavingCustomCreds(false)
+    }
+  }
+
+  // Open modal to edit credentials from staff card
+  const openEditCredentialsModal = (emp: EmployeeRecord) => {
+    setTargetCredsEmp(emp)
+    let username = emp.employee_code || ''
+    if (emp.emergency_contact) {
+      try {
+        const meta = JSON.parse(emp.emergency_contact)
+        username = meta.username || meta.short_username || meta.email || emp.employee_code || ''
+      } catch {}
+    }
+    setTargetCredsUsername(username)
+    setTargetCredsPassword(generateRandomPassword())
+    setTargetCredsError(null)
+    setTargetCredsSuccess(false)
+    setEditCredsModalOpen(true)
+  }
+
+  // Save credentials from staff card modal
+  const handleSaveTargetCreds = async () => {
+    if (!targetCredsEmp?.id) return
+    if (!targetCredsUsername.trim()) {
+      setTargetCredsError('Please enter a valid Username / ID.')
+      return
+    }
+    if (!targetCredsPassword.trim() || targetCredsPassword.trim().length < 4) {
+      setTargetCredsError('Password must be at least 4 characters long.')
+      return
+    }
+
+    setSavingTargetCreds(true)
+    setTargetCredsError(null)
+
+    try {
+      const res = await fetch('/api/admin/members/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId: targetCredsEmp.id,
+          username: targetCredsUsername.trim(),
+          password: targetCredsPassword.trim(),
+        }),
+      })
+
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to update credentials.')
+
+      // Update in employees list
+      setEmployees(prev =>
+        prev.map(e => {
+          if (e.id === targetCredsEmp.id) {
+            let meta: any = {}
+            try { meta = JSON.parse(e.emergency_contact || '{}') } catch {}
+            meta.username = json.credentials?.username || targetCredsUsername.trim()
+            meta.short_username = json.credentials?.short_username || targetCredsUsername.trim()
+            meta.email = json.credentials?.email || meta.email
+            return { ...e, emergency_contact: JSON.stringify(meta) }
+          }
+          return e
+        })
+      )
+
+      setTargetCredsSuccess(true)
+      setTimeout(() => {
+        setEditCredsModalOpen(false)
+        setTargetCredsSuccess(false)
+      }, 1500)
+    } catch (err: any) {
+      setTargetCredsError(err.message || 'Failed to update credentials.')
+    } finally {
+      setSavingTargetCreds(false)
     }
   }
 
@@ -426,22 +599,33 @@ Login URL: ${window.location.origin}/login
                 </div>
 
                 {/* Footer Action */}
-                <div className="pt-2 border-t border-border flex items-center justify-between">
+                <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
                   <span className="text-[10px] text-muted-foreground">
                     Status: <strong className="text-emerald-500 font-semibold">Active</strong>
                   </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditingEmployee(emp)
-                      setEditPermissions([...(emp.permissions || [])])
-                      setEditModalOpen(true)
-                    }}
-                    className="text-xs h-7 px-2.5 rounded-lg font-semibold gap-1 hover:bg-muted"
-                  >
-                    <SlidersHorizontal className="w-3 h-3 text-primary" /> Edit Permissions
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditCredentialsModal(emp)}
+                      className="text-xs h-7 px-2.5 rounded-lg font-semibold gap-1 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10 cursor-pointer"
+                      title="Edit Login Username & Password"
+                    >
+                      <KeyRound className="w-3 h-3 text-amber-500" /> Edit ID / Pass
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingEmployee(emp)
+                        setEditPermissions([...(emp.permissions || [])])
+                        setEditModalOpen(true)
+                      }}
+                      className="text-xs h-7 px-2.5 rounded-lg font-semibold gap-1 hover:bg-muted cursor-pointer"
+                    >
+                      <SlidersHorizontal className="w-3 h-3 text-primary" /> Edit Permissions
+                    </Button>
+                  </div>
                 </div>
               </div>
             )
@@ -643,45 +827,136 @@ Login URL: ${window.location.origin}/login
             They will only see the authorized operations when logged in.
           </DialogDescription>
 
-          <div className="bg-muted/60 border border-border/80 rounded-2xl p-4 my-4 text-left space-y-3 font-mono text-xs">
-            <div>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider block font-sans font-bold">
-                Assigned Role
-              </span>
-              <span className="font-bold text-foreground font-sans capitalize">
-                {createdCredentials?.role.replace(/_/g, ' ')} ({createdCredentials?.employee_code})
-              </span>
+          {customCredsSuccessMsg && (
+            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{customCredsSuccessMsg}</span>
             </div>
+          )}
 
-            <div>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider block font-sans font-bold">
-                Login Username / ID
-              </span>
-              <div className="bg-card px-3 py-2 rounded-xl border border-border flex items-center justify-between mt-1">
-                <span className="text-primary font-bold truncate">
-                  {createdCredentials?.username || createdCredentials?.email}
+          <div className="bg-muted/60 border border-border/80 rounded-2xl p-4 my-3 text-left space-y-3 font-mono text-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider block font-sans font-bold">
+                  Assigned Role
                 </span>
-                <span className="text-[10px] text-muted-foreground font-sans">Can sign in with ID or Email</span>
+                <span className="font-bold text-foreground font-sans capitalize">
+                  {createdCredentials?.role.replace(/_/g, ' ')} ({createdCredentials?.employee_code})
+                </span>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isEditingCreatedCreds) {
+                    setCustomIdInput(createdCredentials?.username || createdCredentials?.email || '')
+                    setCustomPassInput(createdCredentials?.password || '')
+                  }
+                  setIsEditingCreatedCreds(!isEditingCreatedCreds)
+                }}
+                className="text-[11px] font-sans font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer bg-primary/10 px-2 py-1 rounded-lg"
+              >
+                <Pencil className="w-3 h-3" />
+                {isEditingCreatedCreds ? 'Cancel' : 'Edit ID & Password'}
+              </button>
             </div>
 
-            <div>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider block font-sans font-bold">
-                Generated Password
-              </span>
-              <div className="bg-card px-3 py-2 rounded-xl border border-border flex items-center justify-between mt-1">
-                <span className="font-bold text-foreground tracking-wider">
-                  {showPassword ? createdCredentials?.password : '•••••••••'}
-                </span>
-                <button
+            {isEditingCreatedCreds ? (
+              <div className="space-y-3 pt-2 border-t border-border/60 font-sans">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider block font-bold">
+                    Custom Login ID / Username
+                  </span>
+                  <Input
+                    type="text"
+                    value={customIdInput}
+                    onChange={e => setCustomIdInput(e.target.value)}
+                    placeholder="e.g. shankr or shankr12"
+                    className="h-9 bg-card text-xs font-mono font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider block font-bold">
+                      Custom Password
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCustomPassInput(generateRandomPassword())}
+                      className="text-[10px] text-primary hover:underline flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-2.5 h-2.5" /> Random
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={customPassInput}
+                      onChange={e => setCustomPassInput(e.target.value)}
+                      placeholder="Enter new password"
+                      className="h-9 bg-card text-xs font-mono font-bold pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-muted-foreground hover:text-foreground"
+                  size="sm"
+                  disabled={savingCustomCreds}
+                  onClick={handleSaveCreatedCreds}
+                  className="w-full h-8 text-xs font-bold gradient-brand text-white border-0"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                  {savingCustomCreds ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 mr-1" /> Save Updated ID & Password
+                    </>
+                  )}
+                </Button>
               </div>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider block font-sans font-bold">
+                    Login Username / ID
+                  </span>
+                  <div className="bg-card px-3 py-2 rounded-xl border border-border flex items-center justify-between mt-1">
+                    <span className="text-primary font-bold truncate">
+                      {createdCredentials?.username || createdCredentials?.email}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-sans">Can sign in with ID or Email</span>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider block font-sans font-bold">
+                    Generated Password
+                  </span>
+                  <div className="bg-card px-3 py-2 rounded-xl border border-border flex items-center justify-between mt-1">
+                    <span className="font-bold text-foreground tracking-wider">
+                      {showPassword ? createdCredentials?.password : '•••••••••'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-muted-foreground hover:text-foreground cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <Button
@@ -794,6 +1069,123 @@ Login URL: ${window.location.origin}/login
               {editSubmitting ? 'Saving...' : 'Save Permissions'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================== */}
+      {/* 4. EDIT LOGIN ID & PASSWORD MODAL (From Staff Card)       */}
+      {/* ========================================================== */}
+      <Dialog open={editCredsModalOpen} onOpenChange={setEditCredsModalOpen}>
+        <DialogContent className="max-w-md rounded-3xl p-6">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+              <KeyRound className="w-4 h-4 text-amber-500" /> Account Access Credentials
+            </div>
+            <DialogTitle className="text-lg font-black text-foreground">
+              Edit Login ID & Password
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Change login ID/username or set a new password for{' '}
+              <strong className="text-foreground">{targetCredsEmp?.profile?.full_name || 'Staff Member'}</strong> (
+              <span className="font-mono">{targetCredsEmp?.employee_code}</span>).
+            </DialogDescription>
+          </DialogHeader>
+
+          {targetCredsSuccess ? (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2.5 my-2">
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+              <div>
+                <p className="font-bold">Credentials Updated Successfully!</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  The staff member can now sign in with their updated login ID and password.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 my-2">
+              {targetCredsError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{targetCredsError}</span>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Staff Login ID / Username</Label>
+                <Input
+                  type="text"
+                  value={targetCredsUsername}
+                  onChange={e => setTargetCredsUsername(e.target.value)}
+                  placeholder="e.g. shankr or shankr12"
+                  className="h-10 text-xs font-mono font-bold rounded-xl bg-muted/30"
+                />
+                <span className="text-[10px] text-muted-foreground block">
+                  Staff member can type this ID or their email on the login screen.
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold">New Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => setTargetCredsPassword(generateRandomPassword())}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Generate Random
+                  </button>
+                </div>
+                <div className="relative">
+                  <Input
+                    type={targetCredsShowPassword ? 'text' : 'password'}
+                    value={targetCredsPassword}
+                    onChange={e => setTargetCredsPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="h-10 text-xs font-mono font-bold rounded-xl bg-muted/30 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setTargetCredsShowPassword(!targetCredsShowPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-1"
+                  >
+                    {targetCredsShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <span className="text-[10px] text-muted-foreground block">
+                  Minimum 4 characters. Will securely hash and activate immediately.
+                </span>
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0 pt-3 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditCredsModalOpen(false)}
+                  className="text-xs rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={savingTargetCreds}
+                  onClick={handleSaveTargetCreds}
+                  className="gradient-brand text-white border-0 font-bold text-xs rounded-xl shadow-md gap-1.5"
+                >
+                  {savingTargetCreds ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" /> Save Updated Credentials
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

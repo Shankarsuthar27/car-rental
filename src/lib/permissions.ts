@@ -88,6 +88,12 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
     category: 'Reports',
   },
   {
+    id: 'reports.revenue',
+    label: 'Revenue (Last 30 days)',
+    description: 'Can view gross revenue figures, 30-day earnings chart, and turnover metrics',
+    category: 'Reports',
+  },
+  {
     id: 'reports.export',
     label: 'Export Reports (Excel / CSV / PDF)',
     description: 'Can download revenue data into Excel, CSV, and print invoices',
@@ -126,6 +132,7 @@ export const ROLE_PRESETS: Record<
       'payments.view',
       'payments.collect',
       'reports.view',
+      'reports.revenue',
     ],
   },
   booking_manager: {
@@ -146,6 +153,7 @@ export const ROLE_PRESETS: Record<
       'payments.view',
       'payments.collect',
       'reports.view',
+      'reports.revenue',
       'reports.export',
     ],
   },

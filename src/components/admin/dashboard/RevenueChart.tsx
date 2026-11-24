@@ -11,6 +11,8 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { format, parseISO } from 'date-fns'
+import { usePermissions } from '@/hooks/usePermissions'
+import { Lock } from 'lucide-react'
 
 interface RevenueDataPoint {
   date: string
@@ -46,6 +48,44 @@ const CustomTooltip = ({
 }
 
 export function RevenueChart({ data }: RevenueChartProps) {
+  const { can } = usePermissions()
+  const canViewRevenue = can('reports.revenue')
+
+  if (!canViewRevenue) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Revenue (Last 30 days)</CardTitle>
+              <div className="flex items-center gap-2.5 mt-1.5">
+                <span className="text-2xl font-bold font-mono tracking-wider text-muted-foreground/60 select-none">
+                  ₹ •••••••
+                </span>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  Restricted
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-48 flex flex-col items-center justify-center text-muted-foreground text-xs space-y-2.5 bg-muted/20 rounded-2xl border border-dashed border-border/70">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div className="text-center space-y-1">
+              <p className="font-bold text-foreground text-xs">Revenue Analytics Restricted</p>
+              <p className="text-[11px] text-muted-foreground max-w-xs text-center px-4">
+                You do not have permission to view 30-day turnover figures and revenue charts.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const total = data.reduce((sum, d) => sum + d.revenue, 0)
 
   return (

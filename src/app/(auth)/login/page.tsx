@@ -132,7 +132,7 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="Enter staff ID (e.g. shankr) or email"
+                placeholder="Enter email or username"
                 autoComplete="off"
                 spellCheck={false}
                 className="pl-10 h-11 rounded-xl bg-muted/30 text-xs focus-visible:ring-primary"
@@ -158,7 +158,7 @@ function LoginForm() {
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Enter generated password"
+                placeholder="Enter password"
                 autoComplete="new-password"
                 className="pl-10 pr-10 h-11 rounded-xl bg-muted/30 text-xs focus-visible:ring-primary"
               />
