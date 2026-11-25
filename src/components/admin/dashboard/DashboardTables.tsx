@@ -26,6 +26,7 @@ import { format, differenceInMinutes, differenceInHours, isPast } from 'date-fns
 import type { Booking, Vehicle } from '@/types'
 import { formatCustomer } from '@/lib/customers'
 import { cn, getInitials } from '@/lib/utils'
+import { usePermissions } from '@/hooks/usePermissions'
 
 interface DashboardTablesProps {
   recentAssignments: any[]
@@ -40,6 +41,9 @@ export function DashboardTables({
   runningVehicles,
   onOpenReturnModal,
 }: DashboardTablesProps) {
+  const { can } = usePermissions()
+  const canViewAmounts = can('payments.view_amounts')
+  const canViewPaymentStatus = can('payments.view') || can('payments.view_balances')
   const [activeTab, setActiveTab] = useState<'assignments' | 'available' | 'running'>('assignments')
 
   // Calculate overdue message for active rentals
@@ -187,19 +191,21 @@ export function DashboardTables({
                         </td>
 
                         <td className="p-4">
-                          <span className="font-black text-foreground text-sm block">
-                            ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
+                          <span className="font-black text-foreground text-sm block font-mono">
+                            {canViewAmounts ? `₹${Number(b.grand_total || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                           </span>
                           <Badge
                             variant="outline"
                             className={cn(
                               'text-[9px] px-1 py-0 h-4 border-0 uppercase font-bold',
-                              b.payment_status === 'paid'
+                              !canViewPaymentStatus
+                                ? 'bg-muted text-muted-foreground'
+                                : b.payment_status === 'paid'
                                 ? 'bg-emerald-500/10 text-emerald-600'
                                 : 'bg-amber-500/10 text-amber-600'
                             )}
                           >
-                            {b.payment_status}
+                            {canViewPaymentStatus ? b.payment_status : 'Restricted'}
                           </Badge>
                         </td>
 

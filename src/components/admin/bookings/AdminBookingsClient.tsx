@@ -400,6 +400,11 @@ export function AdminBookingsClient({
   branches,
 }: AdminBookingsClientProps) {
   const { can } = usePermissions()
+  const canViewAmounts = can('payments.view_amounts')
+  const canViewBalances = can('payments.view_balances')
+  const canViewPaymentStatus = can('payments.view') || can('payments.view_balances') || can('payments.view_amounts')
+  const canCollectPayments = can('payments.collect')
+  const canViewInvoices = can('payments.view_invoices')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -1421,7 +1426,7 @@ export function AdminBookingsClient({
                       Total Rental
                     </span>
                     <span className="font-mono font-black text-sm sm:text-base text-foreground block">
-                      ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
+                      {canViewAmounts ? `₹${Number(b.grand_total || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                     </span>
                   </div>
 
@@ -1431,7 +1436,7 @@ export function AdminBookingsClient({
                       <div className="text-right">
                         <span className="text-[9px] uppercase font-bold text-muted-foreground block">Deposit</span>
                         <span className="font-mono text-xs font-semibold text-foreground block">
-                          ₹{Number(b.security_deposit || 0).toLocaleString('en-IN')}
+                          {canViewBalances ? `₹${Number(b.security_deposit || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                         </span>
                       </div>
                     )}
@@ -1728,17 +1733,19 @@ export function AdminBookingsClient({
                       <td className="px-3.5 py-3 align-middle border-l border-slate-100 dark:border-border/60">
                         <div className="space-y-0.5">
                           <span className="font-extrabold text-sm text-slate-900 dark:text-white tracking-tight block leading-tight">
-                            ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
+                            {canViewAmounts ? `₹${Number(b.grand_total || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                           </span>
                           <span
                             className={cn(
                               'text-[9px] px-2 py-0.5 rounded-full font-semibold inline-block border',
-                              b.payment_status === 'paid'
+                              !canViewPaymentStatus
+                                ? 'bg-slate-100 text-slate-500 border-slate-200'
+                                : b.payment_status === 'paid'
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
                                 : 'bg-[#fef3c7] text-[#b45309] border-[#fde68a]'
                             )}
                           >
-                            {b.payment_status === 'paid' ? 'Paid' : 'Pending'}
+                            {canViewPaymentStatus ? (b.payment_status === 'paid' ? 'Paid' : 'Pending') : 'Restricted'}
                           </span>
                         </div>
                       </td>
@@ -1815,7 +1822,7 @@ export function AdminBookingsClient({
                                 <span>View Full Details</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                disabled={!can('reports.export')}
+                                disabled={!canViewInvoices}
                                 onClick={() => {
                                   printThermalReceipt(generateRentalReceiptText(b), b.booking_number)
                                 }}
@@ -2375,16 +2382,18 @@ export function AdminBookingsClient({
                           Total Amount Paid
                         </span>
                         <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">
-                          ₹{totalSettlementPaid.toLocaleString('en-IN')}
+                          {canViewAmounts || canViewBalances ? `₹${totalSettlementPaid.toLocaleString('en-IN')}` : '₹ ••••'}
                         </span>
                       </div>
 
                       {/* Payment Status Info Subtitle if advance was paid */}
                       {alreadyPaid > 0 && (
                         <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-dashed border-[#E2E8F0] dark:border-border/60">
-                          <span>Advance Paid: ₹{alreadyPaid.toLocaleString('en-IN')}</span>
+                          <span>Advance Paid: {canViewAmounts || canViewBalances ? `₹${alreadyPaid.toLocaleString('en-IN')}` : '₹ ••••'}</span>
                           <span className={cn('font-bold font-mono', remainingSettlementDue > 0 ? 'text-rose-600' : 'text-emerald-600')}>
-                            {remainingSettlementDue > 0 ? `Net Balance to Collect: ₹${remainingSettlementDue.toLocaleString('en-IN')}` : 'Full Rental Settled'}
+                            {canViewAmounts || canViewBalances
+                              ? (remainingSettlementDue > 0 ? `Net Balance to Collect: ₹${remainingSettlementDue.toLocaleString('en-IN')}` : 'Full Rental Settled')
+                              : 'Balance Restricted'}
                           </span>
                         </div>
                       )}
@@ -2406,6 +2415,7 @@ export function AdminBookingsClient({
                     value={returnPaymentCollected}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReturnPaymentCollected(e.target.value)}
                     placeholder={String(remainingSettlementDue)}
+                    disabled={!canCollectPayments}
                     className="h-10 text-xs sm:text-sm rounded-[6px] font-medium bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-800 dark:text-slate-100"
                   />
                 </div>
@@ -2415,7 +2425,7 @@ export function AdminBookingsClient({
                     <CreditCard className="w-3.5 h-3.5 text-blue-600" />
                     <span>Payment Mode</span>
                   </Label>
-                  <Select value={returnPaymentMethod} onValueChange={setReturnPaymentMethod}>
+                  <Select value={returnPaymentMethod} onValueChange={setReturnPaymentMethod} disabled={!canCollectPayments}>
                     <SelectTrigger id="payment-mode" className="h-10 text-xs sm:text-sm rounded-[6px] bg-white dark:bg-card border-[#E2E8F0] dark:border-border text-slate-800 dark:text-slate-100">
                       <SelectValue />
                     </SelectTrigger>

@@ -72,6 +72,9 @@ export function RentalHistoryClient({
   const router = useRouter()
   const { can } = usePermissions()
   const canDeleteRental = can('bookings.delete')
+  const canViewAmounts = can('payments.view_amounts')
+  const canViewBalances = can('payments.view_balances')
+  const canViewPaymentStatus = can('payments.view') || can('payments.view_balances') || can('payments.view_amounts')
 
   const [bookingsList, setBookingsList] = useState<any[]>(rawBookings || [])
   useEffect(() => {
@@ -392,7 +395,7 @@ export function RentalHistoryClient({
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono">
-              ₹{overviewStats.totalRevenue.toLocaleString('en-IN')}
+              {canViewAmounts ? `₹${overviewStats.totalRevenue.toLocaleString('en-IN')}` : '₹ ••••'}
             </span>
           </div>
         </div>
@@ -656,13 +659,19 @@ export function RentalHistoryClient({
                           {/* Total Bill & Payment Status */}
                           <td className="p-4">
                             <span className="font-black font-mono text-sm text-foreground block">
-                              ₹{Number(booking.grand_total || 0).toLocaleString('en-IN')}
+                              {canViewAmounts ? `₹${Number(booking.grand_total || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                             </span>
                             <span className={cn(
                               'text-[10px] font-bold uppercase tracking-tight block mt-0.5',
-                              booking.payment_status === 'paid' ? 'text-emerald-600' : 'text-amber-600'
+                              !canViewPaymentStatus ? 'text-slate-400' : booking.payment_status === 'paid' ? 'text-emerald-600' : 'text-amber-600'
                             )}>
-                              {booking.payment_status === 'paid' ? 'Paid in full' : `Due: ₹${Number(booking.outstanding_amount || 0).toLocaleString('en-IN')}`}
+                              {!canViewPaymentStatus
+                                ? 'Restricted'
+                                : booking.payment_status === 'paid'
+                                ? 'Paid in full'
+                                : canViewBalances
+                                ? `Due: ₹${Number(booking.outstanding_amount || 0).toLocaleString('en-IN')}`
+                                : 'Due: ₹ ••••'}
                             </span>
                           </td>
 
@@ -804,7 +813,7 @@ export function RentalHistoryClient({
                     <div className="bg-card border border-border/80 rounded-xl p-3.5 shadow-xs space-y-1">
                       <span className="text-[10px] uppercase font-bold text-muted-foreground block">Revenue Earned</span>
                       <span className="text-xl font-black text-emerald-600 font-mono">
-                        ₹{vehicleStats.totalRevenue.toLocaleString('en-IN')}
+                        {canViewAmounts ? `₹${vehicleStats.totalRevenue.toLocaleString('en-IN')}` : '₹ ••••'}
                       </span>
                     </div>
 
@@ -871,7 +880,7 @@ export function RentalHistoryClient({
                                   <div>End: {b.return_odometer || '—'} KM</div>
                                 </td>
                                 <td className="p-3.5 font-bold font-mono text-foreground">
-                                  ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
+                                  {canViewAmounts ? `₹${Number(b.grand_total || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                                 </td>
                                 <td className="p-3.5">
                                   {getStatusBadge(b.status)}
@@ -881,8 +890,7 @@ export function RentalHistoryClient({
                                 </td>
                               </tr>
                             ))
-                          )}
-                        </tbody>
+                          )}                        </tbody>
                       </table>
                     </div>
                   </div>
@@ -994,7 +1002,7 @@ export function RentalHistoryClient({
                     <div className="bg-card border border-border/80 rounded-xl p-3.5 shadow-xs space-y-1">
                       <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total Amount Spent</span>
                       <span className="text-xl font-black text-emerald-600 font-mono">
-                        ₹{customerStats.totalSpend.toLocaleString('en-IN')}
+                        {canViewAmounts ? `₹${customerStats.totalSpend.toLocaleString('en-IN')}` : '₹ ••••'}
                       </span>
                     </div>
                   </div>
@@ -1054,7 +1062,7 @@ export function RentalHistoryClient({
                                   <div>End: {b.return_odometer || '—'} KM</div>
                                 </td>
                                 <td className="p-3.5 font-bold font-mono text-foreground">
-                                  ₹{Number(b.grand_total || 0).toLocaleString('en-IN')}
+                                  {canViewAmounts ? `₹${Number(b.grand_total || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                                 </td>
                                 <td className="p-3.5">
                                   {getStatusBadge(b.status)}
@@ -1064,8 +1072,7 @@ export function RentalHistoryClient({
                                 </td>
                               </tr>
                             ))
-                          )}
-                        </tbody>
+                          )}                        </tbody>
                       </table>
                     </div>
                   </div>
@@ -1213,7 +1220,7 @@ export function RentalHistoryClient({
                   <div className="flex justify-between text-muted-foreground">
                     <span>Base Rental ({getDurationDays(selectedBookingDetails.pickup_datetime, selectedBookingDetails.return_datetime)} Days)</span>
                     <span className="font-mono font-medium text-foreground">
-                      ₹{Number(selectedBookingDetails.base_rental || 0).toLocaleString('en-IN')}
+                      {canViewAmounts ? `₹${Number(selectedBookingDetails.base_rental || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                     </span>
                   </div>
 
@@ -1221,7 +1228,7 @@ export function RentalHistoryClient({
                     <div className="flex justify-between text-muted-foreground">
                       <span>Extra KM Charges</span>
                       <span className="font-mono font-medium text-foreground">
-                        +₹{Number(selectedBookingDetails.extra_km_charge).toLocaleString('en-IN')}
+                        {canViewAmounts ? `+₹${Number(selectedBookingDetails.extra_km_charge).toLocaleString('en-IN')}` : '₹ ••••'}
                       </span>
                     </div>
                   )}
@@ -1230,7 +1237,7 @@ export function RentalHistoryClient({
                     <div className="flex justify-between text-muted-foreground">
                       <span>Insurance Protection</span>
                       <span className="font-mono font-medium text-foreground">
-                        +₹{Number(selectedBookingDetails.insurance_charge).toLocaleString('en-IN')}
+                        {canViewAmounts ? `+₹${Number(selectedBookingDetails.insurance_charge).toLocaleString('en-IN')}` : '₹ ••••'}
                       </span>
                     </div>
                   )}
@@ -1239,7 +1246,7 @@ export function RentalHistoryClient({
                     <div className="flex justify-between text-muted-foreground">
                       <span>GST & Taxes</span>
                       <span className="font-mono font-medium text-foreground">
-                        +₹{Number(selectedBookingDetails.tax_amount).toLocaleString('en-IN')}
+                        {canViewAmounts ? `+₹${Number(selectedBookingDetails.tax_amount).toLocaleString('en-IN')}` : '₹ ••••'}
                       </span>
                     </div>
                   )}
@@ -1248,7 +1255,7 @@ export function RentalHistoryClient({
                     <div className="flex justify-between text-emerald-600">
                       <span>Special Discount</span>
                       <span className="font-mono font-medium">
-                        -₹{Number(selectedBookingDetails.discount_amount).toLocaleString('en-IN')}
+                        {canViewAmounts ? `-₹${Number(selectedBookingDetails.discount_amount).toLocaleString('en-IN')}` : '₹ ••••'}
                       </span>
                     </div>
                   )}
@@ -1258,14 +1265,14 @@ export function RentalHistoryClient({
                   <div className="flex justify-between items-center text-sm font-black">
                     <span className="text-foreground">Grand Total</span>
                     <span className="font-mono text-base text-primary">
-                      ₹{Number(selectedBookingDetails.grand_total || 0).toLocaleString('en-IN')}
+                      {canViewAmounts ? `₹${Number(selectedBookingDetails.grand_total || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                     </span>
                   </div>
 
                   <div className="flex justify-between text-xs pt-1">
                     <span className="text-muted-foreground">Amount Paid (Advance / Collected)</span>
                     <span className="font-mono font-bold text-emerald-600">
-                      ₹{Number(selectedBookingDetails.amount_paid || 0).toLocaleString('en-IN')}
+                      {canViewAmounts ? `₹${Number(selectedBookingDetails.amount_paid || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                     </span>
                   </div>
 
@@ -1273,7 +1280,7 @@ export function RentalHistoryClient({
                     <div className="flex justify-between text-xs pt-0.5">
                       <span className="text-amber-600 font-semibold">Pending Balance Due</span>
                       <span className="font-mono font-bold text-amber-600">
-                        ₹{Number(selectedBookingDetails.outstanding_amount).toLocaleString('en-IN')}
+                        {canViewBalances ? `₹${Number(selectedBookingDetails.outstanding_amount).toLocaleString('en-IN')}` : '₹ ••••'}
                       </span>
                     </div>
                   )}

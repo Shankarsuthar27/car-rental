@@ -2,12 +2,16 @@ import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminPaymentsClient } from '@/components/admin/payments/AdminPaymentsClient'
 import { PermissionGuard } from '@/components/admin/PermissionGuard'
+import { getServerPermissionState, redactPaymentRecord } from '@/lib/server-permissions'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Payment Transactions & Settlements — DriveEase Admin'
 }
 
 async function getPaymentsData() {
+  const state = await getServerPermissionState()
   const supabase = createAdminClient()
 
   const { data: payments } = await supabase
@@ -19,7 +23,7 @@ async function getPaymentsData() {
     `)
     .order('created_at', { ascending: false })
 
-  return payments || []
+  return (payments || []).map((p) => redactPaymentRecord(p, state))
 }
 
 export default async function AdminPaymentsPage() {

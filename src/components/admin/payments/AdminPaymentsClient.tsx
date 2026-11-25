@@ -5,7 +5,12 @@ import {
   CreditCard,
   Search,
   Plus,
-  ArrowLeft
+  ArrowLeft,
+  Lock,
+  IndianRupee,
+  Clock,
+  RotateCcw,
+  Receipt
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,13 +31,20 @@ import {
   DialogTrigger,
   DialogFooter
 } from '@/components/ui/dialog'
-import { createClient } from '@/lib/supabase/client'
+import { usePermissions } from '@/hooks/usePermissions'
 
 interface AdminPaymentsClientProps {
   initialPayments: any[]
 }
 
 export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProps) {
+  const { can } = usePermissions()
+  const canViewStatus = can('payments.view')
+  const canViewAmounts = can('payments.view_amounts')
+  const canViewBalances = can('payments.view_balances')
+  const canViewDetails = can('payments.view_details')
+  const canCollect = can('payments.collect')
+
   const [payments, setPayments] = useState<any[]>(initialPayments)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -45,12 +57,12 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
   const [refNumber, setRefNumber] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
-
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const filtered = payments.filter(p => {
     const bookingNum = p.booking?.booking_number || ''
     const custName = p.customer?.profile?.full_name || ''
-    const rzpId = p.razorpay_payment_id || p.reference_number || ''
+    const rzpId = canViewDetails ? (p.razorpay_payment_id || p.reference_number || '') : ''
 
     const matchesSearch =
       bookingNum.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -61,38 +73,60 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
     return matchesSearch && matchesStatus
   })
 
-  // Handle Manual Payment Entry
+  // Handle Manual Payment Entry via guarded API route
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!canCollect) return
     setSaving(true)
+    setSubmitError(null)
 
-    const supabase = createClient()
-    const { data: newPayment, error } = await supabase
-      .from('payments')
-      .insert({
-        booking_id: bookingId || '11111111-0000-0000-0000-000000000001',
-        customer_id: '11111111-0000-0000-0000-000000000001',
-        amount: Number(amount),
-        currency: 'INR',
-        payment_method: method,
-        status: 'paid',
-        reference_number: refNumber || `MANUAL-${Date.now()}`,
-        payment_date: new Date().toISOString(),
-        description: notes || 'Manual counter payment collection'
+    try {
+      const res = await fetch('/api/admin/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_id: bookingId.trim() || undefined,
+          amount: Number(amount),
+          payment_method: method,
+          reference_number: refNumber.trim() || undefined,
+          description: notes.trim() || 'Manual counter payment collection',
+        }),
       })
-      .select('*, customer:customers(profile:profiles!customers_profile_id_fkey(full_name)), booking:bookings(booking_number)')
-      .single()
-
-    if (!error && newPayment) {
-      setPayments([newPayment, ...payments])
+      const data = await res.json()
+      if (!res.ok) {
+        setSubmitError(data?.error || 'Failed to record payment')
+        setSaving(false)
+        return
+      }
+      setPayments([data, ...payments])
       setManualModalOpen(false)
+      setBookingId('')
+      setRefNumber('')
+      setNotes('')
+    } catch {
+      setSubmitError('Network error while recording payment.')
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const totalCollected = payments
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+
+  const totalPendingDues = payments
+    .filter(p => p.status === 'pending')
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+
+  const totalRefunded = payments
+    .filter(p => p.status === 'refunded')
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+
+  const canSeeAmountForPayment = (p: any) => {
+    if (p.amount === null || p.amount === undefined) return false
+    if (p.status === 'pending') return canViewBalances || canViewAmounts
+    return canViewAmounts
+  }
 
   return (
     <div className="space-y-6">
@@ -100,17 +134,26 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Payments & Gateway Logs
+            Payments &amp; Gateway Logs
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Total revenue collected: <strong className="text-foreground">₹{totalCollected.toLocaleString('en-IN')}</strong> across {payments.length} transactions.
+            Total revenue collected:{' '}
+            <strong className="text-foreground">
+              {canViewAmounts ? `₹${totalCollected.toLocaleString('en-IN')}` : '₹ ••••'}
+            </strong>{' '}
+            across {payments.length} transactions.
           </p>
         </div>
 
         <Dialog open={manualModalOpen} onOpenChange={setManualModalOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-brand text-white border-0 hover:opacity-90 font-bold gap-2 text-xs h-10 shadow-md">
-              <Plus className="w-4 h-4" /> Record Counter Payment
+            <Button
+              disabled={!canCollect}
+              title={canCollect ? 'Record a manual counter payment' : 'Permission required: Collect & Record Payments'}
+              className="gradient-brand text-white border-0 hover:opacity-90 font-bold gap-2 text-xs h-10 shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {canCollect ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              Record Counter Payment
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
@@ -132,11 +175,28 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
             </DialogHeader>
 
             <form onSubmit={handleRecordPayment} className="space-y-3 pt-2">
+              {submitError && (
+                <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20">
+                  {submitError}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Booking # (Optional)</Label>
+                <Input
+                  placeholder="e.g. RNT-2026-123456"
+                  value={bookingId}
+                  onChange={e => setBookingId(e.target.value)}
+                  className="h-9 text-xs font-mono"
+                />
+              </div>
+
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">Amount Received (₹)</Label>
                 <Input
                   required
                   type="number"
+                  min={1}
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   className="h-9 text-xs"
@@ -190,7 +250,7 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
                 </Button>
                 <Button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || !canCollect}
                   size="sm"
                   className="gradient-brand text-white border-0 font-bold"
                 >
@@ -202,6 +262,61 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
         </Dialog>
       </div>
 
+      {/* Granular Payment KPI Summary Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="bg-card border border-border rounded-2xl p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+            <span>Total Collected</span>
+            <IndianRupee className="w-4 h-4 text-emerald-500" />
+          </div>
+          <div className="text-xl font-black font-mono text-foreground">
+            {canViewAmounts ? `₹${totalCollected.toLocaleString('en-IN')}` : '₹ ••••'}
+          </div>
+          <span className="text-[10px] text-muted-foreground block">
+            {canViewAmounts ? 'Verified settled receipts' : 'Amount view restricted'}
+          </span>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+            <span>Pending Dues</span>
+            <Clock className="w-4 h-4 text-amber-500" />
+          </div>
+          <div className="text-xl font-black font-mono text-amber-600">
+            {canViewBalances || canViewAmounts ? `₹${totalPendingDues.toLocaleString('en-IN')}` : '₹ ••••'}
+          </div>
+          <span className="text-[10px] text-muted-foreground block">
+            {canViewBalances || canViewAmounts ? 'Awaiting settlement' : 'Balance view restricted'}
+          </span>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+            <span>Refunded</span>
+            <RotateCcw className="w-4 h-4 text-blue-500" />
+          </div>
+          <div className="text-xl font-black font-mono text-foreground">
+            {canViewAmounts ? `₹${totalRefunded.toLocaleString('en-IN')}` : '₹ ••••'}
+          </div>
+          <span className="text-[10px] text-muted-foreground block">
+            {canViewAmounts ? 'Returned deposits & refunds' : 'Amount view restricted'}
+          </span>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+            <span>Transactions</span>
+            <Receipt className="w-4 h-4 text-primary" />
+          </div>
+          <div className="text-xl font-black font-mono text-foreground">
+            {payments.length}
+          </div>
+          <span className="text-[10px] text-muted-foreground block">
+            {canViewDetails ? 'Full mode & Txn IDs visible' : 'Txn IDs & modes masked'}
+          </span>
+        </div>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-card border border-border rounded-2xl shadow-sm">
         <div className="flex items-center gap-3 flex-1 max-w-sm">
@@ -210,7 +325,7 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
             <Input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by customer, booking #, ref..."
+              placeholder={canViewDetails ? 'Search by customer, booking #, ref...' : 'Search by customer or booking #...'}
               className="pl-9 h-9 text-xs bg-muted/40"
             />
           </div>
@@ -239,8 +354,8 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
               <tr>
                 <th className="p-4">Booking / Tx ID</th>
                 <th className="p-4">Customer</th>
-                <th className="p-4">Method & Channel</th>
-                <th className="p-4">Date & Time</th>
+                <th className="p-4">Method &amp; Channel</th>
+                <th className="p-4">Date &amp; Time</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-right">Amount</th>
               </tr>
@@ -252,8 +367,16 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
                     <span className="font-mono font-bold text-primary block">
                       {p.booking?.booking_number || 'Direct Payment'}
                     </span>
-                    <span className="text-[10px] font-mono text-muted-foreground">
-                      {p.razorpay_payment_id || p.reference_number || p.id.slice(0, 8)}
+                    <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-1 mt-0.5">
+                      {canViewDetails && (p.razorpay_payment_id || p.reference_number) ? (
+                        p.razorpay_payment_id || p.reference_number || p.id.slice(0, 8)
+                      ) : canViewDetails ? (
+                        p.id.slice(0, 8)
+                      ) : (
+                        <>
+                          <Lock className="w-2.5 h-2.5" /> ID Restricted
+                        </>
+                      )}
                     </span>
                   </td>
 
@@ -264,7 +387,13 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
                   </td>
 
                   <td className="p-4 capitalize text-muted-foreground font-medium">
-                    {p.payment_method.replace(/_/g, ' ')}
+                    {canViewDetails && p.payment_method !== 'restricted' ? (
+                      String(p.payment_method || 'cash').replace(/_/g, ' ')
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/75 normal-case">
+                        <Lock className="w-3 h-3" /> Restricted
+                      </span>
+                    )}
                   </td>
 
                   <td className="p-4 text-muted-foreground">
@@ -277,21 +406,31 @@ export function AdminPaymentsClient({ initialPayments }: AdminPaymentsClientProp
                   </td>
 
                   <td className="p-4">
-                    <Badge
-                      className={`text-[10px] uppercase font-bold capitalize ${
-                        p.status === 'paid'
-                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                          : p.status === 'refunded'
-                          ? 'bg-blue-500/10 text-blue-600 border-blue-500/20'
-                          : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                      }`}
-                    >
-                      {p.status}
-                    </Badge>
+                    {canViewStatus ? (
+                      <Badge
+                        className={`text-[10px] uppercase font-bold capitalize ${
+                          p.status === 'paid'
+                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                            : p.status === 'refunded'
+                            ? 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+                            : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                        }`}
+                      >
+                        {p.status}
+                      </Badge>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <Lock className="w-3 h-3" /> Restricted
+                      </span>
+                    )}
                   </td>
 
-                  <td className="p-4 text-right font-black text-sm text-foreground">
-                    ₹{Number(p.amount).toLocaleString('en-IN')}
+                  <td className="p-4 text-right font-black text-sm text-foreground font-mono">
+                    {canSeeAmountForPayment(p) ? (
+                      `₹${Number(p.amount).toLocaleString('en-IN')}`
+                    ) : (
+                      <span className="text-muted-foreground font-semibold">₹ ••••</span>
+                    )}
                   </td>
                 </tr>
               ))}

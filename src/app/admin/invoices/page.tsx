@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminInvoicesClient } from '@/components/admin/invoices/AdminInvoicesClient'
+import { PermissionGuard } from '@/components/admin/PermissionGuard'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Tax Invoices & Rental Receipts — DriveEase Admin'
@@ -30,7 +33,9 @@ export default async function AdminInvoicesPage() {
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <AdminInvoicesClient initialInvoices={invoices} />
+      <PermissionGuard permission="payments.view_invoices">
+        <AdminInvoicesClient initialInvoices={invoices} />
+      </PermissionGuard>
     </div>
   )
 }

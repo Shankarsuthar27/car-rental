@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import { ArrowRight } from 'lucide-react'
 import type { BookingStatus, PaymentStatus } from '@/types'
 import { cn } from '@/lib/utils'
+import { usePermissions } from '@/hooks/usePermissions'
 
 const BOOKING_STATUS_STYLES: Record<BookingStatus, string> = {
   pending: 'status-pending',
@@ -47,6 +48,10 @@ interface RecentBookingsProps {
 }
 
 export function RecentBookings({ bookings }: RecentBookingsProps) {
+  const { can } = usePermissions()
+  const canViewAmounts = can('payments.view_amounts')
+  const canViewPaymentStatus = can('payments.view') || can('payments.view_balances')
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -114,8 +119,8 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
                     <td className="px-4 py-3 text-muted-foreground text-xs">
                       {format(new Date(booking.pickup_datetime), 'dd MMM, HH:mm')}
                     </td>
-                    <td className="px-4 py-3 font-medium">
-                      ₹{booking.grand_total.toLocaleString('en-IN')}
+                    <td className="px-4 py-3 font-medium font-mono">
+                      {canViewAmounts ? `₹${booking.grand_total.toLocaleString('en-IN')}` : '₹ ••••'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 flex-wrap">
@@ -132,10 +137,12 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
                           variant="outline"
                           className={cn(
                             'text-[10px] px-1.5 py-0 h-5 border-0',
-                            PAYMENT_STATUS_STYLES[booking.payment_status]
+                            canViewPaymentStatus
+                              ? PAYMENT_STATUS_STYLES[booking.payment_status]
+                              : 'bg-muted text-muted-foreground'
                           )}
                         >
-                          {booking.payment_status.replace(/_/g, ' ')}
+                          {canViewPaymentStatus ? booking.payment_status.replace(/_/g, ' ') : 'Restricted'}
                         </Badge>
                       </div>
                     </td>

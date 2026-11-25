@@ -19,8 +19,10 @@ import {
   CheckCircle2,
   X,
   Building2,
-  ArrowLeft
+  ArrowLeft,
+  Lock
 } from 'lucide-react'
+import { usePermissions } from '@/hooks/usePermissions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -92,6 +94,12 @@ export interface AdminInvoicesClientProps {
 const DEFAULT_DEMO_INVOICES: InvoiceRecord[] = []
 
 export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProps) {
+  const { can } = usePermissions()
+  const canViewAmounts = can('payments.view_amounts')
+  const canViewStatus = can('payments.view') || can('payments.view_balances') || can('payments.view_invoices')
+  const canViewInvoices = can('payments.view_invoices')
+  const canCollect = can('payments.collect')
+
   const [invoices, setInvoices] = useState<InvoiceRecord[]>(
     initialInvoices || []
   )
@@ -144,6 +152,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
 
   const handleSaveInvoice = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (!canCollect) return
     setSaving(true)
 
     setInvoices(prev =>
@@ -288,12 +297,14 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                     variant="outline"
                     className={cn(
                       'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg border',
-                      inv.is_paid
+                      !canViewStatus
+                        ? 'bg-muted text-muted-foreground border-border'
+                        : inv.is_paid
                         ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
                         : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
                     )}
                   >
-                    {inv.is_paid ? 'Paid' : 'Pending'}
+                    {canViewStatus ? (inv.is_paid ? 'Paid' : 'Pending') : 'Restricted'}
                   </Badge>
                 </div>
 
@@ -331,21 +342,29 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                 <div className="p-3 bg-muted/30 border border-border/60 rounded-2xl space-y-1 text-xs">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Base Hire:</span>
-                    <span className="font-medium text-foreground">₹{Number(baseVal).toLocaleString('en-IN')}</span>
+                    <span className="font-medium text-foreground">
+                      {canViewAmounts ? `₹${Number(baseVal).toLocaleString('en-IN')}` : '₹ ••••'}
+                    </span>
                   </div>
                   {insVal > 0 && (
                     <div className="flex justify-between text-muted-foreground">
                       <span>Insurance:</span>
-                      <span className="font-medium text-foreground">₹{Number(insVal).toLocaleString('en-IN')}</span>
+                      <span className="font-medium text-foreground">
+                        {canViewAmounts ? `₹${Number(insVal).toLocaleString('en-IN')}` : '₹ ••••'}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between text-muted-foreground">
                     <span>GST ({inv.tax_rate ?? 18}%):</span>
-                    <span className="font-medium text-foreground">₹{Number(inv.tax_amount || 0).toLocaleString('en-IN')}</span>
+                    <span className="font-medium text-foreground">
+                      {canViewAmounts ? `₹${Number(inv.tax_amount || 0).toLocaleString('en-IN')}` : '₹ ••••'}
+                    </span>
                   </div>
                   <div className="flex justify-between font-black text-sm text-foreground pt-1.5 border-t border-border/80">
                     <span>Grand Total:</span>
-                    <span className="text-primary font-mono font-bold">₹{Number(inv.total).toLocaleString('en-IN')}</span>
+                    <span className="text-primary font-mono font-bold">
+                      {canViewAmounts ? `₹${Number(inv.total).toLocaleString('en-IN')}` : '₹ ••••'}
+                    </span>
                   </div>
                 </div>
 
@@ -354,22 +373,26 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                   <Button
                     type="button"
                     variant="outline"
+                    disabled={!canCollect}
                     onClick={() => openEditModal(inv)}
-                    className="min-h-[44px] text-xs font-semibold rounded-xl border-border/80 hover:bg-muted/50 gap-1.5"
+                    className="min-h-[44px] text-xs font-semibold rounded-xl border-border/80 hover:bg-muted/50 gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label={`Edit rates for invoice ${inv.invoice_number}`}
+                    title={canCollect ? 'Adjust invoice rates' : 'Permission required: Collect & Record Payments'}
                   >
-                    <Edit className="w-4 h-4 text-primary" aria-hidden="true" />
+                    {canCollect ? <Edit className="w-4 h-4 text-primary" aria-hidden="true" /> : <Lock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />}
                     <span>Edit Rates</span>
                   </Button>
 
                   <Button
                     type="button"
+                    disabled={!canViewInvoices}
                     onClick={() => {
                       setSelectedInvoice(inv)
                       setPreviewOpen(true)
                     }}
-                    className="gradient-brand text-white border-0 min-h-[44px] text-xs font-bold rounded-xl shadow-xs gap-1.5"
+                    className="gradient-brand text-white border-0 min-h-[44px] text-xs font-bold rounded-xl shadow-xs gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label={`View and print invoice ${inv.invoice_number}`}
+                    title={canViewInvoices ? 'View & print GST invoice' : 'Permission required: View Invoices & Bill Breakdown'}
                   >
                     <Printer className="w-4 h-4" aria-hidden="true" />
                     <span>GST Invoice</span>
@@ -450,11 +473,11 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                       <td className="p-4 text-muted-foreground">
                         <div className="space-y-0.5">
                           <span className="text-foreground font-semibold block">
-                            Base: ₹{Number(baseVal).toLocaleString('en-IN')}
+                            Base: {canViewAmounts ? `₹${Number(baseVal).toLocaleString('en-IN')}` : '₹ ••••'}
                           </span>
                           {insVal > 0 && (
                             <span className="text-[10px] text-muted-foreground block">
-                              Ins: ₹{Number(insVal).toLocaleString('en-IN')}
+                              Ins: {canViewAmounts ? `₹${Number(insVal).toLocaleString('en-IN')}` : '₹ ••••'}
                             </span>
                           )}
                         </div>
@@ -462,7 +485,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
 
                       <td className="p-4 text-foreground">
                         <span className="font-semibold block">
-                          ₹{Number(inv.tax_amount || 0).toLocaleString('en-IN')}
+                          {canViewAmounts ? `₹${Number(inv.tax_amount || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                         </span>
                         <span className="text-[10px] text-muted-foreground block">
                           {inv.tax_rate ?? 18}% GST
@@ -471,18 +494,20 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
 
                       <td className="p-4 font-black text-sm text-foreground">
                         <span className="font-mono font-black text-base text-foreground block">
-                          ₹{Number(inv.total).toLocaleString('en-IN')}
+                          {canViewAmounts ? `₹${Number(inv.total).toLocaleString('en-IN')}` : '₹ ••••'}
                         </span>
                         <Badge
                           variant="outline"
                           className={cn(
                             'text-[9px] px-1.5 py-0 h-4 border uppercase font-bold mt-1',
-                            inv.is_paid
+                            !canViewStatus
+                              ? 'bg-muted text-muted-foreground border-border'
+                              : inv.is_paid
                               ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
                               : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
                           )}
                         >
-                          {inv.is_paid ? 'Paid' : 'Pending'}
+                          {canViewStatus ? (inv.is_paid ? 'Paid' : 'Pending') : 'Restricted'}
                         </Badge>
                       </td>
 
@@ -492,22 +517,26 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                             type="button"
                             size="sm"
                             variant="ghost"
+                            disabled={!canCollect}
                             onClick={() => openEditModal(inv)}
-                            className="min-h-[44px] px-3 text-xs text-primary hover:bg-primary/10 rounded-xl"
+                            className="min-h-[44px] px-3 text-xs text-primary hover:bg-primary/10 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
                             aria-label={`Edit rates for invoice ${inv.invoice_number}`}
+                            title={canCollect ? 'Adjust invoice rates' : 'Permission required: Collect & Record Payments'}
                           >
-                            <Edit className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Edit
+                            {canCollect ? <Edit className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> : <Lock className="w-3.5 h-3.5 mr-1" aria-hidden="true" />} Edit
                           </Button>
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
+                            disabled={!canViewInvoices}
                             onClick={() => {
                               setSelectedInvoice(inv)
                               setPreviewOpen(true)
                             }}
-                            className="min-h-[44px] px-3.5 text-xs gap-1.5 rounded-xl border-border hover:bg-muted font-bold"
+                            className="min-h-[44px] px-3.5 text-xs gap-1.5 rounded-xl border-border hover:bg-muted font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                             aria-label={`Print invoice ${inv.invoice_number}`}
+                            title={canViewInvoices ? 'View & print invoice PDF' : 'Permission required: View Invoices & Bill Breakdown'}
                           >
                             <Printer className="w-3.5 h-3.5" aria-hidden="true" /> View PDF
                           </Button>
@@ -740,7 +769,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                           <span className="text-[10px] text-muted-foreground">Self-drive hire including daily allowance</span>
                         </td>
                         <td className="p-3 sm:p-3.5 text-right font-medium">
-                          ₹{Number(selectedInvoice.booking?.base_rental ?? selectedInvoice.base_rental ?? selectedInvoice.subtotal ?? 0).toLocaleString('en-IN')}
+                          {canViewAmounts ? `₹${Number(selectedInvoice.booking?.base_rental ?? selectedInvoice.base_rental ?? selectedInvoice.subtotal ?? 0).toLocaleString('en-IN')}` : '₹ ••••'}
                         </td>
                       </tr>
                       {Number(selectedInvoice.booking?.insurance_charge ?? selectedInvoice.insurance_charge ?? 0) > 0 && (
@@ -750,7 +779,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                             <span className="text-[10px] text-muted-foreground">Zero-depreciation collision waiver</span>
                           </td>
                           <td className="p-3 sm:p-3.5 text-right font-medium">
-                            ₹{Number(selectedInvoice.booking?.insurance_charge ?? selectedInvoice.insurance_charge ?? 0).toLocaleString('en-IN')}
+                            {canViewAmounts ? `₹${Number(selectedInvoice.booking?.insurance_charge ?? selectedInvoice.insurance_charge ?? 0).toLocaleString('en-IN')}` : '₹ ••••'}
                           </td>
                         </tr>
                       )}
@@ -761,13 +790,13 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                             : 'GST (0% - Non-GST / Exempt)'}
                         </td>
                         <td className="p-3 sm:p-3.5 text-right font-medium">
-                          ₹{Number(selectedInvoice.tax_amount || 0).toLocaleString('en-IN')}
+                          {canViewAmounts ? `₹${Number(selectedInvoice.tax_amount || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                         </td>
                       </tr>
                       <tr className="bg-muted/20 font-black text-sm sm:text-base">
                         <td className="p-3 sm:p-3.5">Grand Total (INR)</td>
                         <td className="p-3 sm:p-3.5 text-right text-primary font-mono">
-                          ₹{Number(selectedInvoice.total || 0).toLocaleString('en-IN')}
+                          {canViewAmounts ? `₹${Number(selectedInvoice.total || 0).toLocaleString('en-IN')}` : '₹ ••••'}
                         </td>
                       </tr>
                     </tbody>

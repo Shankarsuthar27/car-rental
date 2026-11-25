@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkServerPermission } from '@/lib/server-permissions'
 
 export async function POST(req: Request) {
   try {
@@ -24,6 +25,19 @@ export async function POST(req: Request) {
       payment_collected_now = 0,
       admin_notes = '',
     } = body
+
+    if (Number(payment_collected_now) > 0) {
+      const canCollect = await checkServerPermission('payments.collect')
+      if (!canCollect) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: { message: 'Unauthorized: You do not have permission to collect payments.' },
+          },
+          { status: 403 }
+        )
+      }
+    }
 
     if (!booking_id || ending_odometer === undefined) {
       return NextResponse.json(

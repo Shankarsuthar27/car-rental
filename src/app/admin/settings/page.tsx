@@ -13,7 +13,6 @@ import {
   Percent,
   Clock,
   Gauge,
-  User,
   Shield,
   KeyRound,
   Sliders,
@@ -51,13 +50,6 @@ export default function AdminSettingsPage() {
   const [gracePeriodMins, setGracePeriodMins] = useState('30')
   const [taxRate, setTaxRate] = useState('18')
 
-  // 3. Admin Profile
-  const [adminName, setAdminName] = useState('Admin Staff')
-  const [adminEmail, setAdminEmail] = useState('Jalorecarrental@gmail.com')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
     setSaved(true)
@@ -77,7 +69,7 @@ export default function AdminSettingsPage() {
               Admin & Fleet System Settings
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Configure business identity, rental fee defaults, late penalty rates, and operator profile credentials.
+              Configure business identity, rental fee defaults, and late penalty rates.
             </p>
           </div>
         </div>
@@ -91,15 +83,12 @@ export default function AdminSettingsPage() {
       )}
 
       <Tabs defaultValue="business" className="space-y-6">
-        <TabsList className="grid grid-cols-3 bg-card border border-border/80 h-11 p-1 rounded-2xl shadow-xs">
+        <TabsList className="grid grid-cols-2 bg-card border border-border/80 h-11 p-1 rounded-2xl shadow-xs">
           <TabsTrigger value="business" className="text-xs rounded-xl font-bold gap-1.5">
             <Building2 className="w-3.5 h-3.5" /> Business Settings
           </TabsTrigger>
           <TabsTrigger value="rental" className="text-xs rounded-xl font-bold gap-1.5">
             <DollarSign className="w-3.5 h-3.5" /> Rental & Fee Defaults
-          </TabsTrigger>
-          <TabsTrigger value="profile" className="text-xs rounded-xl font-bold gap-1.5">
-            <User className="w-3.5 h-3.5" /> Admin Profile
           </TabsTrigger>
         </TabsList>
 
@@ -306,88 +295,6 @@ export default function AdminSettingsPage() {
               <div className="pt-2 flex justify-end">
                 <Button type="submit" className="gradient-brand text-white border-0 font-bold text-xs h-10 px-6 rounded-xl shadow-md gap-1.5">
                   <Save className="w-4 h-4" /> Save Rental Defaults
-                </Button>
-              </div>
-            </form>
-          </div>
-        </TabsContent>
-
-        {/* 3. ADMIN PROFILE */}
-        <TabsContent value="profile">
-          <div className="bg-card border border-border/80 rounded-3xl p-6 md:p-8 space-y-6 shadow-sm">
-            <div>
-              <h3 className="font-black text-base text-foreground">
-                Operator Account & Credentials
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Update administrator name, email, and password security.
-              </p>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Administrator Name</Label>
-                  <Input
-                    value={adminName}
-                    onChange={e => setAdminName(e.target.value)}
-                    className="h-10 rounded-xl text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Admin Login Email</Label>
-                  <Input
-                    type="email"
-                    value={adminEmail}
-                    onChange={e => setAdminEmail(e.target.value)}
-                    className="h-10 rounded-xl text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-border pt-4 space-y-3">
-                <h4 className="font-bold text-xs text-foreground">Update Password</h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Current Password</Label>
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      value={currentPassword}
-                      onChange={e => setCurrentPassword(e.target.value)}
-                      className="h-10 rounded-xl text-xs"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">New Password</Label>
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      className="h-10 rounded-xl text-xs"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Confirm Password</Label>
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={e => setConfirmPassword(e.target.value)}
-                      className="h-10 rounded-xl text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <Button type="submit" className="gradient-brand text-white border-0 font-bold text-xs h-10 px-6 rounded-xl shadow-md gap-1.5">
-                  <Save className="w-4 h-4" /> Update Profile
                 </Button>
               </div>
             </form>
