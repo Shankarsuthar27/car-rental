@@ -13,7 +13,7 @@ export default async function AdminEmployeesPage() {
     {
       id: 'emp-1',
       name: 'Vikramaditya Rathore',
-      email: 'admin@driveease.in',
+      email: 'Jalorecarrental@gmail.com',
       phone: '+91 98290 11111',
       role: 'Super Admin',
       department: 'Executive Management',

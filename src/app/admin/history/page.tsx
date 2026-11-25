@@ -1,12 +1,15 @@
 import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RentalHistoryClient } from '@/components/admin/history/RentalHistoryClient'
+import { PermissionGuard } from '@/components/admin/PermissionGuard'
 import { formatCustomer, DEFAULT_DEMO_CUSTOMERS } from '@/lib/customers'
 import type { Booking, Vehicle, Customer } from '@/types'
 
 export const metadata: Metadata = {
   title: 'Fleet & Customer Rental History — DriveEase Admin',
 }
+
+export const dynamic = 'force-dynamic'
 
 async function getHistoryData() {
   const supabase = createAdminClient()
@@ -56,11 +59,13 @@ export default async function AdminRentalHistoryPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
-      <RentalHistoryClient
-        bookings={bookings}
-        vehicles={vehicles}
-        customers={customers}
-      />
+      <PermissionGuard permission="bookings.view">
+        <RentalHistoryClient
+          bookings={bookings}
+          vehicles={vehicles}
+          customers={customers}
+        />
+      </PermissionGuard>
     </div>
   )
 }

@@ -1,15 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import crypto from 'crypto'
-
-const SALT = process.env.SUPABASE_SERVICE_ROLE_KEY || 'driveease_secure_salt_2026'
-
-function hashValue(value: string, emailOrUser: string): string {
-  return crypto
-    .createHash('sha256')
-    .update(`${value}:${emailOrUser}:${SALT}`)
-    .digest('hex')
-}
+import { upsertStaffCredentials } from '@/lib/staff-credentials'
 
 export async function POST(req: Request) {
   try {
@@ -33,6 +24,13 @@ export async function POST(req: Request) {
     const cleanPass = password.trim()
     const cleanUser = (username || '').trim().toLowerCase().replace(/[^a-z0-9@._-]/g, '')
 
+    if (cleanUser === 'jalorecarrentel' || cleanUser === 'jalorecarrentel@gmail.com') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot assign the master owner identifier to a staff account.' },
+        { status: 400 }
+      )
+    }
+
     const supabaseAdmin = createAdminClient()
 
     // 1. Fetch current employee
@@ -54,19 +52,21 @@ export async function POST(req: Request) {
       meta = JSON.parse(emp.emergency_contact || '{}')
     } catch {}
 
-    // 2. Clear old credentials from system_auth_credentials
-    const oldEntries = [
-      meta.email,
-      meta.username,
-      meta.short_username,
-      emp.employee_code,
-    ].filter(Boolean)
+    // 2. Clear old credentials from system_auth_credentials (protecting master owner IDs)
+    const oldEntries = Array.from(
+      new Set(
+        [meta.email, meta.username, meta.short_username, emp.employee_code]
+          .filter((e): e is string => Boolean(e && e.trim()))
+          .map(e => e.trim().toLowerCase())
+          .filter(e => e !== 'jalorecarrentel@gmail.com' && e !== 'jalorecarrentel')
+      )
+    )
 
     if (oldEntries.length > 0) {
       await supabaseAdmin
         .from('system_auth_credentials')
         .delete()
-        .in('email', oldEntries.map((e: string) => e.toLowerCase()))
+        .in('email', oldEntries)
     }
 
     // 3. Compute updated identifiers
@@ -78,44 +78,16 @@ export async function POST(req: Request) {
     const shortUser = finalUsername.split('@')[0].replace(/[^a-z0-9]/g, '')
 
     meta.username = finalUsername
-    meta.short_username = shortUser
+    meta.short_username = shortUser || finalUsername
     meta.email = finalEmail
 
-    // 4. Create new hashed credential entries
-    const passHashEmail = hashValue(cleanPass, finalEmail.toLowerCase())
-    const passHashUser = hashValue(cleanPass, finalUsername.toLowerCase())
-    const passHashShort = hashValue(cleanPass, shortUser.toLowerCase())
-
-    const credRecords = [
-      {
-        email: finalEmail.toLowerCase(),
-        password_hash: passHashEmail,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        email: finalUsername.toLowerCase(),
-        password_hash: passHashUser,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        email: shortUser.toLowerCase(),
-        password_hash: passHashShort,
-        updated_at: new Date().toISOString(),
-      },
-    ]
-
-    if (emp.employee_code) {
-      const passHashEmpCode = hashValue(cleanPass, emp.employee_code.toLowerCase())
-      credRecords.push({
-        email: emp.employee_code.toLowerCase(),
-        password_hash: passHashEmpCode,
-        updated_at: new Date().toISOString(),
-      })
-    }
-
-    const { error: credErr } = await supabaseAdmin
-      .from('system_auth_credentials')
-      .upsert(credRecords)
+    // 4. Create deduplicated hashed credential entries
+    const { error: credErr } = await upsertStaffCredentials(supabaseAdmin, cleanPass, [
+      finalEmail,
+      finalUsername,
+      shortUser,
+      emp.employee_code,
+    ])
 
     if (credErr) {
       console.error('[API/admin/members/credentials] Error saving credentials:', credErr)

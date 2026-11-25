@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   History,
   Car,
@@ -26,8 +27,12 @@ import {
   TrendingUp,
   MapPin,
   Sparkles,
-  ArrowLeft
+  ArrowLeft,
+  Trash2,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react'
+import { usePermissions } from '@/hooks/usePermissions'
 import { Button } from '@/components/ui/button'
 import { AssignCarButton } from '@/components/ui/AssignCarButton'
 import { Input } from '@/components/ui/input'
@@ -64,11 +69,20 @@ export function RentalHistoryClient({
   vehicles,
   customers: rawCustomers,
 }: RentalHistoryClientProps) {
+  const router = useRouter()
+  const { can } = usePermissions()
+  const canDeleteRental = can('bookings.delete')
+
+  const [bookingsList, setBookingsList] = useState<any[]>(rawBookings || [])
+  useEffect(() => {
+    setBookingsList(rawBookings || [])
+  }, [rawBookings])
+
   const customers = useMemo(() => (rawCustomers || []).map(formatCustomer), [rawCustomers])
-  const bookings = useMemo(() => (rawBookings || []).map(b => ({
+  const bookings = useMemo(() => (bookingsList || []).map(b => ({
     ...b,
     customer: b.customer ? formatCustomer(b.customer) : b.customer,
-  })), [rawBookings])
+  })), [bookingsList])
 
   // Active View Tab: all_rentals (default), car_history, customer_history
   const [activeTab, setActiveTab] = useState<'all_rentals' | 'car_history' | 'customer_history'>('all_rentals')
@@ -88,6 +102,74 @@ export function RentalHistoryClient({
 
   // Modal State for Booking Details
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<any | null>(null)
+
+  // Delete Confirmation & Feedback State
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const showFeedback = (type: 'success' | 'error', text: string) => {
+    setFeedback({ type, text })
+    setTimeout(() => setFeedback(prev => (prev?.text === text ? null : prev)), 4000)
+  }
+
+  const openDeleteModal = (booking: any, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (!canDeleteRental) {
+      showFeedback('error', 'Permission denied: You do not have permission to delete rental history.')
+      return
+    }
+    setDeleteTarget(booking)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget?.id) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/bookings?id=${encodeURIComponent(deleteTarget.id)}`, {
+        method: 'DELETE',
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error?.message || 'Failed to delete rental record.')
+      }
+
+      const deletedNumber = deleteTarget.booking_number || deleteTarget.id
+      setBookingsList(prev => prev.filter(b => b.id !== deleteTarget.id))
+      if (selectedBookingDetails?.id === deleteTarget.id) {
+        setSelectedBookingDetails(null)
+      }
+      setDeleteTarget(null)
+      showFeedback('success', `Rental record ${deletedNumber} deleted successfully.`)
+      router.refresh()
+    } catch (err: any) {
+      showFeedback('error', err.message || 'Failed to delete rental record.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const renderDeleteButton = (booking: any, iconOnly = false) => (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={!canDeleteRental}
+      onClick={(e) => openDeleteModal(booking, e)}
+      title={
+        canDeleteRental
+          ? `Delete ${booking.booking_number}`
+          : 'Permission required: Delete Rentals & History'
+      }
+      className={cn(
+        'h-7 rounded-lg text-xs font-semibold gap-1 border-rose-500/30 text-rose-600 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed',
+        iconOnly ? 'px-2' : 'px-2.5'
+      )}
+    >
+      <Trash2 className="w-3 h-3" />
+      {!iconOnly && <span>Delete</span>}
+    </Button>
+  )
 
   // Safe Date Formatter
   const formatDateSafe = (dateStr?: string, fmt = 'dd MMM yyyy') => {
@@ -255,6 +337,34 @@ export function RentalHistoryClient({
           <AssignCarButton href="/admin/assign" size="sm" />
         </div>
       </div>
+
+      {/* Feedback Banner */}
+      {feedback && (
+        <div
+          className={cn(
+            'p-3.5 rounded-2xl border text-xs font-semibold flex items-center justify-between gap-2 shadow-sm',
+            feedback.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+              : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
+          )}
+        >
+          <div className="flex items-center gap-2">
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+            )}
+            <span>{feedback.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            className="opacity-70 hover:opacity-100 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Top Level Summary Cards (Simple to understand at a glance) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -563,18 +673,21 @@ export function RentalHistoryClient({
 
                           {/* Action */}
                           <td className="p-4 text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedBookingDetails(booking)
-                              }}
-                              className="h-7 px-2.5 text-xs font-semibold rounded-lg gap-1 border-border/80 hover:bg-primary hover:text-white transition-colors"
-                            >
-                              <Eye className="w-3 h-3" />
-                              View
-                            </Button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedBookingDetails(booking)
+                                }}
+                                className="h-7 px-2.5 text-xs font-semibold rounded-lg gap-1 border-border/80 hover:bg-primary hover:text-white transition-colors cursor-pointer"
+                              >
+                                <Eye className="w-3 h-3" />
+                                View
+                              </Button>
+                              {renderDeleteButton(booking)}
+                            </div>
                           </td>
                         </tr>
                       )
@@ -721,12 +834,13 @@ export function RentalHistoryClient({
                             <th className="p-3.5">Start / End KM</th>
                             <th className="p-3.5">Amount</th>
                             <th className="p-3.5">Status</th>
+                            <th className="p-3.5 text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
                           {vehicleBookings.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                              <td colSpan={7} className="p-8 text-center text-muted-foreground">
                                 No previous rentals recorded for this vehicle.
                               </td>
                             </tr>
@@ -761,6 +875,9 @@ export function RentalHistoryClient({
                                 </td>
                                 <td className="p-3.5">
                                   {getStatusBadge(b.status)}
+                                </td>
+                                <td className="p-3.5 text-right">
+                                  {renderDeleteButton(b, true)}
                                 </td>
                               </tr>
                             ))
@@ -900,12 +1017,13 @@ export function RentalHistoryClient({
                             <th className="p-3.5">KM Logged</th>
                             <th className="p-3.5">Total Bill</th>
                             <th className="p-3.5">Status</th>
+                            <th className="p-3.5 text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
                           {customerBookings.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                              <td colSpan={7} className="p-8 text-center text-muted-foreground">
                                 No previous rentals recorded for this customer.
                               </td>
                             </tr>
@@ -940,6 +1058,9 @@ export function RentalHistoryClient({
                                 </td>
                                 <td className="p-3.5">
                                   {getStatusBadge(b.status)}
+                                </td>
+                                <td className="p-3.5 text-right">
+                                  {renderDeleteButton(b, true)}
                                 </td>
                               </tr>
                             ))
@@ -1161,11 +1282,14 @@ export function RentalHistoryClient({
 
               {/* Modal Footer */}
               <DialogFooter className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                <Link href={`/admin/bookings`}>
-                  <Button variant="outline" size="sm" className="text-xs font-semibold rounded-xl">
-                    Manage in Bookings
-                  </Button>
-                </Link>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Link href={`/admin/bookings`}>
+                    <Button variant="outline" size="sm" className="text-xs font-semibold rounded-xl cursor-pointer">
+                      Manage in Bookings
+                    </Button>
+                  </Link>
+                  {renderDeleteButton(selectedBookingDetails)}
+                </div>
                 <Button
                   onClick={() => setSelectedBookingDetails(null)}
                   variant="outline"
@@ -1176,6 +1300,85 @@ export function RentalHistoryClient({
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ============================================================ */}
+      {/* DELETE CONFIRMATION DIALOG */}
+      {/* ============================================================ */}
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
+      >
+        <DialogContent className="max-w-md rounded-3xl p-6">
+          <DialogHeader className="space-y-2 text-left">
+            <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <DialogTitle className="text-lg font-black text-foreground">
+              Delete Rental History Record?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              This will permanently remove rental{' '}
+              <span className="font-mono font-bold text-foreground">
+                {deleteTarget?.booking_number}
+              </span>{' '}
+              along with its linked invoice, payment, and inspection entries. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteTarget && (
+            <div className="bg-muted/40 border border-border/80 rounded-2xl p-3.5 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Vehicle</span>
+                <span className="font-bold text-foreground">
+                  {deleteTarget.vehicle?.brand} {deleteTarget.vehicle?.model} ({deleteTarget.vehicle?.registration_number || 'CAR'})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Customer</span>
+                <span className="font-semibold text-foreground">
+                  {deleteTarget.customer?.profile?.full_name || deleteTarget.customer?.emergency_contact_name || 'Customer'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Bill</span>
+                <span className="font-mono font-bold text-foreground">
+                  ₹{Number(deleteTarget.grand_total || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={deleting}
+              onClick={() => setDeleteTarget(null)}
+              className="text-xs font-semibold rounded-xl cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={deleting}
+              onClick={handleConfirmDelete}
+              className="bg-rose-600 hover:bg-rose-700 text-white border-0 text-xs font-bold rounded-xl gap-1.5 cursor-pointer"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-3.5 h-3.5" /> Yes, Delete Permanently
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -135,6 +135,12 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
             <span className="text-[11px] font-medium text-slate-400 mb-0.5">Operations / Rentals</span>
             <span className="text-sm font-bold text-slate-900 dark:text-white">Assign a vehicle</span>
           </div>
+        ) : pathname === '/admin/employees' ? (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span>Employees</span>
+            <ChevronRight className="w-3.5 h-3.5 shrink-0 text-muted-foreground/50" aria-hidden="true" />
+            <span className="text-foreground font-bold">Staff &amp; Roles</span>
+          </div>
         ) : (
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground" aria-label="Breadcrumb">
             {breadcrumbs.map((crumb, i) => (

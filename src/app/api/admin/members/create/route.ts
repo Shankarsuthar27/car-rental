@@ -1,15 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { upsertStaffCredentials } from '@/lib/staff-credentials'
 import crypto from 'crypto'
-
-const SALT = process.env.SUPABASE_SERVICE_ROLE_KEY || 'driveease_secure_salt_2026'
-
-function hashValue(value: string, emailOrUser: string): string {
-  return crypto
-    .createHash('sha256')
-    .update(`${value}:${emailOrUser}:${SALT}`)
-    .digest('hex')
-}
 
 export async function POST(req: Request) {
   try {
@@ -52,37 +44,12 @@ export async function POST(req: Request) {
     const employeeCode = `EMP-${randomCode}`
 
     // 3. Store persistent hashed credentials in system_auth_credentials table
-    const passHashEmail = hashValue(generatedPassword, staffEmail.toLowerCase())
-    const passHashUser = hashValue(generatedPassword, staffUsername.toLowerCase())
-    const passHashShort = hashValue(generatedPassword, sanitizedName.toLowerCase())
-    const passHashEmpCode = hashValue(generatedPassword, employeeCode.toLowerCase())
-
-    const credRecords = [
-      {
-        email: staffEmail.toLowerCase(),
-        password_hash: passHashEmail,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        email: staffUsername.toLowerCase(),
-        password_hash: passHashUser,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        email: sanitizedName.toLowerCase(),
-        password_hash: passHashShort,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        email: employeeCode.toLowerCase(),
-        password_hash: passHashEmpCode,
-        updated_at: new Date().toISOString(),
-      },
-    ]
-
-    const { error: credError } = await supabaseAdmin
-      .from('system_auth_credentials')
-      .upsert(credRecords)
+    const { error: credError } = await upsertStaffCredentials(supabaseAdmin, generatedPassword, [
+      staffEmail,
+      staffUsername,
+      sanitizedName,
+      employeeCode,
+    ])
 
     if (credError) {
       console.error('[API/admin/members/create] Error saving auth credentials:', credError)

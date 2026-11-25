@@ -59,11 +59,13 @@ export default async function AdminEmployeesPage() {
   const branches = branchRes.data || []
 
   return (
-    <PermissionGuard permission="team.manage">
-      <StaffManagementClient
-        initialEmployees={initialEmployees as any}
-        branches={branches}
-      />
-    </PermissionGuard>
+    <div className="p-4 sm:p-6 md:p-8 min-h-full bg-slate-50/50 dark:bg-background">
+      <PermissionGuard permission="team.manage">
+        <StaffManagementClient
+          initialEmployees={initialEmployees as any}
+          branches={branches}
+        />
+      </PermissionGuard>
+    </div>
   )
 }

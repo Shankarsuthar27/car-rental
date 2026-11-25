@@ -37,7 +37,7 @@ export default function AdminSettingsPage() {
   const [businessName, setBusinessName] = useState('Jalore Self Drive Car Rental')
   const [tagline, setTagline] = useState('Premium Fleet & Self-Drive Car Rental')
   const [gstin, setGstin] = useState('08ABCDE1234F1Z5')
-  const [supportEmail, setSupportEmail] = useState('admin@driveease.in')
+  const [supportEmail, setSupportEmail] = useState('Jalorecarrental@gmail.com')
   const [supportPhone, setSupportPhone] = useState('+91-2973-222333')
   const [address, setAddress] = useState('Near Bus Stand, Collectorate Road, Jalore, Rajasthan 343001')
   const [currency, setCurrency] = useState('INR (₹)')
@@ -53,7 +53,7 @@ export default function AdminSettingsPage() {
 
   // 3. Admin Profile
   const [adminName, setAdminName] = useState('Admin Staff')
-  const [adminEmail, setAdminEmail] = useState('admin@driveease.in')
+  const [adminEmail, setAdminEmail] = useState('Jalorecarrental@gmail.com')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')

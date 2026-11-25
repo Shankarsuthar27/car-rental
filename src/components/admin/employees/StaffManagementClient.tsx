@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import {
   Users,
   UserPlus,
+  UserCheck,
   Shield,
   ShieldCheck,
   Check,
@@ -24,6 +25,7 @@ import {
   EyeOff,
   Pencil,
   RefreshCw,
+  Search,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -138,6 +140,13 @@ export function StaffManagementClient({
   const [editPermissions, setEditPermissions] = useState<string[]>([])
   const [editSubmitting, setEditSubmitting] = useState(false)
 
+  // Dashboard filters, search, copy & expansion states
+  const [roleFilter, setRoleFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [expandedPerms, setExpandedPerms] = useState<Record<string, boolean>>({})
+
   // Group permissions by category
   const categories = useMemo(() => {
     const map = new Map<string, PermissionDefinition[]>()
@@ -147,6 +156,86 @@ export function StaffManagementClient({
     }
     return Array.from(map.entries())
   }, [])
+
+  // Overview stats & role tabs
+  const stats = useMemo(() => {
+    const total = employees.length
+    const active = employees.filter(e => e.is_active !== false).length
+    const branchManagers = employees.filter(
+      e => (e.designation || e.profile?.role) === 'branch_manager'
+    ).length
+    return {
+      total,
+      active,
+      inactive: total - active,
+      branchManagers,
+      categoryCount: categories.length,
+      controlCount: AVAILABLE_PERMISSIONS.length,
+    }
+  }, [employees, categories])
+
+  const roleTabs = useMemo(() => {
+    const presentRoles = new Set<string>()
+    for (const emp of employees) {
+      const r = emp.designation || emp.profile?.role
+      if (r) presentRoles.add(r)
+    }
+    // Always include present roles, ordered by ROLE_PRESETS
+    const orderedKeys = [
+      ...Object.keys(ROLE_PRESETS).filter(k => presentRoles.has(k)),
+      ...Array.from(presentRoles).filter(k => !ROLE_PRESETS[k]),
+    ]
+    return [
+      { key: 'all', label: 'All Roles' },
+      ...orderedKeys.map(key => ({
+        key,
+        label: ROLE_PRESETS[key]?.label || key.replace(/_/g, ' '),
+      })),
+    ]
+  }, [employees])
+
+  const filteredEmployees = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return employees.filter(emp => {
+      const empRole = emp.designation || emp.profile?.role || 'staff'
+      if (roleFilter !== 'all' && empRole !== roleFilter) return false
+
+      const isActive = emp.is_active !== false
+      if (statusFilter === 'active' && !isActive) return false
+      if (statusFilter === 'inactive' && isActive) return false
+
+      if (q) {
+        const name = (emp.profile?.full_name || '').toLowerCase()
+        const email = (emp.profile?.email || '').toLowerCase()
+        const phone = (emp.profile?.phone || '').toLowerCase()
+        const code = (emp.employee_code || '').toLowerCase()
+        let username = ''
+        if (emp.emergency_contact) {
+          try {
+            const meta = JSON.parse(emp.emergency_contact)
+            username = (meta.username || meta.short_username || '').toLowerCase()
+          } catch {}
+        }
+        if (
+          !name.includes(q) &&
+          !email.includes(q) &&
+          !phone.includes(q) &&
+          !code.includes(q) &&
+          !username.includes(q)
+        ) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [employees, roleFilter, statusFilter, searchQuery])
+
+  const handleCopyValue = (key: string, value: string) => {
+    if (!value) return
+    navigator.clipboard.writeText(value)
+    setCopiedField(key)
+    setTimeout(() => setCopiedField(prev => (prev === key ? null : prev)), 1500)
+  }
 
   // Handle Preset change
   const handlePresetChange = (presetKey: string) => {
@@ -208,6 +297,7 @@ export function StaffManagementClient({
         employee_code: json.credentials?.employee_code,
         designation: json.credentials?.role,
         department,
+        emergency_contact: json.employee?.emergency_contact,
         is_active: true,
         permissions: selectedPermissions,
         created_at: new Date().toISOString(),
@@ -298,10 +388,15 @@ export function StaffManagementClient({
           if (e.id === createdCredentials.id) {
             let meta: any = {}
             try { meta = JSON.parse(e.emergency_contact || '{}') } catch {}
+            const nextEmail = json.credentials?.email || meta.email
             meta.username = json.credentials?.username || customIdInput.trim()
             meta.short_username = json.credentials?.short_username || customIdInput.trim()
-            meta.email = json.credentials?.email || meta.email
-            return { ...e, emergency_contact: JSON.stringify(meta) }
+            meta.email = nextEmail
+            return {
+              ...e,
+              emergency_contact: JSON.stringify(meta),
+              profile: e.profile ? { ...e.profile, email: nextEmail } : e.profile,
+            }
           }
           return e
         })
@@ -369,10 +464,15 @@ export function StaffManagementClient({
           if (e.id === targetCredsEmp.id) {
             let meta: any = {}
             try { meta = JSON.parse(e.emergency_contact || '{}') } catch {}
+            const nextEmail = json.credentials?.email || meta.email
             meta.username = json.credentials?.username || targetCredsUsername.trim()
             meta.short_username = json.credentials?.short_username || targetCredsUsername.trim()
-            meta.email = json.credentials?.email || meta.email
-            return { ...e, emergency_contact: JSON.stringify(meta) }
+            meta.email = nextEmail
+            return {
+              ...e,
+              emergency_contact: JSON.stringify(meta),
+              profile: e.profile ? { ...e.profile, email: nextEmail } : e.profile,
+            }
           }
           return e
         })
@@ -457,37 +557,213 @@ Login URL: ${window.location.origin}/login
     setTimeout(() => setCopied(false), 2500)
   }
 
+  const roleStyles: Record<string, { avatar: string; badge: string }> = {
+    branch_manager: {
+      avatar: 'bg-[#1f6bff]',
+      badge: 'bg-blue-50 text-blue-600 border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
+    },
+    vehicle_manager: {
+      avatar: 'bg-[#6d28d9]',
+      badge: 'bg-violet-50 text-violet-600 border-violet-200/80 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20',
+    },
+    booking_manager: {
+      avatar: 'bg-[#059669]',
+      badge: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
+    },
+    accountant: {
+      avatar: 'bg-[#0284c7]',
+      badge: 'bg-sky-50 text-sky-700 border-sky-200/80 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20',
+    },
+    staff: {
+      avatar: 'bg-[#0d9488]',
+      badge: 'bg-teal-50 text-teal-700 border-teal-200/80 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/20',
+    },
+    admin: {
+      avatar: 'bg-[#4f46e5]',
+      badge: 'bg-indigo-50 text-indigo-700 border-indigo-200/80 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20',
+    },
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-[1440px] mx-auto">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl gradient-brand flex items-center justify-center text-white shadow-md shadow-primary/20">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-foreground">
-                Staff & Role Permissions
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Create manager & staff accounts, assign granular permissions, and generate login IDs & passwords.
-              </p>
-            </div>
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200/70 dark:border-blue-500/20 flex items-center justify-center text-[#1f6bff] shrink-0 shadow-2xs">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
+              Staff & Role Permissions
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Create manager & staff accounts, assign granular permissions, and manage login credentials.
+            </p>
           </div>
         </div>
 
         <Button
           onClick={() => setAddModalOpen(true)}
-          className="gradient-brand text-white border-0 hover:opacity-90 font-bold gap-2 text-xs h-10 px-4 rounded-xl shadow-lg shadow-primary/20 cursor-pointer"
+          className="bg-[#1f6bff] hover:bg-[#175ce0] text-white border-0 font-semibold gap-2 text-xs h-10 px-4 rounded-xl shadow-sm cursor-pointer shrink-0"
         >
           <UserPlus className="w-4 h-4" /> Add Team Member
         </Button>
       </div>
 
+      {/* 4 KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Team Members */}
+        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Total Team Members
+              </span>
+              <span className="text-3xl font-extrabold text-foreground block mt-1 leading-none">
+                {stats.total}
+              </span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-muted text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            Registered across JSD fleet
+          </span>
+        </div>
+
+        {/* Card 2: Active Accounts */}
+        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Active Accounts
+              </span>
+              <span className="text-3xl font-extrabold text-foreground block mt-1 leading-none">
+                {stats.active}
+              </span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <UserCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0" />
+            <span>
+              {stats.inactive === 0 ? 'All accounts enabled' : `${stats.inactive} inactive account${stats.inactive > 1 ? 's' : ''}`}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Branch Managers */}
+        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Branch Managers
+              </span>
+              <span className="text-3xl font-extrabold text-foreground block mt-1 leading-none">
+                {stats.branchManagers}
+              </span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-[#1f6bff] flex items-center justify-center shrink-0">
+              <Shield className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#1f6bff] border border-blue-200/60 dark:border-blue-500/20">
+              Manager Tier
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Permission Modules */}
+        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Permission Modules
+              </span>
+              <span className="text-3xl font-extrabold text-foreground block mt-1 leading-none">
+                {stats.categoryCount}
+              </span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <SlidersHorizontal className="w-4 h-4" />
+            </div>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {stats.categoryCount} Categories • {stats.controlCount} Controls
+          </span>
+        </div>
+      </div>
+
+      {/* Role Tabs + Search & Status Filter Toolbar */}
+      <div className="bg-card border border-border/80 rounded-2xl px-3.5 py-2.5 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        {/* Role Pill Filter Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+          {roleTabs.map(tab => {
+            const active = roleFilter === tab.key
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setRoleFilter(tab.key)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  active
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Right Controls: Search + Count + Status Filter */}
+        <div className="flex flex-wrap items-center gap-2.5 justify-between lg:justify-end">
+          <div className="relative flex-1 sm:flex-initial sm:w-56">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search staff, EMP ID, email..."
+              className="pl-8 pr-7 h-8 text-xs rounded-full bg-muted/40 border-border/70"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">
+            Showing <strong className="text-foreground font-semibold">{filteredEmployees.length}</strong> of {employees.length} members
+          </span>
+
+          <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+            <SelectTrigger className="h-8 w-[115px] text-xs font-medium rounded-full bg-card border-border/80">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="all" className="text-xs">All Status</SelectItem>
+              <SelectItem value="active" className="text-xs">Active</SelectItem>
+              <SelectItem value="inactive" className="text-xs">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* Member Cards Grid */}
       {employees.length === 0 ? (
-        <div className="bg-card border border-dashed border-border rounded-3xl p-12 text-center space-y-3">
+        <div className="bg-card border border-dashed border-border rounded-2xl p-12 text-center space-y-3">
           <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto text-muted-foreground">
             <Users className="w-7 h-7" />
           </div>
@@ -500,95 +776,202 @@ Login URL: ${window.location.origin}/login
           <Button
             onClick={() => setAddModalOpen(true)}
             size="sm"
-            className="gradient-brand text-white border-0 font-bold text-xs mt-2"
+            className="bg-[#1f6bff] hover:bg-[#175ce0] text-white border-0 font-semibold text-xs mt-2 rounded-xl"
           >
             <UserPlus className="w-3.5 h-3.5 mr-1.5" /> Add First Manager
           </Button>
         </div>
+      ) : filteredEmployees.length === 0 ? (
+        <div className="bg-card border border-dashed border-border rounded-2xl p-10 text-center space-y-3">
+          <p className="text-sm font-bold text-foreground">No matching staff members found</p>
+          <p className="text-xs text-muted-foreground">
+            Try clearing your search query or switching role/status filters.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setRoleFilter('all')
+              setStatusFilter('all')
+              setSearchQuery('')
+            }}
+            className="text-xs rounded-xl"
+          >
+            Reset Filters
+          </Button>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {employees.map(emp => {
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredEmployees.map((emp, idx) => {
             const fullName = emp.profile?.full_name || 'Staff Member'
             const initials = getInitials(fullName, 'ST')
             const empRole = emp.designation || emp.profile?.role || 'staff'
-            const activePermsCount = emp.permissions?.length || 0
+            const roleLabel = (ROLE_PRESETS[empRole]?.label || empRole.replace(/_/g, ' ')).toUpperCase()
+            const style = roleStyles[empRole] || {
+              avatar: ['bg-[#1f6bff]', 'bg-[#6d28d9]', 'bg-[#059669]'][idx % 3],
+              badge: 'bg-blue-50 text-blue-600 border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
+            }
+            const isActive = emp.is_active !== false
+            const perms = Array.isArray(emp.permissions) ? emp.permissions : []
+            const activePermsCount = perms.length
+            const isExpanded = Boolean(expandedPerms[emp.id])
+            const visiblePerms = isExpanded ? perms : perms.slice(0, 6)
+            const hiddenCount = perms.length - visiblePerms.length
+            const displayEmail = emp.profile?.email || ''
 
             return (
               <div
                 key={emp.id}
-                className="bg-card border border-border/80 rounded-3xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                className="bg-card border border-border/80 rounded-2xl p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between gap-4"
               >
-                <div className="space-y-3.5">
-                  {/* Top Bar: Avatar & Role */}
-                  <div className="flex items-start justify-between gap-3">
+                <div className="space-y-4">
+                  {/* Top Bar: Avatar, Name, Role Badge, Status Pill & Delete */}
+                  <div className="flex items-start justify-between gap-2.5">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-2xl gradient-brand text-white flex items-center justify-center font-extrabold text-sm shrink-0 shadow-xs">
+                      <div className={`w-11 h-11 rounded-xl ${style.avatar} text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs`}>
                         {initials}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-sm text-foreground truncate">{fullName}</h3>
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border-primary/20 bg-primary/10 text-primary mt-0.5"
-                        >
-                          {empRole.replace(/_/g, ' ')}
-                        </Badge>
+                        <h3 className="font-bold text-[15px] text-foreground truncate leading-snug">
+                          {fullName}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <span
+                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${style.badge}`}
+                          >
+                            {roleLabel}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                              isActive
+                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                                : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                            />
+                            {isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => handleDeleteMember(emp)}
-                      className="text-muted-foreground/60 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
+                      className="text-muted-foreground/50 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors cursor-pointer shrink-0"
                       title="Delete staff account"
+                      aria-label={`Delete ${fullName}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Credentials / Contact Snippet */}
-                  <div className="bg-muted/40 border border-border/50 rounded-2xl p-3 space-y-1.5 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2 truncate">
-                      <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="font-mono text-[11px] truncate">{emp.profile?.email}</span>
+                  {/* Credentials / Contact Box with One-Click Copy */}
+                  <div className="bg-slate-50/85 dark:bg-muted/40 border border-border/60 rounded-xl p-3 space-y-2 text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Mail className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+                        <span className="font-mono text-[11px] text-foreground/85 truncate">
+                          {displayEmail || 'No login email'}
+                        </span>
+                      </div>
+                      {displayEmail && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopyValue(`${emp.id}-email`, displayEmail)}
+                          className="text-muted-foreground/60 hover:text-foreground p-0.5 rounded transition-colors cursor-pointer shrink-0"
+                          title="Copy email / login ID"
+                        >
+                          {copiedField === `${emp.id}-email` ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      )}
                     </div>
+
                     {emp.profile?.phone && (
                       <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>{emp.profile.phone}</span>
+                        <Phone className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+                        <span className="text-[11px] text-foreground/80">{emp.profile.phone}</span>
                       </div>
                     )}
+
                     {emp.employee_code && (
-                      <div className="flex items-center gap-2">
-                        <KeyRound className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span className="font-mono font-bold text-[10px] text-foreground">
-                          {emp.employee_code}
-                        </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <KeyRound className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span className="font-mono font-bold text-[11px] text-foreground">
+                            {emp.employee_code}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyValue(`${emp.id}-code`, emp.employee_code!)}
+                          className="text-muted-foreground/60 hover:text-foreground p-0.5 rounded transition-colors cursor-pointer shrink-0"
+                          title="Copy employee code"
+                        >
+                          {copiedField === `${emp.id}-code` ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
                       </div>
                     )}
                   </div>
 
-                  {/* Active Permissions Badges */}
+                  {/* Allowed Operations */}
                   <div>
-                    <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground mb-1.5">
-                      <span>Allowed Operations</span>
-                      <span className="text-primary font-bold">{activePermsCount} granted</span>
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="font-semibold text-muted-foreground">Allowed Operations</span>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#1f6bff] dark:bg-blue-500/10 dark:text-blue-400">
+                        {activePermsCount} granted
+                      </span>
                     </div>
 
-                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-0.5">
-                      {emp.permissions && emp.permissions.length > 0 ? (
-                        emp.permissions.map(permId => {
-                          const def = AVAILABLE_PERMISSIONS.find(p => p.id === permId)
-                          return (
-                            <span
-                              key={permId}
-                              className="text-[10px] font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded-md border border-border/40 inline-flex items-center gap-1"
+                    <div className="flex flex-wrap gap-1.5">
+                      {perms.length > 0 ? (
+                        <>
+                          {visiblePerms.map(permId => {
+                            const def = AVAILABLE_PERMISSIONS.find(p => p.id === permId)
+                            return (
+                              <span
+                                key={permId}
+                                className="text-[11px] font-medium bg-slate-50 dark:bg-muted/50 text-foreground/90 px-2 py-1 rounded-lg border border-border/70 inline-flex items-center gap-1.5"
+                              >
+                                <Check className="w-3 h-3 text-emerald-500 stroke-[2.5] shrink-0" />
+                                <span>{def?.label || permId}</span>
+                              </span>
+                            )
+                          })}
+                          {hiddenCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedPerms(prev => ({ ...prev, [emp.id]: true }))
+                              }
+                              className="text-[11px] font-bold bg-blue-50/80 dark:bg-blue-500/10 text-[#1f6bff] px-2.5 py-1 rounded-lg border border-blue-200/70 dark:border-blue-500/20 hover:bg-blue-100/80 transition-colors cursor-pointer"
                             >
-                              <Check className="w-2.5 h-2.5 text-emerald-500 stroke-[3]" />
-                              {def?.label || permId}
-                            </span>
-                          )
-                        })
+                              +{hiddenCount} more
+                            </button>
+                          )}
+                          {isExpanded && perms.length > 6 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedPerms(prev => ({ ...prev, [emp.id]: false }))
+                              }
+                              className="text-[11px] font-semibold text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg cursor-pointer"
+                            >
+                              Show less
+                            </button>
+                          )}
+                        </>
                       ) : (
                         <span className="text-[11px] text-muted-foreground italic">
                           No specific permissions assigned
@@ -598,34 +981,33 @@ Login URL: ${window.location.origin}/login
                   </div>
                 </div>
 
-                {/* Footer Action */}
-                <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
-                  <span className="text-[10px] text-muted-foreground">
-                    Status: <strong className="text-emerald-500 font-semibold">Active</strong>
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditCredentialsModal(emp)}
-                      className="text-xs h-7 px-2.5 rounded-lg font-semibold gap-1 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10 cursor-pointer"
-                      title="Edit Login Username & Password"
-                    >
-                      <KeyRound className="w-3 h-3 text-amber-500" /> Edit ID / Pass
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingEmployee(emp)
-                        setEditPermissions([...(emp.permissions || [])])
-                        setEditModalOpen(true)
-                      }}
-                      className="text-xs h-7 px-2.5 rounded-lg font-semibold gap-1 hover:bg-muted cursor-pointer"
-                    >
-                      <SlidersHorizontal className="w-3 h-3 text-primary" /> Edit Permissions
-                    </Button>
-                  </div>
+                {/* Card Footer Split Buttons */}
+                <div className="pt-3 border-t border-border/70 grid grid-cols-2 gap-2.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditCredentialsModal(emp)}
+                    className="h-9 text-xs font-semibold rounded-xl gap-1.5 border-border/80 hover:bg-muted/60 cursor-pointer w-full"
+                    title="Edit Login Username & Password"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span>Edit ID / Pass</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditingEmployee(emp)
+                      setEditPermissions([...(emp.permissions || [])])
+                      setEditModalOpen(true)
+                    }}
+                    className="h-9 text-xs font-semibold rounded-xl gap-1.5 border-blue-200 dark:border-blue-500/30 bg-blue-50/40 dark:bg-blue-500/5 hover:bg-blue-50 dark:hover:bg-blue-500/15 text-foreground cursor-pointer w-full"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#1f6bff] shrink-0" />
+                    <span>Edit Permissions</span>
+                  </Button>
                 </div>
               </div>
             )

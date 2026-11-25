@@ -25,6 +25,12 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
     description: 'Can cancel or terminate existing customer bookings',
     category: 'Reservations',
   },
+  {
+    id: 'bookings.delete',
+    label: 'Delete Rentals & History',
+    description: 'Can permanently remove rental bookings and history records',
+    category: 'Reservations',
+  },
 
   // Fleet
   {

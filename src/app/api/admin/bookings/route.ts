@@ -1,6 +1,26 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { BookingService } from '@/services/BookingService'
 import type { Booking } from '@/types'
+
+async function checkPermission(requiredPermission: string): Promise<boolean> {
+  const cookieStore = await cookies()
+  const role = cookieStore.get('driveease_demo_role')?.value
+  if (role === 'super_admin' || role === 'owner') return true
+
+  const userPermsRaw = cookieStore.get('driveease_user_permissions')?.value
+  if (!userPermsRaw) return false
+  try {
+    let raw = userPermsRaw
+    try { raw = decodeURIComponent(userPermsRaw) } catch {}
+    const perms = JSON.parse(raw)
+    if (Array.isArray(perms)) {
+      if (perms.includes('*') || perms.includes(requiredPermission)) return true
+    }
+  } catch {}
+  return false
+}
 
 // GET: Fetch bookings
 export async function GET(req: Request) {
@@ -194,6 +214,58 @@ export async function PUT(req: Request) {
     console.error('Update booking error:', error)
     return NextResponse.json(
       { success: false, error: { message: error.message || 'Failed to update booking financials.' } },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE: Permanently delete a booking / rental history record
+export async function DELETE(req: Request) {
+  try {
+    if (!await checkPermission('bookings.delete')) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Permission denied: Delete Rentals & History permission required.' } },
+        { status: 403 }
+      )
+    }
+
+    const { searchParams } = new URL(req.url)
+    let id = searchParams.get('id')
+
+    if (!id) {
+      try {
+        const body = await req.json()
+        id = body?.id
+      } catch {
+        // empty body
+      }
+    }
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Booking ID is required for deletion.' } },
+        { status: 400 }
+      )
+    }
+
+    const result = await BookingService.deleteBooking(id)
+
+    if (!result.deleted) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Rental record not found.' } },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+      message: `Rental record ${result.bookingNumber || id} deleted permanently.`,
+    })
+  } catch (error: any) {
+    console.error('Delete booking error:', error)
+    return NextResponse.json(
+      { success: false, error: { message: error.message || 'Failed to delete rental record.' } },
       { status: 500 }
     )
   }

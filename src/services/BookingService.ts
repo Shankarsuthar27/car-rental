@@ -480,6 +480,97 @@ export class BookingService {
       returns: (returns.data ?? []) as unknown as Booking[],
     }
   }
+
+  /**
+   * Permanently delete a booking/rental history record and its dependent rows,
+   * restoring vehicle availability if active and recalculating customer totals.
+   */
+  static async deleteBooking(bookingId: string): Promise<{ deleted: boolean; bookingNumber?: string }> {
+    const supabase = this.getClient()
+
+    const { data: booking, error: fetchErr } = await supabase
+      .from('bookings')
+      .select('id, booking_number, status, vehicle_id, customer_id')
+      .eq('id', bookingId)
+      .maybeSingle()
+
+    if (fetchErr) throw fetchErr
+    if (!booking) {
+      return { deleted: false }
+    }
+
+    // Delete dependent records in FK-safe order (children referencing payments/inspections first)
+    const dependentTables = [
+      'refunds',
+      'security_deposits',
+      'payments',
+      'vehicle_damage',
+      'invoices',
+      'rental_agreements',
+      'vehicle_inspections',
+      'coupon_usages',
+    ]
+
+    for (const table of dependentTables) {
+      const { error: depErr } = await supabase
+        .from(table)
+        .delete()
+        .eq('booking_id', bookingId)
+
+      if (depErr) {
+        throw new Error(`Failed to remove linked ${table}: ${depErr.message}`)
+      }
+    }
+
+    const { error: delErr } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('id', bookingId)
+
+    if (delErr) throw delErr
+
+    // If the deleted booking was holding the vehicle, free it unless another active/confirmed booking exists
+    if (booking.vehicle_id && ['active', 'confirmed', 'ready_for_pickup'].includes(booking.status)) {
+      const { count } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('vehicle_id', booking.vehicle_id)
+        .in('status', ['active', 'confirmed', 'ready_for_pickup'])
+
+      if (!count || count === 0) {
+        await VehicleService.updateStatus(booking.vehicle_id, 'available')
+      }
+    }
+
+    // Recompute customer lifetime totals from remaining bookings so counts/spend stay accurate
+    if (booking.customer_id) {
+      const { data: remaining } = await supabase
+        .from('bookings')
+        .select('status, grand_total, outstanding_amount')
+        .eq('customer_id', booking.customer_id)
+
+      if (remaining) {
+        const completed = remaining.filter(b => b.status === 'completed')
+        const activeOrCompleted = remaining.filter(
+          b => !['cancelled', 'rejected', 'no_show'].includes(b.status)
+        )
+        await supabase
+          .from('customers')
+          .update({
+            total_rentals: completed.length,
+            total_spent: completed.reduce((sum, b) => sum + Number(b.grand_total || 0), 0),
+            outstanding_balance: activeOrCompleted.reduce(
+              (sum, b) => sum + Number(b.outstanding_amount || 0),
+              0
+            ),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', booking.customer_id)
+      }
+    }
+
+    return { deleted: true, bookingNumber: booking.booking_number }
+  }
 }
 
 // Fix missing import

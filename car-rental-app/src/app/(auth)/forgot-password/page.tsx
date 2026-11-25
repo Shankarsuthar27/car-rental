@@ -136,7 +136,7 @@ export default function ForgotPasswordPage() {
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="admin@driveease.in"
+                  placeholder="Jalorecarrental@gmail.com"
                   className="pl-10 h-11 rounded-xl bg-muted/30 text-xs focus-visible:ring-primary"
                   autoFocus
                 />

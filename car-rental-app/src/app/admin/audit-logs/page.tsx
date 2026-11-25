@@ -26,7 +26,7 @@ export default async function AdminAuditLogsPage() {
       id: 'log-1',
       action: 'vehicle_status_changed',
       module: 'vehicles',
-      user_email: 'admin@driveease.in',
+      user_email: 'Jalorecarrental@gmail.com',
       created_at: '2026-08-20T12:15:00Z',
       new_value: { status: 'rented', vehicle: 'Hyundai Creta (RJ14-CR-2024)' }
     },
@@ -42,7 +42,7 @@ export default async function AdminAuditLogsPage() {
       id: 'log-3',
       action: 'kyc_verified',
       module: 'customers',
-      user_email: 'admin@driveease.in',
+      user_email: 'Jalorecarrental@gmail.com',
       created_at: '2026-08-20T10:05:00Z',
       new_value: { customer: 'Rahul Sharma', status: 'verified' }
     }

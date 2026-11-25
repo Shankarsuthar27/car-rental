@@ -6,7 +6,7 @@ export async function POST(req: Request) {
     const { role } = await req.json()
     const isSuperAdmin = role === 'admin'
     const userRole = isSuperAdmin ? 'super_admin' : 'customer'
-    const email = isSuperAdmin ? 'admin@driveease.in' : 'rahul@example.com'
+    const email = isSuperAdmin ? 'Jalorecarrental@gmail.com' : 'rahul@example.com'
     const password = isSuperAdmin ? 'admin123' : 'Password@123'
     const fullName = isSuperAdmin ? 'Admin DriveEase' : 'Rahul Sharma'
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
       if (!userId && createError) {
         const { data: userList } = await supabase.auth.admin.listUsers()
-        const existing = userList?.users?.find(u => u.email === email)
+        const existing = userList?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
         if (existing) {
           userId = existing.id
           await supabase.auth.admin.updateUserById(userId, {

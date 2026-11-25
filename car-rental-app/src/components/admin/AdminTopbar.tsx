@@ -286,7 +286,7 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
             <div className="flex flex-col">
               <span className="font-bold text-xs text-foreground">{profile?.full_name ?? 'Administrator'}</span>
               <span className="text-[11px] text-muted-foreground truncate font-normal">
-                {profile?.email ?? 'admin@driveease.in'}
+                {profile?.email ?? 'Jalorecarrental@gmail.com'}
               </span>
             </div>
           </DropdownMenuLabel>
