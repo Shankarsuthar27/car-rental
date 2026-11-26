@@ -6,9 +6,20 @@ export async function POST(req: Request) {
     const { role } = await req.json()
     const isSuperAdmin = role === 'admin'
     const userRole = isSuperAdmin ? 'super_admin' : 'customer'
-    const email = isSuperAdmin ? 'jalorecarrentel@gmail.com' : 'rahul@example.com'
-    const password = isSuperAdmin ? 'Admin@1212' : 'Password@123'
+    const email = isSuperAdmin
+      ? process.env.DEMO_ADMIN_EMAIL || process.env.ADMIN_EMAIL || ''
+      : process.env.DEMO_CUSTOMER_EMAIL || ''
+    const password = isSuperAdmin
+      ? process.env.DEMO_ADMIN_PASSWORD || ''
+      : process.env.DEMO_CUSTOMER_PASSWORD || ''
     const fullName = isSuperAdmin ? 'Administrator' : 'Rahul Sharma'
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { success: false, error: 'Demo credentials are not configured in environment variables.' },
+        { status: 500 }
+      )
+    }
 
     try {
       const supabase = createAdminClient()
