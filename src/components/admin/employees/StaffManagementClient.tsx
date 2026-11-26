@@ -145,7 +145,7 @@ export function StaffManagementClient({
   // Dashboard filters, search, copy & expansion states
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [searchQuery, setSearchQuery] = useState('')
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [expandedPerms, setExpandedPerms] = useState<Record<string, boolean>>({})
