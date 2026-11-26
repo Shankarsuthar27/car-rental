@@ -229,7 +229,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
               ? 'opacity-35 cursor-not-allowed text-[#4a5b73]'
               : active
               ? 'bg-[#1f70ff] text-white shadow-lg shadow-blue-500/25 font-semibold cursor-pointer'
-              : 'text-[#627794] hover:text-white hover:bg-white/[0.05] cursor-pointer'
+              : 'text-white hover:text-white hover:bg-white/[0.06] cursor-pointer'
           )}
         >
           <Icon className="w-5 h-5 shrink-0" />
@@ -248,7 +248,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
               {!allowed ? (
                 <Lock className="w-3 h-3 text-amber-400" />
               ) : item.badge ? (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#131e30] text-[#5e7799]">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#131e30] text-white/90">
                   {item.badge}
                 </span>
               ) : null}
@@ -264,7 +264,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                     href={child.href}
                     onClick={handleNavClick}
                     prefetch={true}
-                    className="flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                    className="flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-lg text-white hover:text-white hover:bg-white/10 transition-colors"
                   >
                     <span>{child.label}</span>
                     {child.badgeColor && (
@@ -305,13 +305,13 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
             'w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-[13.5px] transition-all duration-150 group select-none',
             active
               ? 'bg-[#1f70ff] text-white font-medium shadow-lg shadow-blue-600/25'
-              : 'text-[#7e91ab] hover:text-white hover:bg-white/[0.04]'
+              : 'text-white hover:text-white hover:bg-white/[0.06]'
           )}
         >
           <Icon
             className={cn(
               'w-5 h-5 shrink-0 transition-colors',
-              active ? 'text-white' : 'text-[#5e7492] group-hover:text-white'
+              active ? 'text-white' : 'text-white/90 group-hover:text-white'
             )}
           />
           <span className="truncate">{item.label}</span>
@@ -323,7 +323,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
 
           {/* Dark pill badge like in image (e.g. 24, 8) */}
           {!active && item.badge && (
-            <span className="ml-auto shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#131e30] text-[#5e7799] border border-[#1b2940]">
+            <span className="ml-auto shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#131e30] text-white/90 border border-[#1b2940]">
               {item.badge}
             </span>
           )}
@@ -355,13 +355,13 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
             'w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-[13.5px] transition-all duration-150 group select-none cursor-pointer text-left',
             active
               ? 'bg-[#1f70ff] text-white font-medium shadow-lg shadow-blue-600/25'
-              : 'text-[#7e91ab] hover:text-white hover:bg-white/[0.04]'
+              : 'text-white hover:text-white hover:bg-white/[0.06]'
           )}
         >
           <Icon
             className={cn(
               'w-5 h-5 shrink-0 transition-colors',
-              active ? 'text-white' : 'text-[#5e7492] group-hover:text-white'
+              active ? 'text-white' : 'text-white/90 group-hover:text-white'
             )}
           />
           <span className="truncate">{item.label}</span>
@@ -371,14 +371,14 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
             <ChevronRight
               className={cn(
                 'w-4 h-4 ml-auto shrink-0 transition-transform duration-200 stroke-[2.3]',
-                active ? 'text-white' : 'text-[#5e7492] group-hover:text-white',
+                active ? 'text-white' : 'text-white/90 group-hover:text-white',
                 expanded && 'transform rotate-90'
               )}
             />
           ) : (
             /* When inactive and collapsed: show dark pill badge like 24 or 8 */
             item.badge && (
-              <span className="ml-auto shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#131e30] text-[#5e7799] border border-[#1b2940]">
+              <span className="ml-auto shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#131e30] text-white/90 border border-[#1b2940]">
                 {item.badge}
               </span>
             )
@@ -407,7 +407,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                       'flex items-center justify-between px-3 py-2 rounded-xl text-[12.5px] transition-all duration-150',
                       isChildActive
                         ? 'bg-white/10 text-white font-semibold'
-                        : 'text-[#7e91ab] hover:text-white hover:bg-white/[0.04]'
+                        : 'text-white hover:text-white hover:bg-white/[0.06]'
                     )}
                   >
                     <span className="truncate">{child.label}</span>
@@ -476,11 +476,11 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 overflow-y-auto py-3 px-3.5 space-y-1 scrollbar-thin">
+        <nav className="flex-1 overflow-y-auto py-3 px-3.5 space-y-1 no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {/* WORKSPACE Section */}
           {!collapsed && (
             <div className="px-3 pt-3 pb-2">
-              <span className="text-[10.5px] font-bold tracking-[0.15em] text-[#4c627b] uppercase select-none">
+              <span className="text-[10.5px] font-bold tracking-[0.15em] text-white/75 uppercase select-none">
                 WORKSPACE
               </span>
             </div>
@@ -510,7 +510,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
               <TooltipTrigger asChild>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center p-2 rounded-xl text-xs text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150"
+                  className="w-full flex items-center justify-center p-2 rounded-xl text-xs text-white hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -520,7 +520,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           ) : (
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-white hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150"
             >
               <LogOut className="w-4 h-4 shrink-0" />
               <span>Log out</span>
@@ -530,7 +530,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           {/* Sidebar Collapse Button */}
           <button
             onClick={onToggle}
-            className="w-full flex items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-white hover:bg-white/[0.05] transition-all duration-150"
+            className="w-full flex items-center justify-center py-1.5 rounded-xl text-white/80 hover:text-white hover:bg-white/[0.05] transition-all duration-150"
           >
             {collapsed ? (
               <ChevronRight className="w-4 h-4" />

@@ -168,6 +168,14 @@
    CUSTOM UTILITIES
    ============================================================ */
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @layer utilities {
   /* Glass morphism */
   .glass {
