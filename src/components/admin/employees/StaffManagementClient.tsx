@@ -26,6 +26,8 @@ import {
   Pencil,
   RefreshCw,
   Search,
+  LayoutGrid,
+  List,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -51,7 +53,7 @@ import {
   ROLE_PRESETS,
   type PermissionDefinition,
 } from '@/lib/permissions'
-import { getInitials } from '@/lib/utils'
+import { cn, getInitials } from '@/lib/utils'
 
 interface EmployeeRecord {
   id: string
@@ -143,6 +145,7 @@ export function StaffManagementClient({
   // Dashboard filters, search, copy & expansion states
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [expandedPerms, setExpandedPerms] = useState<Record<string, boolean>>({})
@@ -758,6 +761,37 @@ Login URL: ${window.location.origin}/login
               <SelectItem value="inactive" className="text-xs">Inactive</SelectItem>
             </SelectContent>
           </Select>
+
+          <div className="inline-flex items-center rounded-full border border-border/80 bg-card p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'inline-flex items-center justify-center h-7 w-7 rounded-full transition-colors cursor-pointer',
+                viewMode === 'grid'
+                  ? 'bg-[#1f6bff] text-white shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="Card Grid View"
+              aria-label="Card Grid View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'inline-flex items-center justify-center h-7 w-7 rounded-full transition-colors cursor-pointer',
+                viewMode === 'list'
+                  ? 'bg-[#1f6bff] text-white shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="List View"
+              aria-label="List View"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -800,6 +834,153 @@ Login URL: ${window.location.origin}/login
           >
             Reset Filters
           </Button>
+        </div>
+      ) : viewMode === 'list' ? (
+        <div className="bg-card border border-border/80 rounded-2xl overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border/70 bg-muted/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3">Staff Member</th>
+                  <th className="px-4 py-3">Contact</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Allowed Operations</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {filteredEmployees.map((emp, idx) => {
+                  const fullName = emp.profile?.full_name || 'Staff Member'
+                  const initials = getInitials(fullName, 'ST')
+                  const empRole = emp.designation || emp.profile?.role || 'staff'
+                  const roleLabel = (ROLE_PRESETS[empRole]?.label || empRole.replace(/_/g, ' ')).toUpperCase()
+                  const style = roleStyles[empRole] || {
+                    avatar: ['bg-[#1f6bff]', 'bg-[#6d28d9]', 'bg-[#059669]'][idx % 3],
+                    badge: 'bg-blue-50 text-blue-600 border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
+                  }
+                  const isActive = emp.is_active !== false
+                  const perms = Array.isArray(emp.permissions) ? emp.permissions : []
+                  const displayEmail = emp.profile?.email || ''
+
+                  return (
+                    <tr key={emp.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-xs shrink-0', style.avatar)}>
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-foreground truncate">{fullName}</p>
+                            <span className={cn('inline-block mt-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full border tracking-wide', style.badge)}>
+                              {roleLabel}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-foreground/90 truncate max-w-[200px]">
+                              {displayEmail || 'No email'}
+                            </span>
+                            {displayEmail && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyValue(`${emp.id}-email`, displayEmail)}
+                                className="text-muted-foreground/60 hover:text-foreground p-0.5 rounded cursor-pointer"
+                                title="Copy email / login ID"
+                              >
+                                {copiedField === `${emp.id}-email` ? (
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          {emp.profile?.phone && (
+                            <p className="text-muted-foreground font-mono text-[11px]">{emp.profile.phone}</p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            'text-[10px] font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1',
+                            isActive
+                              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                              : 'bg-slate-100 text-slate-500 dark:bg-muted dark:text-muted-foreground'
+                          )}
+                        >
+                          <span className={cn('w-1.5 h-1.5 rounded-full', isActive ? 'bg-emerald-500' : 'bg-slate-400')} />
+                          {isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-1.5 max-w-xs">
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#1f6bff] dark:bg-blue-500/10 dark:text-blue-400">
+                            {perms.length} granted
+                          </span>
+                          {perms.slice(0, 2).map((pKey: string) => {
+                            const pObj = AVAILABLE_PERMISSIONS.find(p => p.id === pKey)
+                            return (
+                              <span
+                                key={pKey}
+                                className="text-[11px] bg-muted/40 border border-border/70 px-2 py-0.5 rounded-md text-foreground/85 truncate max-w-[140px]"
+                              >
+                                {pObj?.label || pKey}
+                              </span>
+                            )
+                          })}
+                          {perms.length > 2 && (
+                            <span className="text-[11px] font-semibold text-muted-foreground">
+                              +{perms.length - 2} more
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditCredentialsModal(emp)}
+                            className="h-8 text-[11px] font-semibold rounded-lg gap-1 border-border/80 cursor-pointer"
+                          >
+                            <KeyRound className="w-3 h-3 text-amber-500" />
+                            <span>ID / Pass</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingEmployee(emp)
+                              setEditPermissions([...(emp.permissions || [])])
+                              setEditModalOpen(true)
+                            }}
+                            className="h-8 text-[11px] font-semibold rounded-lg gap-1 border-blue-200 dark:border-blue-500/30 bg-blue-50/40 dark:bg-blue-500/5 text-foreground cursor-pointer"
+                          >
+                            <SlidersHorizontal className="w-3 h-3 text-[#1f6bff]" />
+                            <span>Permissions</span>
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMember(emp)}
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground/70 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            title="Delete staff member"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
