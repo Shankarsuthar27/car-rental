@@ -277,7 +277,7 @@ function toUiNotification(row: DbNotification): UiNotification {
 }
 
 export default function AdminNotificationsPage() {
-  const [filter, setFilter] = useState<'all' | 'overdue' | 'pickup' | 'payment' | 'maintenance' | 'rejected'>('all')
+  const [filter, setFilter] = useState<'all' | 'pickup' | 'rejected'>('all')
   const [notifications, setNotifications] = useState<UiNotification[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -500,35 +500,11 @@ export default function AdminNotificationsPage() {
         </Button>
         <Button
           size="sm"
-          variant={filter === 'overdue' ? 'default' : 'ghost'}
-          onClick={() => setFilter('overdue')}
-          className="text-xs h-8 rounded-xl font-semibold text-rose-600 dark:text-rose-400"
-        >
-          Overdue Returns
-        </Button>
-        <Button
-          size="sm"
           variant={filter === 'pickup' ? 'default' : 'ghost'}
           onClick={() => setFilter('pickup')}
           className="text-xs h-8 rounded-xl font-semibold text-purple-600 dark:text-purple-400"
         >
           Bookings & Pickups
-        </Button>
-        <Button
-          size="sm"
-          variant={filter === 'maintenance' ? 'default' : 'ghost'}
-          onClick={() => setFilter('maintenance')}
-          className="text-xs h-8 rounded-xl font-semibold text-orange-600 dark:text-orange-400"
-        >
-          Maintenance
-        </Button>
-        <Button
-          size="sm"
-          variant={filter === 'payment' ? 'default' : 'ghost'}
-          onClick={() => setFilter('payment')}
-          className="text-xs h-8 rounded-xl font-semibold text-emerald-600 dark:text-emerald-400"
-        >
-          Payments
         </Button>
         <Button
           size="sm"
