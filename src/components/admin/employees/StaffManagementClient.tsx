@@ -900,29 +900,6 @@ Login URL: ${window.location.origin}/login
                         <span className="text-[11px] text-foreground/80">{emp.profile.phone}</span>
                       </div>
                     )}
-
-                    {emp.employee_code && (
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <KeyRound className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span className="font-mono font-bold text-[11px] text-foreground">
-                            {emp.employee_code}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyValue(`${emp.id}-code`, emp.employee_code!)}
-                          className="text-muted-foreground/60 hover:text-foreground p-0.5 rounded transition-colors cursor-pointer shrink-0"
-                          title="Copy employee code"
-                        >
-                          {copiedField === `${emp.id}-code` ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-500" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    )}
                   </div>
 
                   {/* Allowed Operations */}

@@ -55,6 +55,11 @@ const workspaceNavItems: NavItem[] = [
     icon: LayoutGrid,
   },
   {
+    label: 'Inquiry',
+    href: '/admin/notifications',
+    icon: Bell,
+  },
+  {
     label: 'Fleet',
     icon: CarFront,
     badge: '24',
@@ -115,11 +120,6 @@ const utilityNavItems: NavItem[] = [
     href: '/admin/employees',
     icon: UserCog,
     permission: 'team.manage',
-  },
-  {
-    label: 'Notifications',
-    href: '/admin/notifications',
-    icon: Bell,
   },
   {
     label: 'Settings',

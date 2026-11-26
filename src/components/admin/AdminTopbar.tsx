@@ -185,7 +185,7 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
         <Popover>
           <PopoverTrigger
             className="relative text-slate-600 dark:text-slate-300 hover:text-slate-900 w-9 h-9 rounded-full border border-slate-200 dark:border-border inline-flex items-center justify-center hover:bg-slate-50 dark:hover:bg-muted/40 transition-colors cursor-pointer"
-            aria-label="View fleet notifications"
+            aria-label="View fleet inquiries"
           >
             <Bell className="w-4 h-4" aria-hidden="true" />
             {unreadCount > 0 && (
@@ -195,7 +195,7 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
           <PopoverContent align="end" className="w-80 p-0 rounded-2xl shadow-xl border border-border">
             <div className="flex items-center justify-between p-3.5 border-b border-border bg-muted/30">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-xs">Fleet Notifications</span>
+                <span className="font-bold text-xs">Fleet Inquiries</span>
                 {unreadCount > 0 && (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
                     {unreadCount} new
@@ -214,7 +214,7 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
             <div className="divide-y divide-border max-h-72 overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="p-6 text-center text-xs text-muted-foreground">
-                  No new notifications
+                  No new inquiries
                 </div>
               ) : (
                 notifications.map(n => (
@@ -250,7 +250,7 @@ export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
                 href="/admin/notifications"
                 className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
               >
-                View All Notifications <ArrowRight className="w-3 h-3" />
+                View All Inquiries <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
           </PopoverContent>

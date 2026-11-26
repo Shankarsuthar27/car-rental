@@ -1,22 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Building2,
-  Lock,
-  Mail,
-  Bell,
   Save,
   CheckCircle2,
-  FileText,
-  CreditCard,
-  Percent,
-  Clock,
-  Gauge,
-  Shield,
-  KeyRound,
   Sliders,
-  DollarSign
+  DollarSign,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +22,10 @@ import { BrandLogo } from '@/components/brand/BrandLogo'
 import { PermissionGuard } from '@/components/admin/PermissionGuard'
 
 export default function AdminSettingsPage() {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<'business' | 'rental' | null>(null)
   const [saved, setSaved] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   // 1. Business Settings
   const [businessName, setBusinessName] = useState('Jalore Self Drive Car Rental')
@@ -50,10 +45,105 @@ export default function AdminSettingsPage() {
   const [gracePeriodMins, setGracePeriodMins] = useState('30')
   const [taxRate, setTaxRate] = useState('18')
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    let active = true
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/admin/settings', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!active) return
+
+        if (data.business) {
+          if (data.business.name != null) setBusinessName(String(data.business.name))
+          if (data.business.tagline != null) setTagline(String(data.business.tagline))
+          if (data.business.gstin != null) setGstin(String(data.business.gstin))
+          if (data.business.email != null) setSupportEmail(String(data.business.email))
+          if (data.business.phone != null) setSupportPhone(String(data.business.phone))
+          if (data.business.address != null) setAddress(String(data.business.address))
+          if (data.business.currency != null) setCurrency(String(data.business.currency))
+        }
+
+        if (data.rental) {
+          if (data.rental.default_hourly_rate != null) setDefaultHourlyRate(String(data.rental.default_hourly_rate))
+          if (data.rental.default_daily_rate != null) setDefaultDailyRate(String(data.rental.default_daily_rate))
+          if (data.rental.default_deposit != null) setDefaultDeposit(String(data.rental.default_deposit))
+          if (data.rental.late_fee_per_hour != null) setLateFeePerHour(String(data.rental.late_fee_per_hour))
+          if (data.rental.extra_km_charge != null) setExtraKmCharge(String(data.rental.extra_km_charge))
+          if (data.rental.return_grace_period_minutes != null) setGracePeriodMins(String(data.rental.return_grace_period_minutes))
+          if (data.rental.tax_rate != null) setTaxRate(String(data.rental.tax_rate))
+        }
+      } catch {
+        // Keep defaults if fetch fails
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadSettings()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const saveSection = async (section: 'business' | 'rental') => {
+    setSaving(section)
+    setErrorMsg(null)
+    setSaved(false)
+
+    try {
+      const payload =
+        section === 'business'
+          ? {
+              business: {
+                name: businessName,
+                tagline,
+                gstin,
+                currency,
+                email: supportEmail,
+                phone: supportPhone,
+                address,
+              },
+            }
+          : {
+              rental: {
+                default_daily_rate: Number(defaultDailyRate),
+                default_hourly_rate: Number(defaultHourlyRate),
+                default_deposit: Number(defaultDeposit),
+                late_fee_per_hour: Number(lateFeePerHour),
+                extra_km_charge: Number(extraKmCharge),
+                return_grace_period_minutes: Number(gracePeriodMins),
+                tax_rate: Number(taxRate),
+              },
+            }
+
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to save settings to database')
+      }
+
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to save settings')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const handleSaveBusiness = (e: React.FormEvent) => {
     e.preventDefault()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    void saveSection('business')
+  }
+
+  const handleSaveRental = (e: React.FormEvent) => {
+    e.preventDefault()
+    void saveSection('rental')
   }
 
   return (
@@ -78,7 +168,14 @@ export default function AdminSettingsPage() {
       {saved && (
         <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2.5 shadow-sm">
           <CheckCircle2 className="w-5 h-5 shrink-0" />
-          <span className="font-bold">Settings updated and synchronized across all rental operations!</span>
+          <span className="font-bold">Settings updated and saved to database!</span>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-2xl text-destructive text-xs flex items-center gap-2.5 shadow-sm">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <span className="font-bold">{errorMsg}</span>
         </div>
       )}
 
@@ -131,7 +228,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSaveBusiness} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Business Entity Name</Label>
@@ -199,8 +296,17 @@ export default function AdminSettingsPage() {
               </div>
 
               <div className="pt-2 flex justify-end">
-                <Button type="submit" className="gradient-brand text-white border-0 font-bold text-xs h-10 px-6 rounded-xl shadow-md gap-1.5">
-                  <Save className="w-4 h-4" /> Save Business Settings
+                <Button
+                  type="submit"
+                  disabled={loading || saving === 'business'}
+                  className="gradient-brand text-white border-0 font-bold text-xs h-10 px-6 rounded-xl shadow-md gap-1.5"
+                >
+                  {saving === 'business' ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {saving === 'business' ? 'Saving...' : 'Save Business Settings'}
                 </Button>
               </div>
             </form>
@@ -219,7 +325,7 @@ export default function AdminSettingsPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSaveRental} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Default Daily Rental Rate (₹)</Label>
@@ -293,8 +399,17 @@ export default function AdminSettingsPage() {
               </div>
 
               <div className="pt-2 flex justify-end">
-                <Button type="submit" className="gradient-brand text-white border-0 font-bold text-xs h-10 px-6 rounded-xl shadow-md gap-1.5">
-                  <Save className="w-4 h-4" /> Save Rental Defaults
+                <Button
+                  type="submit"
+                  disabled={loading || saving === 'rental'}
+                  className="gradient-brand text-white border-0 font-bold text-xs h-10 px-6 rounded-xl shadow-md gap-1.5"
+                >
+                  {saving === 'rental' ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {saving === 'rental' ? 'Saving...' : 'Save Rental Defaults'}
                 </Button>
               </div>
             </form>
