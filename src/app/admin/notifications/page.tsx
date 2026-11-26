@@ -363,6 +363,7 @@ export default function AdminNotificationsPage() {
         }
         setNotifications((prev) => prev.filter((n) => n.id !== id))
         setPendingConfirm(null)
+        window.dispatchEvent(new Event('jsd-sidebar-counts-refresh'))
         return
       }
 
@@ -388,6 +389,7 @@ export default function AdminNotificationsPage() {
         )
       )
       setPendingConfirm(null)
+      window.dispatchEvent(new Event('jsd-sidebar-counts-refresh'))
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : `Failed to ${action} inquiry`)
     } finally {

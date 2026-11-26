@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
@@ -58,12 +58,10 @@ const workspaceNavItems: NavItem[] = [
     label: 'Inquiry',
     href: '/admin/notifications',
     icon: MessageSquareText,
-    badge: '3',
   },
   {
     label: 'Fleet',
     icon: CarFront,
-    badge: '11',
     permission: 'vehicles.view',
     children: [
       { label: 'All Cars', href: '/admin/vehicles' },
@@ -75,7 +73,6 @@ const workspaceNavItems: NavItem[] = [
   {
     label: 'Rentals',
     icon: CalendarClock,
-    badge: '2',
     permission: 'bookings.view',
     children: [
       { label: 'Active Rentals', href: '/admin/bookings?status=active', badgeColor: 'bg-blue-500' },
@@ -146,6 +143,52 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
     Fleet: pathname.startsWith('/admin/vehicles'),
     Rentals: pathname.startsWith('/admin/bookings'),
   })
+  const [counts, setCounts] = useState<{ inquiry: number | null; fleet: number | null; rentals: number | null }>({
+    inquiry: null,
+    fleet: null,
+    rentals: null,
+  })
+
+  useEffect(() => {
+    let active = true
+    const loadCounts = async () => {
+      try {
+        const res = await fetch('/api/admin/sidebar-counts', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (active) {
+          setCounts({
+            inquiry: typeof data.inquiry === 'number' ? data.inquiry : 0,
+            fleet: typeof data.fleet === 'number' ? data.fleet : 0,
+            rentals: typeof data.rentals === 'number' ? data.rentals : 0,
+          })
+        }
+      } catch {
+        // Ignore transient fetch errors
+      }
+    }
+
+    void loadCounts()
+    const handleRefresh = () => void loadCounts()
+    window.addEventListener('jsd-sidebar-counts-refresh', handleRefresh)
+    return () => {
+      active = false
+      window.removeEventListener('jsd-sidebar-counts-refresh', handleRefresh)
+    }
+  }, [pathname])
+
+  const getItemBadge = (item: NavItem): string | undefined => {
+    if (item.label === 'Inquiry') {
+      return counts.inquiry !== null && counts.inquiry > 0 ? String(counts.inquiry) : undefined
+    }
+    if (item.label === 'Fleet') {
+      return counts.fleet !== null ? String(counts.fleet) : undefined
+    }
+    if (item.label === 'Rentals') {
+      return counts.rentals !== null ? String(counts.rentals) : undefined
+    }
+    return item.badge
+  }
 
   const toggleGroup = (label: string) => {
     setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }))
@@ -197,6 +240,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
     const hasChildren = Boolean(item.children && item.children.length > 0)
     const expanded = openGroups[item.label]
     const allowed = !item.permission || can(item.permission)
+    const badgeText = getItemBadge(item)
 
     // Collapsed mode: Icon-only with Tooltip & popover
     if (collapsed) {
@@ -256,9 +300,9 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
               <span>{item.label}</span>
               {!allowed ? (
                 <Lock className="w-3 h-3 text-amber-500" />
-              ) : item.badge ? (
+              ) : badgeText ? (
                 <span className="min-w-6 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums text-slate-600 dark:border-[#1b2940] dark:bg-[#131e30] dark:text-white/90">
-                  {item.badge}
+                  {badgeText}
                 </span>
               ) : null}
             </p>
@@ -332,7 +376,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           />
           <span className="truncate">{item.label}</span>
 
-          {item.badge && (
+          {badgeText && (
             <span
               className={cn(
                 'ml-auto shrink-0 min-w-6 rounded-full border px-2 py-0.5 text-center text-xs font-semibold tabular-nums',
@@ -341,7 +385,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                   : 'border-slate-200 bg-white text-slate-600 dark:border-[#1b2940] dark:bg-[#131e30] dark:text-white/90'
               )}
             >
-              {item.badge}
+              {badgeText}
             </span>
           )}
         </Link>
@@ -390,7 +434,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           />
           <span className="truncate">{item.label}</span>
 
-          {item.badge && (
+          {badgeText && (
             <span
               className={cn(
                 'ml-auto shrink-0 min-w-6 rounded-full border px-2 py-0.5 text-center text-xs font-semibold tabular-nums',
@@ -399,7 +443,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                   : 'border-slate-200 bg-white text-slate-600 dark:border-[#1b2940] dark:bg-[#131e30] dark:text-white/90'
               )}
             >
-              {item.badge}
+              {badgeText}
             </span>
           )}
         </button>
