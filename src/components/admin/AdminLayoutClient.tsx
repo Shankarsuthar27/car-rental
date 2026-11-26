@@ -16,6 +16,29 @@ export function AdminLayoutClient({ children, profile }: AdminLayoutClientProps)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [sidebarDark, setSidebarDark] = useState(false)
+
+  // Keep right-hand side view in light theme; restore sidebar theme preference
+  useEffect(() => {
+    document.documentElement.classList.remove('dark')
+    try {
+      setSidebarDark(localStorage.getItem('jsd_sidebar_theme') === 'dark')
+    } catch {
+      // Ignore storage access errors
+    }
+  }, [])
+
+  const toggleSidebarTheme = () => {
+    setSidebarDark(prev => {
+      const next = !prev
+      try {
+        localStorage.setItem('jsd_sidebar_theme', next ? 'dark' : 'light')
+      } catch {
+        // Ignore storage access errors
+      }
+      return next
+    })
+  }
 
   // Track desktop viewport (>= 768px) to safely apply layout offset
   useEffect(() => {
@@ -30,7 +53,7 @@ export function AdminLayoutClient({ children, profile }: AdminLayoutClientProps)
   return (
     <div className="flex min-h-dvh h-dvh overflow-hidden bg-background">
       {/* Desktop sidebar - hidden on mobile/tablet */}
-      <div className="hidden md:block">
+      <div className={sidebarDark ? 'hidden md:block dark' : 'hidden md:block'}>
         <AdminSidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(prev => !prev)}
@@ -39,7 +62,14 @@ export function AdminLayoutClient({ children, profile }: AdminLayoutClientProps)
 
       {/* Mobile drawer sidebar */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 w-72 max-w-[85vw] bg-sidebar border-sidebar-border">
+        <SheetContent
+          side="left"
+          className={
+            sidebarDark
+              ? 'p-0 w-72 max-w-[85vw] bg-[#060e1d] border-[#122036] dark'
+              : 'p-0 w-72 max-w-[85vw] bg-[#F1F4FA] border-slate-200'
+          }
+        >
           <AdminSidebar
             collapsed={false}
             onToggle={() => setMobileOpen(false)}
@@ -50,14 +80,16 @@ export function AdminLayoutClient({ children, profile }: AdminLayoutClientProps)
       {/* Main content wrapper with mobile-first fluid layout */}
       <motion.div
         animate={{
-          marginLeft: isDesktop ? (sidebarCollapsed ? 68 : 256) : 0,
+          marginLeft: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0,
         }}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
         className="flex-1 flex flex-col min-w-0 w-full overflow-hidden"
       >
         <AdminTopbar
           onMobileMenuToggle={() => setMobileOpen(true)}
           profile={profile}
+          isDark={sidebarDark}
+          onToggleTheme={toggleSidebarTheme}
         />
 
         <main className="flex-1 overflow-y-auto overscroll-contain">

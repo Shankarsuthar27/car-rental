@@ -6,15 +6,15 @@ import Image from 'next/image'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  LayoutGrid,
+  LayoutDashboard,
+  MessageSquareText,
   CarFront,
-  Calendar,
+  CalendarClock,
   Users,
   Zap,
   CreditCard,
   History,
   BarChart3,
-  Bell,
   Settings,
   UserCog,
   ChevronRight,
@@ -52,34 +52,35 @@ const workspaceNavItems: NavItem[] = [
   {
     label: 'Dashboard',
     href: '/admin/dashboard',
-    icon: LayoutGrid,
+    icon: LayoutDashboard,
   },
   {
     label: 'Inquiry',
     href: '/admin/notifications',
-    icon: Bell,
+    icon: MessageSquareText,
+    badge: '3',
   },
   {
     label: 'Fleet',
     icon: CarFront,
-    badge: '24',
+    badge: '11',
     permission: 'vehicles.view',
     children: [
       { label: 'All Cars', href: '/admin/vehicles' },
-      { label: 'Available Cars', href: '/admin/vehicles?status=available', badgeColor: 'bg-emerald-400' },
-      { label: 'Running Cars', href: '/admin/vehicles?status=rented', badgeColor: 'bg-blue-400' },
-      { label: 'Unavailable Cars', href: '/admin/vehicles?status=inactive', badgeColor: 'bg-rose-400' },
+      { label: 'Available Cars', href: '/admin/vehicles?status=available', badgeColor: 'bg-emerald-500' },
+      { label: 'Running Cars', href: '/admin/vehicles?status=rented', badgeColor: 'bg-blue-500' },
+      { label: 'Unavailable Cars', href: '/admin/vehicles?status=inactive', badgeColor: 'bg-rose-500' },
     ],
   },
   {
     label: 'Rentals',
-    icon: Calendar,
-    badge: '8',
+    icon: CalendarClock,
+    badge: '2',
     permission: 'bookings.view',
     children: [
-      { label: 'Active Rentals', href: '/admin/bookings?status=active', badgeColor: 'bg-blue-400' },
+      { label: 'Active Rentals', href: '/admin/bookings?status=active', badgeColor: 'bg-blue-500' },
       { label: 'Completed', href: '/admin/bookings?status=completed', badgeColor: 'bg-zinc-400' },
-      { label: 'Cancelled', href: '/admin/bookings?status=cancelled', badgeColor: 'bg-rose-400' },
+      { label: 'Cancelled', href: '/admin/bookings?status=cancelled', badgeColor: 'bg-rose-500' },
     ],
   },
   {
@@ -89,7 +90,7 @@ const workspaceNavItems: NavItem[] = [
     permission: 'customers.view',
   },
   {
-    label: 'Assign car',
+    label: 'Assign Car',
     href: '/admin/assign',
     icon: Zap,
     permission: 'bookings.create',
@@ -101,7 +102,7 @@ const workspaceNavItems: NavItem[] = [
     permission: 'payments.view',
   },
   {
-    label: 'Rental history',
+    label: 'Rental History',
     href: '/admin/history',
     icon: History,
     permission: 'bookings.view',
@@ -138,30 +139,25 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const supabase = createClient()
   const { can } = usePermissions()
 
-  // Track expanded groups
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    Fleet: pathname.startsWith('/admin/vehicles'),
+    Rentals: pathname.startsWith('/admin/bookings'),
+  })
 
-  const toggleGroup = (groupName: string) => {
-    setExpandedGroups((prev) => {
-      // If currently unset, check if it's active by route
-      const currentlyExpanded = prev[groupName] ?? false
-      return {
-        ...prev,
-        [groupName]: !currentlyExpanded,
-      }
-    })
+  const toggleGroup = (label: string) => {
+    setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }))
   }
 
   const handleLogout = async () => {
-    document.cookie = 'driveease_demo_role=; path=/; max-age=0; SameSite=Lax'
-    document.cookie = 'driveease_user_permissions=; path=/; max-age=0; SameSite=Lax'
-    document.cookie = 'driveease_user_name=; path=/; max-age=0; SameSite=Lax'
-    document.cookie = 'driveease_user_email=; path=/; max-age=0; SameSite=Lax'
-    const supabase = createClient()
+    document.cookie = 'driveease_demo_role=; path=/; max-age=0'
+    document.cookie = 'driveease_user_permissions=; path=/; max-age=0'
+    document.cookie = 'driveease_user_name=; path=/; max-age=0'
     await supabase.auth.signOut()
-    window.location.href = '/login'
+    router.push('/login')
+    router.refresh()
   }
 
   const handleNavClick = () => {
@@ -170,69 +166,82 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
     }
   }
 
-  const isLinkActive = (href: string) => {
-    const [path, query] = href.split('?')
-    if (query) {
-      const [key, val] = query.split('=')
-      return pathname === path && searchParams.get(key) === val
+  const isLinkActive = (href?: string) => {
+    if (!href) return false
+    const [basePath, queryStr] = href.split('?')
+    if (queryStr) {
+      const targetParams = new URLSearchParams(queryStr)
+      if (pathname !== basePath) return false
+      for (const [key, val] of targetParams.entries()) {
+        if (searchParams.get(key) !== val) return false
+      }
+      return true
     }
-    if (href === '/admin/dashboard') {
-      return pathname === '/admin/dashboard'
+    if (basePath === '/admin/dashboard') {
+      return pathname === '/admin/dashboard' || pathname === '/admin'
     }
-    if (href === '/admin/vehicles') {
-      return pathname === '/admin/vehicles' && (!searchParams.get('status') || searchParams.get('status') === 'all')
-    }
-    if (href === '/admin/bookings') {
-      return pathname === '/admin/bookings' && (!searchParams.get('status') || searchParams.get('status') === 'all')
-    }
-    return pathname === href || pathname.startsWith(href + '/')
+    return pathname === basePath || pathname.startsWith(basePath + '/')
   }
 
   const isGroupActive = (item: NavItem) => {
     if (item.href && isLinkActive(item.href)) return true
-    if (item.children && item.children.some((c) => isLinkActive(c.href))) return true
-    return false
-  }
-
-  const isGroupExpanded = (item: NavItem) => {
-    if (expandedGroups[item.label] !== undefined) {
-      return expandedGroups[item.label]
+    if (item.children) {
+      return item.children.some(child => pathname === child.href.split('?')[0])
     }
-    // Default open if one of its children is currently active
-    return isGroupActive(item)
+    return false
   }
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon
-    const hasChildren = item.children && item.children.length > 0
     const active = isGroupActive(item)
-    const expanded = hasChildren && isGroupExpanded(item)
+    const hasChildren = Boolean(item.children && item.children.length > 0)
+    const expanded = openGroups[item.label]
     const allowed = !item.permission || can(item.permission)
 
-    // Collapsed mode item (when sidebar is mini 68px width)
+    // Collapsed mode: Icon-only with Tooltip & popover
     if (collapsed) {
-      const linkContent = (
+      const linkContent = item.href && allowed ? (
+        <Link
+          href={item.href}
+          onClick={handleNavClick}
+          prefetch={true}
+          title={item.label}
+          className={cn(
+            'relative h-11 w-full flex items-center justify-center rounded-lg transition-all duration-150',
+            active
+              ? 'bg-indigo-50 text-indigo-700 font-semibold dark:bg-[#1f70ff] dark:text-white dark:shadow-lg dark:shadow-blue-500/25'
+              : 'text-slate-600 hover:bg-white hover:text-slate-900 dark:text-white dark:hover:text-white dark:hover:bg-white/[0.06]'
+          )}
+        >
+          {active && (
+            <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-indigo-600 dark:hidden" />
+          )}
+          <Icon size={19} strokeWidth={1.8} className="shrink-0" />
+        </Link>
+      ) : (
         <button
           type="button"
-          disabled={!allowed}
+          title={item.label}
           onClick={() => {
             if (!allowed) return
-            if (hasChildren && item.children?.[0]) {
-              router.push(item.children[0].href)
-            } else if (item.href) {
-              router.push(item.href)
+            if (hasChildren) {
+              onToggle()
+              setOpenGroups(prev => ({ ...prev, [item.label]: true }))
             }
           }}
           className={cn(
-            'w-10 h-10 mx-auto my-1 flex items-center justify-center rounded-xl transition-all duration-150',
+            'relative h-11 w-full flex items-center justify-center rounded-lg transition-all duration-150',
             !allowed
-              ? 'opacity-35 cursor-not-allowed text-[#4a5b73]'
+              ? 'opacity-35 cursor-not-allowed text-slate-400 dark:text-[#4a5b73]'
               : active
-              ? 'bg-[#1f70ff] text-white shadow-lg shadow-blue-500/25 font-semibold cursor-pointer'
-              : 'text-white hover:text-white hover:bg-white/[0.06] cursor-pointer'
+              ? 'bg-indigo-50 text-indigo-700 font-semibold cursor-pointer dark:bg-[#1f70ff] dark:text-white dark:shadow-lg dark:shadow-blue-500/25'
+              : 'text-slate-600 hover:bg-white hover:text-slate-900 cursor-pointer dark:text-white dark:hover:text-white dark:hover:bg-white/[0.06]'
           )}
         >
-          <Icon className="w-5 h-5 shrink-0" />
+          {active && (
+            <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-indigo-600 dark:hidden" />
+          )}
+          <Icon size={19} strokeWidth={1.8} className="shrink-0" />
         </button>
       )
 
@@ -241,20 +250,20 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
           <TooltipContent
             side="right"
-            className="p-2.5 bg-[#09152b] border border-[#1b2940] text-white shadow-xl min-w-[150px]"
+            className="p-2.5 bg-white border border-slate-200 text-slate-900 shadow-lg min-w-[160px] dark:bg-[#09152b] dark:border-[#1b2940] dark:text-white"
           >
-            <p className="font-bold text-xs pb-1 mb-1 border-b border-white/10 text-white flex items-center justify-between">
+            <p className="font-semibold text-xs pb-1 mb-1 border-b border-slate-100 dark:border-white/10 flex items-center justify-between gap-2">
               <span>{item.label}</span>
               {!allowed ? (
-                <Lock className="w-3 h-3 text-amber-400" />
+                <Lock className="w-3 h-3 text-amber-500" />
               ) : item.badge ? (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#131e30] text-white/90">
+                <span className="min-w-6 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums text-slate-600 dark:border-[#1b2940] dark:bg-[#131e30] dark:text-white/90">
                   {item.badge}
                 </span>
               ) : null}
             </p>
             {!allowed && (
-              <p className="text-[11px] text-amber-400/90 font-medium">Permission required</p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-400/90 font-medium">Permission required</p>
             )}
             {allowed && hasChildren && (
               <div className="space-y-1 pt-1">
@@ -264,7 +273,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                     href={child.href}
                     onClick={handleNavClick}
                     prefetch={true}
-                    className="flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-lg text-white hover:text-white hover:bg-white/10 transition-colors"
+                    className="flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-md text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-white dark:hover:text-white dark:hover:bg-white/10 transition-colors"
                   >
                     <span>{child.label}</span>
                     {child.badgeColor && (
@@ -279,18 +288,18 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
       )
     }
 
-    // Single item without dropdown children (e.g. Dashboard, Customers, Assign car, etc.)
+    // Expanded Mode: Single Link Item (Dashboard, Inquiry, Customers, etc.)
     if (!hasChildren && item.href) {
       if (!allowed) {
         return (
           <div
             key={item.label}
-            className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-[13.5px] opacity-35 cursor-not-allowed select-none text-[#5e7492]"
+            className="w-full flex items-center h-11 rounded-lg px-3 gap-3 text-sm font-medium opacity-35 cursor-not-allowed select-none text-slate-400 dark:text-[#5e7492]"
             title={`Permission required: ${item.label}`}
           >
-            <Icon className="w-5 h-5 shrink-0 text-[#4a5b73]" />
+            <Icon size={19} strokeWidth={1.8} className="shrink-0" />
             <span className="truncate">{item.label}</span>
-            <Lock className="w-3.5 h-3.5 ml-auto shrink-0 text-slate-500" />
+            <Lock className="w-3.5 h-3.5 ml-auto shrink-0" />
           </div>
         )
       }
@@ -302,28 +311,36 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           onClick={handleNavClick}
           prefetch={true}
           className={cn(
-            'w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-[13.5px] transition-all duration-150 group select-none',
+            'relative w-full flex items-center h-11 rounded-lg px-3 gap-3 text-sm font-medium transition-all duration-150 group select-none',
             active
-              ? 'bg-[#1f70ff] text-white font-medium shadow-lg shadow-blue-600/25'
-              : 'text-white hover:text-white hover:bg-white/[0.06]'
+              ? 'bg-indigo-50 text-indigo-700 font-semibold dark:bg-[#1f70ff] dark:text-white dark:shadow-lg dark:shadow-blue-600/25'
+              : 'text-slate-600 hover:bg-white hover:text-slate-900 dark:text-white dark:hover:text-white dark:hover:bg-white/[0.06]'
           )}
         >
+          {active && (
+            <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-indigo-600 dark:hidden" />
+          )}
           <Icon
+            size={19}
+            strokeWidth={1.8}
             className={cn(
-              'w-5 h-5 shrink-0 transition-colors',
-              active ? 'text-white' : 'text-white/90 group-hover:text-white'
+              'shrink-0 transition-colors',
+              active
+                ? 'text-indigo-700 dark:text-white'
+                : 'text-slate-600 group-hover:text-slate-900 dark:text-white/90 dark:group-hover:text-white'
             )}
           />
           <span className="truncate">{item.label}</span>
 
-          {/* When active: show white right chevron like in image */}
-          {active && (
-            <ChevronRight className="w-4 h-4 ml-auto shrink-0 text-white stroke-[2.3]" />
-          )}
-
-          {/* Dark pill badge like in image (e.g. 24, 8) */}
-          {!active && item.badge && (
-            <span className="ml-auto shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#131e30] text-white/90 border border-[#1b2940]">
+          {item.badge && (
+            <span
+              className={cn(
+                'ml-auto shrink-0 min-w-6 rounded-full border px-2 py-0.5 text-center text-xs font-semibold tabular-nums',
+                active
+                  ? 'border-indigo-200 bg-white text-indigo-700 dark:border-white/20 dark:bg-white/15 dark:text-white'
+                  : 'border-slate-200 bg-white text-slate-600 dark:border-[#1b2940] dark:bg-[#131e30] dark:text-white/90'
+              )}
+            >
               {item.badge}
             </span>
           )}
@@ -336,12 +353,12 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
       return (
         <div
           key={item.label}
-          className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-[13.5px] opacity-35 cursor-not-allowed select-none text-[#5e7492]"
+          className="w-full flex items-center h-11 rounded-lg px-3 gap-3 text-sm font-medium opacity-35 cursor-not-allowed select-none text-slate-400 dark:text-[#5e7492]"
           title={`Permission required: ${item.label}`}
         >
-          <Icon className="w-5 h-5 shrink-0 text-[#4a5b73]" />
+          <Icon size={19} strokeWidth={1.8} className="shrink-0" />
           <span className="truncate">{item.label}</span>
-          <Lock className="w-3.5 h-3.5 ml-auto shrink-0 text-slate-500" />
+          <Lock className="w-3.5 h-3.5 ml-auto shrink-0" />
         </div>
       )
     }
@@ -352,36 +369,38 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           type="button"
           onClick={() => toggleGroup(item.label)}
           className={cn(
-            'w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-[13.5px] transition-all duration-150 group select-none cursor-pointer text-left',
+            'relative w-full flex items-center h-11 rounded-lg px-3 gap-3 text-sm font-medium transition-all duration-150 group select-none cursor-pointer text-left',
             active
-              ? 'bg-[#1f70ff] text-white font-medium shadow-lg shadow-blue-600/25'
-              : 'text-white hover:text-white hover:bg-white/[0.06]'
+              ? 'bg-indigo-50 text-indigo-700 font-semibold dark:bg-[#1f70ff] dark:text-white dark:shadow-lg dark:shadow-blue-600/25'
+              : 'text-slate-600 hover:bg-white hover:text-slate-900 dark:text-white dark:hover:text-white dark:hover:bg-white/[0.06]'
           )}
         >
+          {active && (
+            <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-indigo-600 dark:hidden" />
+          )}
           <Icon
+            size={19}
+            strokeWidth={1.8}
             className={cn(
-              'w-5 h-5 shrink-0 transition-colors',
-              active ? 'text-white' : 'text-white/90 group-hover:text-white'
+              'shrink-0 transition-colors',
+              active
+                ? 'text-indigo-700 dark:text-white'
+                : 'text-slate-600 group-hover:text-slate-900 dark:text-white/90 dark:group-hover:text-white'
             )}
           />
           <span className="truncate">{item.label}</span>
 
-          {/* If active or expanded: show chevron right (rotates down when expanded) */}
-          {active || expanded ? (
-            <ChevronRight
+          {item.badge && (
+            <span
               className={cn(
-                'w-4 h-4 ml-auto shrink-0 transition-transform duration-200 stroke-[2.3]',
-                active ? 'text-white' : 'text-white/90 group-hover:text-white',
-                expanded && 'transform rotate-90'
+                'ml-auto shrink-0 min-w-6 rounded-full border px-2 py-0.5 text-center text-xs font-semibold tabular-nums',
+                active
+                  ? 'border-indigo-200 bg-white text-indigo-700 dark:border-white/20 dark:bg-white/15 dark:text-white'
+                  : 'border-slate-200 bg-white text-slate-600 dark:border-[#1b2940] dark:bg-[#131e30] dark:text-white/90'
               )}
-            />
-          ) : (
-            /* When inactive and collapsed: show dark pill badge like 24 or 8 */
-            item.badge && (
-              <span className="ml-auto shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#131e30] text-white/90 border border-[#1b2940]">
-                {item.badge}
-              </span>
-            )
+            >
+              {item.badge}
+            </span>
           )}
         </button>
 
@@ -393,7 +412,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="overflow-hidden pl-7 pr-1 space-y-1 ml-4 my-1 border-l border-white/10"
+              className="overflow-hidden pl-6 pr-1 space-y-0.5 ml-4 my-1 border-l border-slate-200 dark:border-white/10"
             >
               {item.children?.map((child) => {
                 const isChildActive = isLinkActive(child.href)
@@ -404,15 +423,15 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                     onClick={handleNavClick}
                     prefetch={true}
                     className={cn(
-                      'flex items-center justify-between px-3 py-2 rounded-xl text-[12.5px] transition-all duration-150',
+                      'flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150',
                       isChildActive
-                        ? 'bg-white/10 text-white font-semibold'
-                        : 'text-white hover:text-white hover:bg-white/[0.06]'
+                        ? 'bg-indigo-50 text-indigo-700 font-semibold dark:bg-white/10 dark:text-white'
+                        : 'text-slate-600 hover:bg-white hover:text-slate-900 dark:text-white dark:hover:text-white dark:hover:bg-white/[0.06]'
                     )}
                   >
                     <span className="truncate">{child.label}</span>
                     {child.badgeColor && (
-                      <span className={cn('w-2 h-2 rounded-full shrink-0 shadow-xs', child.badgeColor)} />
+                      <span className={cn('w-2 h-2 rounded-full shrink-0', child.badgeColor)} />
                     )}
                   </Link>
                 )
@@ -427,26 +446,36 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
   return (
     <TooltipProvider delayDuration={0}>
       <motion.aside
-        animate={{ width: collapsed ? 68 : 256 }}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
-        className="flex flex-col h-screen bg-gradient-to-b from-[#09152b] via-[#060e1d] to-[#040913] border-r border-[#122036] fixed left-0 top-0 z-30 overflow-hidden shadow-xl select-none"
+        animate={{ width: collapsed ? 80 : 256 }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className="flex flex-col h-screen bg-[#F1F4FA] dark:bg-gradient-to-b dark:from-[#09152b] dark:via-[#060e1d] dark:to-[#040913] border-r border-slate-200 dark:border-[#122036] fixed left-0 top-0 z-30 overflow-hidden shadow-xs dark:shadow-xl select-none"
       >
-        {/* Header Logo — Preserved as requested */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-[#122036] shrink-0 bg-[#09152b]/80 backdrop-blur-sm">
+        {/* 1. Brand Header */}
+        <div
+          className={cn(
+            'flex items-center h-20 border-b border-slate-200 dark:border-[#122036] shrink-0 dark:bg-[#09152b]/80',
+            collapsed ? 'justify-center px-3' : 'justify-between px-5'
+          )}
+        >
           <Link
             href="/admin/dashboard"
             onClick={handleNavClick}
-            className="flex items-center gap-2.5 overflow-hidden flex-1 group min-w-0"
+            className={cn(
+              'flex items-center gap-3 overflow-hidden group min-w-0',
+              collapsed ? 'justify-center' : 'flex-1'
+            )}
           >
-            <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-md ring-2 ring-primary/25 bg-slate-950 flex items-center justify-center transition-transform group-hover:scale-105">
+            {/* Brand Logo */}
+            <div className="size-10 rounded-full overflow-hidden shrink-0 shadow-sm ring-2 ring-indigo-200 dark:ring-primary/25 bg-slate-950 flex items-center justify-center transition-transform group-hover:scale-105">
               <Image
                 src="/logo.png"
                 alt="JSD — Jalore Self Drive Car Rental"
-                width={36}
-                height={36}
+                width={40}
+                height={40}
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
+
             {!collapsed && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -454,33 +483,34 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
                 exit={{ opacity: 0 }}
                 className="overflow-hidden min-w-0"
               >
-                <span className="text-white font-black text-lg tracking-tight block leading-tight">
+                <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white block leading-tight">
                   JSD
                 </span>
-                <span className="text-[9px] font-extrabold uppercase tracking-widest text-primary block truncate">
-                  Jalore Self Drive • Fleet
+                <span className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-indigo-600 dark:text-[#1f70ff] block truncate">
+                  JALORE SELF DRIVE • FLEET
                 </span>
               </motion.div>
             )}
           </Link>
 
           {/* Mobile Close Button */}
-          <button
-            type="button"
-            onClick={onToggle}
-            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0"
-            aria-label="Close navigation drawer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={onToggle}
+              className="md:hidden min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0"
+              aria-label="Close navigation drawer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        {/* Navigation Items */}
-        <nav className="flex-1 overflow-y-auto py-3 px-3.5 space-y-1 no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {/* WORKSPACE Section */}
+        {/* 2. Navigation Menu */}
+        <nav className="flex-1 overflow-y-auto px-3 py-6 no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {!collapsed && (
-            <div className="px-3 pt-3 pb-2">
-              <span className="text-[10.5px] font-bold tracking-[0.15em] text-white/75 uppercase select-none">
+            <div className="px-3 mb-3">
+              <span className="text-[11px] font-semibold tracking-[0.15em] text-slate-500 dark:text-white/75 uppercase select-none">
                 WORKSPACE
               </span>
             </div>
@@ -492,9 +522,9 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
               .map(renderNavItem)}
           </div>
 
-          {/* Settings & Notifications footer items */}
-          <div className="pt-4 mt-3 border-t border-[#122036]">
-            <div className="space-y-0.5">
+          {/* Staff & Settings items */}
+          <div className="pt-4 mt-4 border-t border-slate-200 dark:border-[#122036]">
+            <div className="space-y-1">
               {utilityNavItems
                 .filter(item => !item.permission || can(item.permission))
                 .map(renderNavItem)}
@@ -502,40 +532,39 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           </div>
         </nav>
 
-        {/* Bottom Actions */}
-        <div className="border-t border-[#122036] p-2 space-y-1 shrink-0 bg-[#060e1d]/90">
-          {/* Logout */}
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center justify-center p-2 rounded-xl text-xs text-white hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Log out</TooltipContent>
-            </Tooltip>
-          ) : (
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-white hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150"
-            >
-              <LogOut className="w-4 h-4 shrink-0" />
-              <span>Log out</span>
-            </button>
-          )}
-
-          {/* Sidebar Collapse Button */}
+        {/* 3. Footer */}
+        <div className="border-t border-slate-200 dark:border-[#122036] p-3 space-y-1 shrink-0 dark:bg-[#060e1d]/90">
+          {/* Log out */}
           <button
+            type="button"
+            onClick={handleLogout}
+            title={collapsed ? 'Log out' : undefined}
+            className={cn(
+              'w-full flex items-center h-10 rounded-lg text-sm font-semibold text-slate-500 hover:bg-white hover:text-slate-900 dark:text-white dark:hover:text-rose-400 dark:hover:bg-rose-500/10 transition-all duration-150 cursor-pointer',
+              collapsed ? 'justify-center px-0' : 'px-3 gap-3'
+            )}
+          >
+            <LogOut size={18} className="shrink-0" />
+            {!collapsed && <span>Log out</span>}
+          </button>
+
+          {/* Collapse sidebar */}
+          <button
+            type="button"
             onClick={onToggle}
-            className="w-full flex items-center justify-center py-1.5 rounded-xl text-white/80 hover:text-white hover:bg-white/[0.05] transition-all duration-150"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className={cn(
+              'hidden md:flex w-full items-center h-10 rounded-lg text-sm font-semibold text-slate-500 hover:bg-white hover:text-slate-900 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/[0.05] transition-all duration-150 cursor-pointer',
+              collapsed ? 'justify-center px-0' : 'px-3 gap-3'
+            )}
           >
             {collapsed ? (
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight size={18} className="shrink-0" />
             ) : (
-              <ChevronLeft className="w-4 h-4" />
+              <>
+                <ChevronLeft size={18} className="shrink-0" />
+                <span>Collapse sidebar</span>
+              </>
             )}
           </button>
         </div>
@@ -543,5 +572,3 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
     </TooltipProvider>
   )
 }
-
-

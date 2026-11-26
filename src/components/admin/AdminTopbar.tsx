@@ -65,25 +65,39 @@ function generateBreadcrumbs(pathname: string) {
 interface AdminTopbarProps {
   onMobileMenuToggle: () => void
   profile?: Profile | null
+  isDark?: boolean
+  onToggleTheme?: () => void
 }
 
-export function AdminTopbar({ onMobileMenuToggle, profile }: AdminTopbarProps) {
+export function AdminTopbar({
+  onMobileMenuToggle,
+  profile,
+  isDark: isDarkProp,
+  onToggleTheme,
+}: AdminTopbarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const breadcrumbs = generateBreadcrumbs(pathname)
-  const [isDark, setIsDark] = useState(false)
+  const [localDark, setLocalDark] = useState(false)
+  const isDark = isDarkProp ?? localDark
   const [globalSearch, setGlobalSearch] = useState('')
 
   const [notifications, setNotifications] = useState<any[]>([])
 
 
   useEffect(() => {
-    setIsDark(document.documentElement.classList.contains('dark'))
-  }, [])
+    if (isDarkProp === undefined) {
+      setLocalDark(document.documentElement.classList.contains('dark'))
+    }
+  }, [isDarkProp])
 
   const toggleTheme = () => {
-    const next = !isDark
-    setIsDark(next)
+    if (onToggleTheme) {
+      onToggleTheme()
+      return
+    }
+    const next = !localDark
+    setLocalDark(next)
     document.documentElement.classList.toggle('dark', next)
   }
 
