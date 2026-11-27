@@ -738,12 +738,6 @@ export function AdminVehiclesClient({
                               <Clock className="w-3.5 h-3.5 text-amber-500" /> Reserved
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => handleUpdateStatus(v.id, 'rented')}
-                              className="text-xs gap-2 font-medium cursor-pointer rounded-xl"
-                            >
-                              <Key className="w-3.5 h-3.5 text-blue-500" /> Rented
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
                               onClick={() => handleUpdateStatus(v.id, 'maintenance')}
                               className="text-xs gap-2 font-medium cursor-pointer rounded-xl"
                             >
@@ -1071,12 +1065,6 @@ export function AdminVehiclesClient({
                                   className="text-xs gap-2 font-medium cursor-pointer"
                                 >
                                   <Clock className="w-3.5 h-3.5 text-amber-500" /> Reserved
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleUpdateStatus(v.id, 'rented')}
-                                  className="text-xs gap-2 font-medium cursor-pointer"
-                                >
-                                  <Key className="w-3.5 h-3.5 text-blue-500" /> Rented
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleUpdateStatus(v.id, 'maintenance')}

@@ -26,18 +26,31 @@ async function checkPermission(requiredPermission: string): Promise<boolean> {
 export async function GET(req: Request) {
   try {
     const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('customers')
-      .select(`
-        *,
-        profile:profiles!customers_profile_id_fkey(*)
-      `)
-      .order('created_at', { ascending: false })
+    const [{ data, error }, { data: activeBookings }] = await Promise.all([
+      supabase
+        .from('customers')
+        .select(`
+          *,
+          profile:profiles!customers_profile_id_fkey(*)
+        `)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('bookings')
+        .select('customer_id')
+        .eq('status', 'active'),
+    ])
 
     if (error) throw error
 
+    const activeCustomerIds = new Set(
+      (activeBookings || []).map((b) => b.customer_id).filter(Boolean)
+    )
+
     const formatted = (data && data.length > 0)
-      ? data.map(formatCustomer)
+      ? data.map((c) => ({
+          ...formatCustomer(c),
+          has_active_trip: activeCustomerIds.has(c.id),
+        }))
       : DEFAULT_DEMO_CUSTOMERS
 
     return NextResponse.json({

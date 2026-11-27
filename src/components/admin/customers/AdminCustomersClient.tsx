@@ -1541,16 +1541,18 @@ export function AdminCustomersClient({
                           <Edit className="w-3.5 h-3.5" />
                         </Button>
 
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={!can('customers.delete')}
-                          onClick={() => openDeleteModal(cust)}
-                          className="h-8 px-2.5 text-xs rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                          title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                        {!(cust as any).has_active_trip && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={!can('customers.delete')}
+                            onClick={() => openDeleteModal(cust)}
+                            className="h-8 px-2.5 text-xs rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )
@@ -1725,16 +1727,18 @@ export function AdminCustomersClient({
                             <Edit className="w-3.5 h-3.5" />
                           </Button>
 
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={!can('customers.delete')}
-                            onClick={() => openDeleteModal(cust)}
-                            className="h-8 text-xs px-2 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                            title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          {!(cust as any).has_active_trip && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={!can('customers.delete')}
+                              onClick={() => openDeleteModal(cust)}
+                              className="h-8 text-xs px-2 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1882,16 +1886,18 @@ export function AdminCustomersClient({
                     <Edit className="w-3.5 h-3.5" />
                   </Button>
 
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={!can('customers.delete')}
-                    onClick={() => openDeleteModal(cust)}
-                    className="h-8 px-2.5 text-xs rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
+                  {!(cust as any).has_active_trip && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={!can('customers.delete')}
+                      onClick={() => openDeleteModal(cust)}
+                      className="h-8 px-2.5 text-xs rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                 </div>
               </div>
             )
@@ -2200,23 +2206,25 @@ export function AdminCustomersClient({
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0 pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={!can('customers.delete')}
-                onClick={() => {
-                  const c = customers.find(x => x.id === editId) || selectedCust
-                  if (c) {
-                    setEditModalOpen(false)
-                    openDeleteModal(c)
-                  }
-                }}
-                className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl gap-1.5 cursor-pointer font-semibold mr-auto disabled:opacity-40 disabled:cursor-not-allowed"
-                title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Delete Customer
-              </Button>
+              {!(customers.find(x => x.id === editId) as any)?.has_active_trip && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={!can('customers.delete')}
+                  onClick={() => {
+                    const c = customers.find(x => x.id === editId) || selectedCust
+                    if (c) {
+                      setEditModalOpen(false)
+                      openDeleteModal(c)
+                    }
+                  }}
+                  className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl gap-1.5 cursor-pointer font-semibold mr-auto disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={can('customers.delete') ? "Delete Customer" : "Permission required: Delete Customers"}
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete Customer
+                </Button>
+              )}
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -2572,20 +2580,22 @@ export function AdminCustomersClient({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={!can('customers.delete')}
-                    onClick={() => {
-                      setViewDetailsOpen(false)
-                      if (selectedCust) openDeleteModal(selectedCust)
-                    }}
-                    className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl h-9 px-2.5 gap-1.5 cursor-pointer font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-                    title={can('customers.delete') ? 'Delete Customer' : 'Permission required: Delete Customers'}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                  </Button>
+                  {!(selectedCust as any)?.has_active_trip && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={!can('customers.delete')}
+                      onClick={() => {
+                        setViewDetailsOpen(false)
+                        if (selectedCust) openDeleteModal(selectedCust)
+                      }}
+                      className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl h-9 px-2.5 gap-1.5 cursor-pointer font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={can('customers.delete') ? 'Delete Customer' : 'Permission required: Delete Customers'}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </Button>
+                  )}
 
                   <Button
                     type="button"

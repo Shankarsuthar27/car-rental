@@ -1968,6 +1968,11 @@ export function AdminBookingsClient({
                       id="ret-dt"
                       type="datetime-local"
                       value={returnDatetime}
+                      onClick={(e: React.MouseEvent<HTMLInputElement>) => {
+                        try {
+                          e.currentTarget.showPicker?.()
+                        } catch {}
+                      }}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleReturnDatetimeChange(e.target.value)}
                       className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20"
                     />
@@ -2501,8 +2506,13 @@ export function AdminBookingsClient({
                   type="datetime-local"
                   required
                   value={newExtendReturnDatetime}
+                  onClick={(e: React.MouseEvent<HTMLInputElement>) => {
+                    try {
+                      e.currentTarget.showPicker?.()
+                    } catch {}
+                  }}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewExtendReturnDatetime(e.target.value)}
-                  className="min-h-[44px] text-xs sm:text-sm rounded-xl"
+                  className="min-h-[44px] text-xs sm:text-sm rounded-xl cursor-pointer"
                 />
               </div>
 

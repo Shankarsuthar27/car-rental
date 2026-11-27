@@ -152,27 +152,30 @@ export function RentalHistoryClient({
     }
   }
 
-  const renderDeleteButton = (booking: any, iconOnly = false) => (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={!canDeleteRental}
-      onClick={(e) => openDeleteModal(booking, e)}
-      title={
-        canDeleteRental
-          ? `Delete ${booking.booking_number}`
-          : 'Permission required: Delete Rentals & History'
-      }
-      className={cn(
-        'h-7 rounded-lg text-xs font-semibold gap-1 border-rose-500/30 text-rose-600 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed',
-        iconOnly ? 'px-2' : 'px-2.5'
-      )}
-    >
-      <Trash2 className="w-3 h-3" />
-      {!iconOnly && <span>Delete</span>}
-    </Button>
-  )
+  const renderDeleteButton = (booking: any, iconOnly = false) => {
+    if (!booking || booking.status === 'active') return null
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={!canDeleteRental}
+        onClick={(e) => openDeleteModal(booking, e)}
+        title={
+          canDeleteRental
+            ? `Delete ${booking.booking_number}`
+            : 'Permission required: Delete Rentals & History'
+        }
+        className={cn(
+          'h-7 rounded-lg text-xs font-semibold gap-1 border-rose-500/30 text-rose-600 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed',
+          iconOnly ? 'px-2' : 'px-2.5'
+        )}
+      >
+        <Trash2 className="w-3 h-3" />
+        {!iconOnly && <span>Delete</span>}
+      </Button>
+    )
+  }
 
   // Safe Date Formatter
   const formatDateSafe = (dateStr?: string, fmt = 'dd MMM yyyy') => {
