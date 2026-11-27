@@ -216,7 +216,7 @@ export function TerminalCustomerList({
               const custId = cust.customer_code || `CUST-${cust.id.slice(0, 6).toUpperCase()}`
               const status = getStatusBadge(cust)
               const name = (cust.profile?.full_name || cust.emergency_contact_name || 'ANONYMOUS').toUpperCase()
-              const email = cust.profile?.email || 'customer@driveease.in'
+              const email = cust.profile?.email || 'customer@jsdjalore.in'
               const emailPath = `/var/users/${email.replace(/[@.]/g, '_')}`
               const dl = cust.driving_license_number || 'RJ19-NONE'
               const spent = `INR_${Number(cust.total_spent || 0).toLocaleString('en-IN')}`

@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     }
 
     let profileId: string | null = user?.id || null
-    const customerEmail = (customerDetails?.email || user?.email || 'guest@driveease.in').trim().toLowerCase()
+    const customerEmail = (customerDetails?.email || user?.email || 'guest@jsdjalore.in').trim().toLowerCase()
     const customerName = customerDetails?.fullName || user?.user_metadata?.full_name || 'Guest Driver'
     const customerPhone = customerDetails?.phone || ''
 

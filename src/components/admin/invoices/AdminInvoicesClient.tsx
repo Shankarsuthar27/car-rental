@@ -699,7 +699,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground pt-1 leading-relaxed">
-                    Jalore, Rajasthan • support@driveease.in
+                    Jalore, Rajasthan • support@jsdjalore.in
                   </p>
                   <p className="text-xs font-mono font-bold text-primary">
                     GSTIN: 08ABCDE1234F1Z5
@@ -729,7 +729,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                       'Valued Customer'}
                   </span>
                   <span className="text-muted-foreground block">
-                    Email: {selectedInvoice.customer?.profile?.email || 'customer@driveease.in'}
+                    Email: {selectedInvoice.customer?.profile?.email || 'customer@jsdjalore.in'}
                   </span>
                   <span className="text-muted-foreground block">
                     Phone: {selectedInvoice.customer?.profile?.phone || selectedInvoice.customer?.emergency_contact_phone || 'N/A'}

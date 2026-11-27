@@ -8,10 +8,10 @@
 -- ============================================================
 
 INSERT INTO branches (id, name, slug, address, city, state, pincode, phone, email, opening_time, closing_time, is_active) VALUES
-  ('11111111-0000-0000-0000-000000000001', 'Jaipur Main Branch', 'jaipur-main', 'C-Scheme, Ashok Marg', 'Jaipur', 'Rajasthan', '302001', '+91-141-2345678', 'jaipur@driveease.in', '08:00', '22:00', TRUE),
-  ('11111111-0000-0000-0000-000000000002', 'Jodhpur Branch', 'jodhpur', 'Near Clock Tower, Sardar Market', 'Jodhpur', 'Rajasthan', '342001', '+91-291-3456789', 'jodhpur@driveease.in', '08:00', '21:00', TRUE),
-  ('11111111-0000-0000-0000-000000000003', 'Udaipur Branch', 'udaipur', 'City Palace Road, Fateh Sagar', 'Udaipur', 'Rajasthan', '313001', '+91-294-4567890', 'udaipur@driveease.in', '09:00', '21:00', TRUE),
-  ('11111111-0000-0000-0000-000000000004', 'Ahmedabad Branch', 'ahmedabad', 'SG Highway, Prahlad Nagar', 'Ahmedabad', 'Gujarat', '380051', '+91-79-5678901', 'ahmedabad@driveease.in', '08:00', '22:00', TRUE);
+  ('11111111-0000-0000-0000-000000000001', 'Jaipur Main Branch', 'jaipur-main', 'C-Scheme, Ashok Marg', 'Jaipur', 'Rajasthan', '302001', '+91-141-2345678', 'jaipur@jsdjalore.in', '08:00', '22:00', TRUE),
+  ('11111111-0000-0000-0000-000000000002', 'Jodhpur Branch', 'jodhpur', 'Near Clock Tower, Sardar Market', 'Jodhpur', 'Rajasthan', '342001', '+91-291-3456789', 'jodhpur@jsdjalore.in', '08:00', '21:00', TRUE),
+  ('11111111-0000-0000-0000-000000000003', 'Udaipur Branch', 'udaipur', 'City Palace Road, Fateh Sagar', 'Udaipur', 'Rajasthan', '313001', '+91-294-4567890', 'udaipur@jsdjalore.in', '09:00', '21:00', TRUE),
+  ('11111111-0000-0000-0000-000000000004', 'Ahmedabad Branch', 'ahmedabad', 'SG Highway, Prahlad Nagar', 'Ahmedabad', 'Gujarat', '380051', '+91-79-5678901', 'ahmedabad@jsdjalore.in', '08:00', '22:00', TRUE);
 
 -- ============================================================
 -- SETTINGS
@@ -22,7 +22,7 @@ INSERT INTO settings (key, value, description, is_public) VALUES
   ('company_tagline', '"Drive Your Way, Every Day"', 'Company tagline', TRUE),
   ('company_address', '"C-Scheme, Ashok Marg, Jaipur, Rajasthan 302001"', 'Registered address', FALSE),
   ('company_phone', '"+91-141-2345678"', 'Support phone', TRUE),
-  ('company_email', '"support@driveease.in"', 'Support email', TRUE),
+  ('company_email', '"support@jsdjalore.in"', 'Support email', TRUE),
   ('company_gstin', '"08ABCDE1234F1Z5"', 'GST number', FALSE),
   ('currency', '"INR"', 'Default currency', TRUE),
   ('currency_symbol', '"₹"', 'Currency symbol', TRUE),

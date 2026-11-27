@@ -23,7 +23,7 @@ export default async function AdminEmployeesPage() {
     {
       id: 'emp-2',
       name: 'Pooja Choudhary',
-      email: 'pooja.c@driveease.in',
+      email: 'pooja.c@jsdjalore.in',
       phone: '+91 98290 22222',
       role: 'Accountant',
       department: 'Finance & Invoicing',
@@ -33,7 +33,7 @@ export default async function AdminEmployeesPage() {
     {
       id: 'emp-3',
       name: 'Suresh Meena',
-      email: 'suresh.m@driveease.in',
+      email: 'suresh.m@jsdjalore.in',
       phone: '+91 98290 33333',
       role: 'Vehicle Manager',
       department: 'Fleet Operations',
@@ -43,7 +43,7 @@ export default async function AdminEmployeesPage() {
     {
       id: 'emp-4',
       name: 'Kavita Joshi',
-      email: 'kavita.j@driveease.in',
+      email: 'kavita.j@jsdjalore.in',
       phone: '+91 98290 44444',
       role: 'Booking Manager',
       department: 'Customer Success',

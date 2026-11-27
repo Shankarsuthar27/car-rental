@@ -344,7 +344,7 @@ export function AdminCustomersClient({
         body: JSON.stringify({
           full_name: addName.trim(),
           phone: addPhone.trim(),
-          email: addEmail.trim() || `customer-${Date.now()}@driveease.in`,
+          email: addEmail.trim() || `customer-${Date.now()}@jsdjalore.in`,
           driving_license_number: addLicense.trim(),
           address: addAddress.trim(),
           city: addCity.trim(),
@@ -397,7 +397,7 @@ export function AdminCustomersClient({
           id: `prof-${Date.now()}`,
           full_name: addName.trim(),
           phone: addPhone.trim(),
-          email: addEmail.trim() || `customer-${Date.now()}@driveease.in`,
+          email: addEmail.trim() || `customer-${Date.now()}@jsdjalore.in`,
           role: 'customer',
           is_active: true,
           created_at: new Date().toISOString(),

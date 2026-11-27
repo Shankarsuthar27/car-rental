@@ -398,7 +398,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                     C-Scheme, Ashok Marg, Jaipur, Rajasthan 302001
                   </p>
                   <p className="text-xs font-mono font-bold text-primary">
-                    GSTIN: 08ABCDE1234F1Z5 • support@driveease.in
+                    GSTIN: 08ABCDE1234F1Z5 • support@jsdjalore.in
                   </p>
                 </div>
 
@@ -423,7 +423,7 @@ export function AdminInvoicesClient({ initialInvoices }: AdminInvoicesClientProp
                     {selectedInvoice.customer?.profile?.full_name || selectedInvoice.customer?.emergency_contact_name || 'Valued Customer'}
                   </span>
                   <span className="text-muted-foreground block">
-                    Email: {selectedInvoice.customer?.profile?.email || 'customer@driveease.in'}
+                    Email: {selectedInvoice.customer?.profile?.email || 'customer@jsdjalore.in'}
                   </span>
                   <span className="text-muted-foreground block">
                     Phone: {selectedInvoice.customer?.profile?.phone || selectedInvoice.customer?.emergency_contact_phone || 'N/A'}

@@ -290,7 +290,7 @@ export function AssignCarWorkflow({
         body: JSON.stringify({
           full_name: newCustName.trim(),
           phone: newCustPhone.trim(),
-          email: newCustEmail.trim() || `customer-${Date.now()}@driveease.in`,
+          email: newCustEmail.trim() || `customer-${Date.now()}@jsdjalore.in`,
           driving_license_number: newCustLicense.trim(),
           city: newCustCity.trim() || 'Jalore',
           state: 'Rajasthan',
@@ -329,7 +329,7 @@ export function AssignCarWorkflow({
           updated_at: new Date().toISOString(),
           profile: {
             id: `prof-${Date.now()}`,
-            email: newCustEmail.trim() || `customer-${Date.now()}@driveease.in`,
+            email: newCustEmail.trim() || `customer-${Date.now()}@jsdjalore.in`,
             full_name: newCustName.trim(),
             phone: newCustPhone.trim(),
             role: 'customer',

@@ -24,8 +24,8 @@ export function extractEmail(c: any): string {
     const emailMatch = c.kyc_notes.match(/Email:\s*([^\s|]+)/i)
     if (emailMatch && emailMatch[1]) return emailMatch[1].trim()
   }
-  if (c.customer_code) return `${c.customer_code.toLowerCase().replace(/[^a-z0-9]/g, '')}@driveease.in`
-  return 'customer@driveease.in'
+  if (c.customer_code) return `${c.customer_code.toLowerCase().replace(/[^a-z0-9]/g, '')}@jsdjalore.in`
+  return 'customer@jsdjalore.in'
 }
 
 export function extractFullName(c: any): string {

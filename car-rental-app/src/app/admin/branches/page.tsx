@@ -65,7 +65,7 @@ export default async function AdminBranchesPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>{b.email || 'support@driveease.in'}</span>
+                <span>{b.email || 'support@jsdjalore.in'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 text-primary shrink-0" />

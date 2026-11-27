@@ -246,7 +246,7 @@ export function AssignCarWorkflow({
         body: JSON.stringify({
           full_name: newCustName.trim(),
           phone: newCustPhone.trim(),
-          email: newCustEmail.trim() || `customer-${Date.now()}@driveease.in`,
+          email: newCustEmail.trim() || `customer-${Date.now()}@jsdjalore.in`,
           driving_license_number: newCustLicense.trim(),
           city: newCustCity.trim() || 'Jaipur',
           state: 'Rajasthan',
@@ -284,7 +284,7 @@ export function AssignCarWorkflow({
           updated_at: new Date().toISOString(),
           profile: {
             id: `prof-${Date.now()}`,
-            email: newCustEmail.trim() || `customer-${Date.now()}@driveease.in`,
+            email: newCustEmail.trim() || `customer-${Date.now()}@jsdjalore.in`,
             full_name: newCustName.trim(),
             phone: newCustPhone.trim(),
             role: 'customer',
@@ -602,7 +602,7 @@ export function AssignCarWorkflow({
                     <div className="flex items-center gap-1.5 text-muted-foreground truncate">
                       <Mail className="w-3 h-3 text-primary shrink-0" />
                       <span className="truncate">
-                        {selectedCustomer.profile?.email || 'customer@driveease.in'}
+                        {selectedCustomer.profile?.email || 'customer@jsdjalore.in'}
                       </span>
                     </div>
 
@@ -945,7 +945,7 @@ export function AssignCarWorkflow({
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] truncate">
                       <Mail className="w-3 h-3 text-muted-foreground shrink-0" />
-                      <span className="truncate">{selectedCustomer.profile?.email || 'customer@driveease.in'}</span>
+                      <span className="truncate">{selectedCustomer.profile?.email || 'customer@jsdjalore.in'}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px]">
                       <FileCheck2 className="w-3 h-3 text-primary shrink-0" />

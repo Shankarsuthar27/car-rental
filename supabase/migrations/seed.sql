@@ -6,7 +6,7 @@
 -- 1. BRANCHES
 INSERT INTO branches (id, name, slug, city, state, address, pincode, phone, email, opening_time, closing_time, is_active)
 VALUES
-  ('11111111-1111-1111-1111-111111111111', 'Jalore Main Branch', 'jalore-main', 'Jalore', 'Rajasthan', 'Near Bus Stand, Collectorate Road, Jalore', '343001', '+91-2973-222333', 'jalore@driveease.in', '08:00', '22:00', true)
+  ('11111111-1111-1111-1111-111111111111', 'Jalore Main Branch', 'jalore-main', 'Jalore', 'Rajasthan', 'Near Bus Stand, Collectorate Road, Jalore', '343001', '+91-2973-222333', 'jalore@jsdjalore.in', '08:00', '22:00', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. VEHICLES
@@ -107,6 +107,6 @@ ON CONFLICT (id) DO NOTHING;
 -- 6. SETTINGS
 INSERT INTO settings (id, key, value, description, is_public)
 VALUES
-  ('e1111111-1111-1111-1111-111111111111', 'company_profile', '{"name": "JSD Jalore Self Drive PVT LTD", "tagline": "Drive Your Way, Every Day", "gstin": "08ABCDE1234F1Z5", "email": "support@driveease.in", "phone": "+91-2973-222333", "address": "Near Bus Stand, Collectorate Road, Jalore, Rajasthan 343001"}', 'Company details and GSTIN', true),
+  ('e1111111-1111-1111-1111-111111111111', 'company_profile', '{"name": "JSD Jalore Self Drive PVT LTD", "tagline": "Drive Your Way, Every Day", "gstin": "08ABCDE1234F1Z5", "email": "support@jsdjalore.in", "phone": "+91-2973-222333", "address": "Near Bus Stand, Collectorate Road, Jalore, Rajasthan 343001"}', 'Company details and GSTIN', true),
   ('e2222222-2222-2222-2222-222222222222', 'rental_policy', '{"partial_period_rule": "round_up_hour", "return_grace_period_minutes": 30, "advance_payment_percentage": 30, "tax_rate": 18, "weekend_multiplier": 1.25}', 'Pricing calculation rules', true)
 ON CONFLICT (id) DO NOTHING;

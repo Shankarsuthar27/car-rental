@@ -90,11 +90,11 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:support@driveease.in"
+                  href="mailto:support@jsdjalore.in"
                   className="text-sm text-sidebar-foreground/60 hover:text-white transition-colors flex items-center gap-2"
                 >
                   <Mail className="w-4 h-4 shrink-0" />
-                  support@driveease.in
+                  support@jsdjalore.in
                 </a>
               </li>
               <li>

@@ -8,7 +8,7 @@
 -- ============================================================
 
 INSERT INTO branches (id, name, slug, address, city, state, pincode, phone, email, opening_time, closing_time, is_active) VALUES
-  ('11111111-0000-0000-0000-000000000001', 'Jalore Main Branch', 'jalore-main', 'Near Bus Stand, Collectorate Road', 'Jalore', 'Rajasthan', '343001', '+91-2973-222333', 'jalore@driveease.in', '08:00', '22:00', TRUE);
+  ('11111111-0000-0000-0000-000000000001', 'Jalore Main Branch', 'jalore-main', 'Near Bus Stand, Collectorate Road', 'Jalore', 'Rajasthan', '343001', '+91-2973-222333', 'jalore@jsdjalore.in', '08:00', '22:00', TRUE);
 
 -- ============================================================
 -- SETTINGS
@@ -19,7 +19,7 @@ INSERT INTO settings (key, value, description, is_public) VALUES
   ('company_tagline', '"Drive Your Way, Every Day"', 'Company tagline', TRUE),
   ('company_address', '"Near Bus Stand, Collectorate Road, Jalore, Rajasthan 343001"', 'Registered address', FALSE),
   ('company_phone', '"+91-2973-222333"', 'Support phone', TRUE),
-  ('company_email', '"support@driveease.in"', 'Support email', TRUE),
+  ('company_email', '"support@jsdjalore.in"', 'Support email', TRUE),
   ('company_gstin', '"08ABCDE1234F1Z5"', 'GST number', FALSE),
   ('currency', '"INR"', 'Default currency', TRUE),
   ('currency_symbol', '"₹"', 'Currency symbol', TRUE),

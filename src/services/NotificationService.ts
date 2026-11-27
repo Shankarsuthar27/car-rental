@@ -212,7 +212,7 @@ export class NotificationService {
     } = params
 
     const ownerEmail = process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || 'ss2137789@gmail.com'
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://driveease.in'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://jsdjalore.in'
 
     const emailSubject = `🚗 Car Assigned: ${vehicleBrand} ${vehicleModel} (${registrationNumber}) → ${customerName} [${bookingNumber}]`
 

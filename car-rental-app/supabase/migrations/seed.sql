@@ -6,10 +6,10 @@
 -- 1. BRANCHES
 INSERT INTO branches (id, name, slug, city, state, address, pincode, phone, email, opening_time, closing_time, is_active)
 VALUES
-  ('11111111-1111-1111-1111-111111111111', 'Jaipur Main Branch', 'jaipur-main', 'Jaipur', 'Rajasthan', 'C-Scheme, Ashok Marg, Jaipur', '302001', '+91-141-2345678', 'jaipur@driveease.in', '08:00', '22:00', true),
-  ('22222222-2222-2222-2222-222222222222', 'Jodhpur Branch', 'jodhpur-branch', 'Jodhpur', 'Rajasthan', 'Paota Circle, High Court Road, Jodhpur', '342001', '+91-291-2345678', 'jodhpur@driveease.in', '08:00', '21:00', true),
-  ('33333333-3333-3333-3333-333333333333', 'Udaipur City Center', 'udaipur-city', 'Udaipur', 'Rajasthan', 'Sukhadia Circle, Panchwati, Udaipur', '313001', '+91-294-2345678', 'udaipur@driveease.in', '08:00', '21:00', true),
-  ('44444444-4444-4444-4444-444444444444', 'Ahmedabad SG Highway', 'ahmedabad-sg', 'Ahmedabad', 'Gujarat', 'SG Highway, Bodakdev, Ahmedabad', '380054', '+91-79-2345678', 'ahmedabad@driveease.in', '08:00', '22:00', true)
+  ('11111111-1111-1111-1111-111111111111', 'Jaipur Main Branch', 'jaipur-main', 'Jaipur', 'Rajasthan', 'C-Scheme, Ashok Marg, Jaipur', '302001', '+91-141-2345678', 'jaipur@jsdjalore.in', '08:00', '22:00', true),
+  ('22222222-2222-2222-2222-222222222222', 'Jodhpur Branch', 'jodhpur-branch', 'Jodhpur', 'Rajasthan', 'Paota Circle, High Court Road, Jodhpur', '342001', '+91-291-2345678', 'jodhpur@jsdjalore.in', '08:00', '21:00', true),
+  ('33333333-3333-3333-3333-333333333333', 'Udaipur City Center', 'udaipur-city', 'Udaipur', 'Rajasthan', 'Sukhadia Circle, Panchwati, Udaipur', '313001', '+91-294-2345678', 'udaipur@jsdjalore.in', '08:00', '21:00', true),
+  ('44444444-4444-4444-4444-444444444444', 'Ahmedabad SG Highway', 'ahmedabad-sg', 'Ahmedabad', 'Gujarat', 'SG Highway, Bodakdev, Ahmedabad', '380054', '+91-79-2345678', 'ahmedabad@jsdjalore.in', '08:00', '22:00', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. VEHICLES
@@ -110,6 +110,6 @@ ON CONFLICT (id) DO NOTHING;
 -- 6. SETTINGS
 INSERT INTO settings (id, key, value, description, is_public)
 VALUES
-  ('e1111111-1111-1111-1111-111111111111', 'company_profile', '{"name": "DriveEase Mobility Solutions", "tagline": "Drive Your Way, Every Day", "gstin": "08ABCDE1234F1Z5", "email": "support@driveease.in", "phone": "+91-141-2345678", "address": "C-Scheme, Ashok Marg, Jaipur, Rajasthan 302001"}', 'Company details and GSTIN', true),
+  ('e1111111-1111-1111-1111-111111111111', 'company_profile', '{"name": "DriveEase Mobility Solutions", "tagline": "Drive Your Way, Every Day", "gstin": "08ABCDE1234F1Z5", "email": "support@jsdjalore.in", "phone": "+91-141-2345678", "address": "C-Scheme, Ashok Marg, Jaipur, Rajasthan 302001"}', 'Company details and GSTIN', true),
   ('e2222222-2222-2222-2222-222222222222', 'rental_policy', '{"partial_period_rule": "round_up_hour", "return_grace_period_minutes": 30, "advance_payment_percentage": 30, "tax_rate": 18, "weekend_multiplier": 1.25}', 'Pricing calculation rules', true)
 ON CONFLICT (id) DO NOTHING;
